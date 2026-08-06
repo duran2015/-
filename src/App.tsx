@@ -10,18 +10,18 @@ import { OrderInfoModal } from './components/Orders/OrderInfoModal';
 import { GrowthTab } from './components/Growth/GrowthTab';
 import { ProfileTab } from './components/Profile/ProfileTab';
 import { VoiceCall } from './client-app/pages/Counseling/VoiceCall';
-import { AISummaryModal } from './components/AISummaryModal';
+import { SessionReviewWorkspace } from './components/SessionReview/SessionReviewWorkspace';
 
 import { ChatDrawer } from './components/IM/ChatDrawer';
 
 import { INITIAL_CONSULTANT, INITIAL_SERVICE_PRODUCTS, INITIAL_SETTLEMENTS, INITIAL_VIRAL_VOUCHERS } from './data/mockData';
 import { useAppStore } from './client-app/store';
-import { Order, ServiceProduct, ViralVoucher, SessionSummary, ConsultantProfile } from './types';
+import { Order, ServiceProduct, ViralVoucher, ConsultantProfile, SessionSnapshot } from './types';
 import { IncomeView } from './components/Profile/IncomeView';
 import { X, ChevronRight } from 'lucide-react';
 
 export default function App() {
-  const { orders, updateOrder } = useAppStore();
+  const { orders, updateOrder, ensureSessionReview, endConsultationSession } = useAppStore();
   const setOrders = (updater: any) => {
     // Adapter for legacy setOrders
     if (typeof updater === 'function') {
@@ -47,7 +47,7 @@ export default function App() {
 
   // Modals & Drawers
   const [activeLiveOrder, setActiveLiveOrder] = useState<Order | null>(null);
-  const [selectedOrderForSummary, setSelectedOrderForSummary] = useState<Order | null>(null);
+  const [activeSessionReviewId, setActiveSessionReviewId] = useState<string | null>(null);
   const [selectedOrderForFile, setSelectedOrderForFile] = useState<Order | null>(null);
   const [showOrderInfo, setShowOrderInfo] = useState<Order | null>(null);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
@@ -67,14 +67,6 @@ export default function App() {
   const nextScheduledOrder = displayedOrders.find((o) => o.status === 'scheduled');
 
   // Action Handlers
-  React.useEffect(() => {
-    const handler = (e: any) => {
-      setSelectedOrderForSummary(e.detail);
-    };
-    window.addEventListener("open-ai-summary", handler);
-    return () => window.removeEventListener("open-ai-summary", handler);
-  }, []);
-
   const handleToggleListening = () => {
     setConsultant((prev) => ({ ...prev, isListeningActive: !prev.isListeningActive }));
   };
@@ -85,15 +77,17 @@ export default function App() {
   };
 
   const handleWriteSummary = (order: Order) => {
-    setSelectedOrderForSummary(order);
+    setActiveSessionReviewId(ensureSessionReview(order));
   };
 
   const handleSendReminder = (order: Order) => {
     alert(`已为【${order.clientName}】发送微信及短信【极简咨询室入室提醒】！`);
   };
 
-  const handleSaveSummary = (summary: SessionSummary) => {
-    updateOrder(summary.orderId, { hasSummary: true });
+  const handleSessionEnded = (order: Order, snapshot: SessionSnapshot) => {
+    const draftId = endConsultationSession(order, snapshot);
+    setActiveLiveOrder(null);
+    setActiveSessionReviewId(draftId);
   };
 
   const handleUpdateConsultant = (updated: ConsultantProfile) => {
@@ -308,16 +302,15 @@ export default function App() {
           propOrder={activeLiveOrder} 
           propMode="counselor" 
           onClose={() => setActiveLiveOrder(null)}
+          onSessionEnded={handleSessionEnded}
         />
       )}
 
-      {/* MODAL 2: AI Session Summary Generator */}
-      {selectedOrderForSummary && (
-        <AISummaryModal
-          order={selectedOrderForSummary}
-          onClose={() => setSelectedOrderForSummary(null)}
-          onSaveSummary={handleSaveSummary}
-          onOpenChat={(order) => setActiveChatOrder(order)}
+      {/* MODAL 2: Session review workspace */}
+      {activeSessionReviewId && (
+        <SessionReviewWorkspace
+          draftId={activeSessionReviewId}
+          onClose={() => setActiveSessionReviewId(null)}
         />
       )}
 

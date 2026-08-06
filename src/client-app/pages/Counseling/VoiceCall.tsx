@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   BellRing,
@@ -30,6 +30,8 @@ import {
   getVoiceCallPresentation,
   type MeetingState,
 } from "../../../voiceCallPresentation";
+import { buildMockSessionSnapshot } from "../../../consultationWorkflowMock";
+import type { Order, SessionSnapshot } from "../../../types";
 
 type MediaPermissionState = { camera: boolean; microphone: boolean };
 
@@ -37,6 +39,7 @@ interface VoiceCallProps {
   propOrder?: unknown;
   propMode?: "counselor" | "user";
   onClose?: () => void;
+  onSessionEnded?: (order: Order, snapshot: SessionSnapshot) => void;
 }
 
 const detectClientPlatform = () => {
@@ -48,7 +51,7 @@ const detectClientPlatform = () => {
   return "当前设备";
 };
 
-export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
+export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: VoiceCallProps) {
   const {
     popView,
     pushView,
@@ -74,6 +77,10 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
   const selfRole = isCounselorView ? "咨询师" : "用户";
   const otherRole = isCounselorView ? "用户" : "咨询师";
   const roomNumber = `KL-${String(order?.id || "849201").replace(/\D/g, "").slice(-6).padStart(6, "0")}`;
+  const mockSnapshot = useMemo(
+    () => buildMockSessionSnapshot((order || { id: "demo", clientName: "来访者" }) as Order),
+    [order?.id],
+  );
 
   const [meetingState, setMeetingState] = useState<MeetingState>("waiting");
   const roomPresentation = getVoiceCallPresentation(meetingState, isVideo);
@@ -81,6 +88,7 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
   const [cameraOff, setCameraOff] = useState(!isVideo);
   const [speaker, setSpeaker] = useState(true);
   const [duration, setDuration] = useState(0);
+  const [scratchpad, setScratchpad] = useState(mockSnapshot.notes.map((note) => note.text).join("\n"));
   
   // AI Panel & More Menus
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
@@ -152,15 +160,28 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
   };
 
   const finishAndGoToSummary = () => {
-    leaveMeeting();
     if (isCounselorView) {
-      if (onClose) {
-         const event = new CustomEvent("open-ai-summary", { detail: order });
-         window.dispatchEvent(event);
+      const sessionOrder = order as Order;
+      const snapshot: SessionSnapshot = {
+        ...mockSnapshot,
+        durationSeconds: duration || mockSnapshot.durationSeconds,
+        notes: scratchpad.trim()
+          ? [
+              { id: `${mockSnapshot.transcript[0]?.sessionId || `session-${sessionOrder.id}`}-n-live`, text: scratchpad.trim() },
+              ...mockSnapshot.notes,
+            ]
+          : mockSnapshot.notes,
+      };
+      setActiveCallSession(null);
+      setIsCallMinimized(false);
+      if (onSessionEnded) {
+        onSessionEnded(sessionOrder, snapshot);
       } else {
-         pushView("counselor-session-notes" as any);
+        useAppStore.getState().endConsultationSession(sessionOrder, snapshot);
+        pushView("counselor-session-notes" as any);
       }
     } else {
+      leaveMeeting();
       pushView("user-evaluation" as any);
     }
   };
@@ -412,7 +433,7 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
                 <AlertTriangle size={22} />
               </button>
             )}
-<button onClick={meetingState === "waiting" ? leaveMeeting : finishAndGoToSummary} className="flex h-[42px] w-[42px] sm:h-[52px] sm:w-[52px] shrink-0 flex-col items-center justify-center rounded-[18px] sm:rounded-[20px] bg-red-500 text-white shadow-lg shadow-red-500/30 transition-all hover:bg-red-600 active:scale-95">
+<button onClick={meetingState === "waiting" ? leaveMeeting : endMeeting} className="flex h-[42px] w-[42px] sm:h-[52px] sm:w-[52px] shrink-0 flex-col items-center justify-center rounded-[18px] sm:rounded-[20px] bg-red-500 text-white shadow-lg shadow-red-500/30 transition-all hover:bg-red-600 active:scale-95">
               <PhoneOff size={22} />
             </button>
           </div>
@@ -443,7 +464,7 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
                    {/* AI Insights Card */}
                    <div className="mb-5 rounded-[20px] bg-[#F6EDFF] border border-[#EADDFF] p-4 shadow-sm">
                      <div className="mb-2 flex items-center text-[12px] font-black text-[#6750A4]"><Sparkles size={14} className="mr-1.5" />实时情绪洞察</div>
-                     <p className="text-[13px] leading-relaxed text-[#21005D]">来访者语速明显减缓，提到“压力”时声音低沉。建议：给予更多留白，引导其表达具体感受。</p>
+                     <p className="text-[13px] leading-relaxed text-[#21005D]">{mockSnapshot.insights[1]?.detail}</p>
                    </div>
                    
                    {/* Live Transcription */}
@@ -453,9 +474,12 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
                         <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span className="text-[10px] font-normal">Recording</span></div>
                      </div>
                      <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-                       <div className="text-[13px] leading-relaxed"><span className="font-black text-[#6750A4] mr-2">张女士:</span><span className="text-[#1D1B16]">最近工作真的感觉喘不过气，每天晚上都在想第二天的事情，<span className="bg-[#EADDFF]/50 px-1 rounded text-[#21005D] font-bold">完全失眠</span>。</span></div>
-                       <div className="text-[13px] leading-relaxed"><span className="font-black text-[#7A756C] mr-2">我:</span><span className="text-[#49463D]">听起来这种状态持续有一段时间了，能具体说说是什么让你觉得最困难吗？</span></div>
-                       <div className="text-[13px] leading-relaxed"><span className="font-black text-[#6750A4] mr-2">张女士:</span><span className="text-[#1D1B16]">主要是老板的要求总是在变，我觉得自己<span className="bg-[#EADDFF]/50 px-1 rounded text-[#21005D] font-bold">毫无价值</span>。</span></div>
+                       {mockSnapshot.transcript.slice(0, 4).map((segment) => (
+                         <div key={segment.id} className="text-[13px] leading-relaxed">
+                           <span className={`font-black mr-2 ${segment.speakerRole === "client" ? "text-[#6750A4]" : "text-[#7A756C]"}`}>{segment.speakerRole === "counselor" ? "我" : segment.speakerName}:</span>
+                           <span className="text-[#1D1B16]">{segment.text}</span>
+                         </div>
+                       ))}
                      </div>
                    </div>
 
@@ -472,7 +496,8 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
                       className="w-full resize-none rounded-[16px] bg-[#FAF8F5] border border-[#ECE6DC] p-3 text-[13px] leading-relaxed text-[#1D1B16] outline-none focus:ring-2 focus:ring-[#6750A4]/20 focus:border-[#6750A4] transition-all" 
                       rows={4} 
                       placeholder="在这里记录临床观察或灵感，支持快捷键..." 
-                      defaultValue="重点：工作压力导致失眠，自我价值感低。"
+                      value={scratchpad}
+                      onChange={(event) => setScratchpad(event.target.value)}
                     />
                   </div>
                 )}
