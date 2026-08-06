@@ -14,7 +14,7 @@ import {
 import { mockCounselors } from "../../data";
 
 export function CallSummary() {
-  const { resetToView, popView, bookingOrder, selectedCounselorOrder, selectedCounselorId, consultationWorkflow } = useAppStore();
+  const { resetToView, popView, bookingOrder, selectedCounselorOrder, selectedCounselorId, consultationWorkflow, completeWorkflowTask } = useAppStore();
   
   // 区分是咨询师端还是用户端
   const isCounselorView = !!selectedCounselorOrder;
@@ -47,8 +47,11 @@ export function CallSummary() {
   ]).map((text) => ({ text, done: false }));
 
   const handleSubmitEvaluation = () => {
+    const evaluationTask = consultationWorkflow.tasks.find(
+      (task) => task.draftId === sharedReview?.draftId && task.taskType === "review_counselor" && task.status !== "completed",
+    );
+    if (evaluationTask) completeWorkflowTask(evaluationTask.id);
     setSubmitted(true);
-    // Submit API simulation
   };
 
   return (

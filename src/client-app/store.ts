@@ -19,6 +19,7 @@ import type {
 } from "../types";
 
 const workflowTimestamp = () => new Date().toISOString();
+const WORKFLOW_STORAGE_KEY = "kelu-consultation-workflow-v1";
 
 const buildInitialWorkflow = () => {
   const timestamp = workflowTimestamp();
@@ -33,6 +34,24 @@ const buildInitialWorkflow = () => {
       ),
     seeded,
   );
+};
+
+const loadInitialWorkflow = (): ConsultationWorkflowState => {
+  try {
+    const stored = localStorage.getItem(WORKFLOW_STORAGE_KEY);
+    if (!stored) return buildInitialWorkflow();
+    const parsed = JSON.parse(stored) as ConsultationWorkflowState;
+    if (!Array.isArray(parsed.reviewDrafts) || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.messages)) {
+      return buildInitialWorkflow();
+    }
+    return parsed;
+  } catch {
+    return buildInitialWorkflow();
+  }
+};
+
+const persistWorkflow = (workflow: ConsultationWorkflowState) => {
+  localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(workflow));
 };
 
 const defaultUser: UserProfile = {
@@ -89,7 +108,7 @@ const buildLoggedOutState = () => ({
   isSessionCounselorDetail: false,
   counselorStatus: "active" as const,
   activeOrderTab: "all" as const,
-  consultationWorkflow: buildInitialWorkflow(),
+  consultationWorkflow: loadInitialWorkflow(),
 });
 
 const clearAuthStorage = () => {
@@ -193,7 +212,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   assessmentState: defaultAssessmentState,
   aiSettings: defaultAISettings,
   hasAgreedPrivacy: localStorage.getItem("hasAgreedPrivacy") === "true",
-  consultationWorkflow: buildInitialWorkflow(),
+  consultationWorkflow: loadInitialWorkflow(),
 
   agreePrivacy: () => {
     localStorage.setItem("hasAgreedPrivacy", "true");
@@ -275,6 +294,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       buildMockReviewPatch(order),
       timestamp,
     );
+    persistWorkflow(nextWorkflow);
     set({ consultationWorkflow: nextWorkflow });
     return draftId;
   },
@@ -284,14 +304,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     return draftId;
   },
   saveSessionReview: (draftId, patch) => {
-    set((state) => ({
-      consultationWorkflow: saveWorkflowReviewDraft(
-        state.consultationWorkflow,
-        draftId,
-        patch,
-        workflowTimestamp(),
-      ),
-    }));
+    const nextWorkflow = saveWorkflowReviewDraft(
+      get().consultationWorkflow,
+      draftId,
+      patch,
+      workflowTimestamp(),
+    );
+    persistWorkflow(nextWorkflow);
+    set({ consultationWorkflow: nextWorkflow });
   },
   submitSessionReview: (draftId, patch) => {
     let workflow = get().consultationWorkflow;
@@ -299,6 +319,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       workflow = saveWorkflowReviewDraft(workflow, draftId, patch, workflowTimestamp());
     }
     const result = submitWorkflowReviewDraft(workflow, draftId, workflowTimestamp());
+    persistWorkflow(result.state);
     set({ consultationWorkflow: result.state });
     if (result.ok) {
       const orderId = result.state.reviewDrafts.find((draft) => draft.id === draftId)?.orderId;
@@ -307,24 +328,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { ok: result.ok, errors: result.errors };
   },
   completeWorkflowTask: (taskId) => {
-    set((state) => ({
-      consultationWorkflow: {
-        ...state.consultationWorkflow,
-        tasks: state.consultationWorkflow.tasks.map((task) =>
-          task.id === taskId ? { ...task, status: "completed" as const } : task,
-        ),
-      },
-    }));
+    const current = get().consultationWorkflow;
+    const nextWorkflow = {
+      ...current,
+      tasks: current.tasks.map((task) =>
+        task.id === taskId ? { ...task, status: "completed" as const } : task,
+      ),
+    };
+    persistWorkflow(nextWorkflow);
+    set({ consultationWorkflow: nextWorkflow });
   },
   confirmConsultationBooking: (orderId) => {
     const order = get().orders.find((item) => item.id === orderId) as Order | undefined;
     if (!order) return;
+    const nextWorkflow = confirmBookingWorkflow(
+      get().consultationWorkflow,
+      order,
+      workflowTimestamp(),
+    );
+    persistWorkflow(nextWorkflow);
     set((state) => ({
-      consultationWorkflow: confirmBookingWorkflow(
-        state.consultationWorkflow,
-        order,
-        workflowTimestamp(),
-      ),
+      consultationWorkflow: nextWorkflow,
       orders: state.orders.map((item) =>
         item.id === orderId ? { ...item, status: "scheduled" } : item,
       ),

@@ -5,6 +5,7 @@ import {
   ShieldAlert, ChevronRight
 } from 'lucide-react';
 import { Order, OrderStatus } from '../../types';
+import { useAppStore } from '../../client-app/store';
 
 interface OrderDetailViewProps {
   order: Order;
@@ -39,6 +40,11 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   onWriteSummary,
   onOpenOrderInfo,
 }) => {
+  const summaryMessage = useAppStore((state) =>
+    state.consultationWorkflow.messages.find(
+      (message) => message.orderId === order.id && message.audience === 'counselor',
+    ),
+  );
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [inputValue, setInputValue] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
@@ -273,6 +279,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           </div>
         );
       case 'write_summary':
+        const summarySubmitted = summaryMessage?.status === 'submitted' || order.hasSummary;
         return (
           <div className="bg-white border border-[#ECE6DC] rounded-[24px] p-4 shadow-sm w-full max-w-[85%] mx-auto">
             <h4 className="font-bold text-sm text-[#1D1B16] flex items-center justify-between mb-3 pb-3 border-b border-[#FAF8F5]">
@@ -282,25 +289,25 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </div>
                 业务流：结案小结
               </div>
-              {order.hasSummary ? (
+              {summarySubmitted ? (
                 <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold border border-emerald-100">已完成</span>
               ) : (
                 <span className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full font-semibold border border-rose-100">待处理</span>
               )}
             </h4>
             <p className="text-xs text-[#7A756C] mb-4">
-              本次咨询已结束。AI 已为您生成了本次对话的初步结构化小结，请您审查并补充临床意见。
+              {summaryMessage?.description || '本次咨询已结束。AI 已为您生成了本次对话的初步结构化小结，请您审查并补充临床意见。'}
             </p>
             <button
               onClick={() => onWriteSummary(order)}
               className={`w-full py-2.5 rounded-[12px] text-xs font-bold shadow-xs transition active:scale-[0.98] flex items-center justify-center gap-2 ${
-                order.hasSummary
+                summarySubmitted
                   ? 'bg-[#FAF8F5] text-[#49463D] border border-[#E6E0D6] hover:bg-[#E8E2D5]'
                   : 'bg-[#A23F1E] text-white hover:bg-[#883216]'
               }`}
             >
-              <Sparkles className={`w-4 h-4 ${order.hasSummary ? 'text-[#7A756C]' : 'text-amber-200'}`} />
-              {order.hasSummary ? '查看/修改咨询小结' : '撰写 AI 临床结案小结'}
+              <Sparkles className={`w-4 h-4 ${summarySubmitted ? 'text-[#7A756C]' : 'text-amber-200'}`} />
+              {summaryMessage?.actionLabel || (summarySubmitted ? '查看已归档咨询小结' : '打开待确认总结')}
             </button>
           </div>
         );

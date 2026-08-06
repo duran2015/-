@@ -1,12 +1,15 @@
 import { motion } from "motion/react";
 import { useAppStore } from "../../store";
 import { mockCounselors, mockConsultationRecords, mockNotifications } from "../../data";
-import { ChevronRight, Bell, ShieldAlert, Mic, MessageSquare, Video, ArrowRight, PhoneCall } from "lucide-react";
+import { Bell, ShieldAlert, Video, ArrowRight, PhoneCall, Sparkles, CheckCircle2 } from "lucide-react";
 
 export function MessagesTab() {
-  const { pushView, setTab, user, setSelectedConsultationId, setActiveCallSession, setIsCallMinimized, setBookingOrder, setSelectedCounselorOrder, orders, appMode, counselorStatus } = useAppStore();
+  const { pushView, user, setSelectedConsultationId, setActiveCallSession, setIsCallMinimized, setBookingOrder, setSelectedCounselorOrder, orders, appMode, counselorStatus, consultationWorkflow, completeWorkflowTask } = useAppStore();
 
   const isCounselorMode = appMode === "counselor";
+  const sharedSummary = !isCounselorMode
+    ? consultationWorkflow.messages.find((message) => message.audience === "client")
+    : undefined;
 
   const startCallDemo = (type: "voice" | "video") => {
     const demoOrder = {
@@ -121,6 +124,32 @@ export function MessagesTab() {
               </button>
             </div>
           </div>}
+
+          {sharedSummary && (
+            <button
+              onClick={() => {
+                const readTask = consultationWorkflow.tasks.find(
+                  (task) => task.draftId === sharedSummary.draftId && task.taskType === "read_session_recap",
+                );
+                if (readTask) completeWorkflowTask(readTask.id);
+                pushView("counseling-summary");
+              }}
+              className="mb-4 w-full overflow-hidden rounded-[24px] border border-[#D0BCFF] bg-white text-left shadow-sm active:scale-[0.99]"
+            >
+              <div className="bg-[#EADDFF] p-4 text-[#21005D]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-[15px] bg-white/60"><Sparkles size={21} /></div>
+                  <span className="flex items-center gap-1 rounded-full bg-[#C4EED0] px-2.5 py-1 text-[9px] font-black text-[#163723]"><CheckCircle2 size={11} />咨询师已确认</span>
+                </div>
+                <h3 className="mt-4 text-[16px] font-black">{sharedSummary.title}</h3>
+                <p className="mt-1 line-clamp-3 text-[12px] leading-5 opacity-80">{sharedSummary.description}</p>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 text-[12px] font-black text-[#6750A4]">
+                <span>{sharedSummary.actionLabel}</span><ArrowRight size={16} />
+              </div>
+              <div className="border-t border-[#E7E0EC] px-4 py-2 text-[9px] text-[#79747E]">仅含用户可见回顾 · 临床记录与咨询师自评未分享</div>
+            </button>
+          )}
 
           {/* System Notifications Chat */}
           {!isCounselorMode && <button
@@ -250,7 +279,7 @@ export function MessagesTab() {
             );
           })}
           
-          {chats.length === 0 && (!user.hasRisk || isCounselorMode) && (
+          {chats.length === 0 && !sharedSummary && (!user.hasRisk || isCounselorMode) && (
             <div className="pt-10 flex flex-col items-center justify-center text-gray-400">
               <div className="text-4xl mb-3 opacity-50">💭</div>
               <p className="text-[13px]">暂无沟通记录</p>
