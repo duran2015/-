@@ -45,3 +45,46 @@
 ## Concerns
 
 `npm run lint` 仍失败：`src/components/Workbench/WorkbenchTasks.tsx` 有两处对已移除 `counselor_reflection` 类型的引用。该文件不在本 Task brief 指定的可修改范围内，故未改动；后续任务需要同步移除其 descriptor 和任务类型比较，才能恢复 TypeScript 全量检查。
+
+## Fix round 1 — Workbench legacy task cleanup
+
+### 修改摘要
+
+- 移除 `WorkbenchTasks` 中遗留的 `counselor_reflection` descriptor。
+- 将 `isReview` 限定为仅识别 `complete_session_review`。
+- 未实现旅程卡或任何 Task 4 页面改造。
+
+### RED / 根因复现
+
+命令：`npm run lint`
+
+结果：失败（退出码 2）。`tsc --noEmit` 报告 `WorkbenchTasks.tsx` 第 44 行的未知 descriptor 键（TS2353）及第 68 行的无重叠任务类型比较（TS2367）。根因是 `WorkflowTaskType` 已移除 `counselor_reflection`，而工作台仍引用该旧值。
+
+### 验证
+
+命令：
+
+```sh
+npm run lint
+node --import tsx --test src/consultationWorkflow.test.ts
+```
+
+完整结果：
+
+- `npm run lint`：通过（退出码 0，`tsc --noEmit` 无诊断）。
+- `node --import tsx --test src/consultationWorkflow.test.ts`：11/11 通过，0 失败：
+  - ending a session creates only the required counselor summary task
+  - professional reflection does not block summary submission
+  - normalizing stored workflow removes legacy counselor reflection tasks
+  - saving a review keeps settlement locked and does not create a client card
+  - submitting a valid review atomically updates tasks, cards, archive, and settlement
+  - submitting an incomplete review preserves the draft and settlement hold
+  - submitting twice is idempotent
+  - order states seed the matching actor tasks
+  - ending a scheduled session completes the room-entry task
+  - confirming a booking completes confirmation and creates intake and room tasks
+  - mock session evidence is traceable and ready for a review draft
+
+### Concerns
+
+无。此前的 TypeScript 工作台遗留引用已清理。

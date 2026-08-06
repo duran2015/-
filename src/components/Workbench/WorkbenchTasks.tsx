@@ -41,11 +41,6 @@ const descriptors: Partial<Record<WorkflowTaskType, TaskDescriptor>> = {
     desc: 'AI 草稿已生成 · 提交前结算锁定',
     btnText: '复盘',
   },
-  counselor_reflection: {
-    statusText: '待完成专业自评',
-    desc: '与咨询总结联动提交',
-    btnText: '填写',
-  },
 };
 
 export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
@@ -65,7 +60,7 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
         const descriptor = descriptors[task.taskType];
         if (!order || !descriptor) return null;
         const isPrimary = task.taskType === 'enter_session';
-        const isReview = task.taskType === 'complete_session_review' || task.taskType === 'counselor_reflection';
+        const isReview = task.taskType === 'complete_session_review';
         return {
           id: task.id,
           order,
