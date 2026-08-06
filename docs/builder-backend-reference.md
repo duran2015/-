@@ -237,28 +237,38 @@ draft
 ```text
 用户预约
   -> 咨询师确认
-  -> 用户填写前序资料（可跳过）
-  -> 咨询师查阅资料
-  -> 双方进入咨询室
+  -> 咨询师查阅前序资料（用户未填写时跳过）
+  -> 咨询师开始咨询
   -> 会谈结束并固化转录/笔记/AI 洞察快照
-  -> 咨询师确认临床总结、用户回顾和专业自评
+  -> 咨询师确认临床总结和用户回顾
   -> 提交归档并向用户推送回顾卡片
   -> 用户阅读回顾并评价咨询师
   -> 咨询师总结提交后订单进入 T+1 可结算
 ```
+
+咨询师工作台不可按底层待办的创建顺序自行推断可操作项。Builder 应按每个 `order_id`（会谈结束后同时带上 `session_id`）返回固定的序列化旅程，`phase_order` 永远为：
+
+1. `confirm_booking`（确认预约）
+2. `review_intake`（查阅资料）
+3. `enter_session`（开始咨询）
+4. `complete_session_review`（确认总结）
+
+每个 phase 返回 `phase_order`、`task_type`、`task_id`（跳过时可为 `null`）和投影状态 `completed`、`skipped`、`current` 或 `locked`。未完成旅程必须有且只有一个 `current_task_id`；其前的节点只能是 `completed` 或 `skipped`，其后的节点必须为 `locked`。用户没有填写前序资料时，第二阶段固定投影为 `skipped`，不阻塞第三阶段。全部阶段完成时 `current_task_id` 为 `null`。这是服务端的确定性投影契约，客户端只渲染它，不重新解锁或排序。
 
 `workflow_tasks`
 
 - `id`, `task_type`, `actor_role`, `actor_id`, `order_id`, `session_id`, `review_draft_id`
 - `status`: `pending`, `in_progress`, `completed`, `skipped`
 - `blocking_settlement`, `due_at`, `completed_at`, `created_at`, `version`
-- `task_type`: `confirm_booking`, `complete_intake`, `review_intake`, `enter_session`, `complete_session_review`, `counselor_reflection`, `read_session_recap`, `review_counselor`
+- `task_type`: `confirm_booking`, `complete_intake`, `review_intake`, `enter_session`, `complete_session_review`, `read_session_recap`, `review_counselor`
 - 对 `(task_type, actor_id, order_id)` 建唯一索引，事件重放不得制造重复待办。
+
+`complete_intake` 是用户侧资料填写任务，不是咨询师四阶段中的节点；`review_intake` 可在资料缺失时没有实际待办，由旅程投影输出 `skipped`。会谈结束只创建 `complete_session_review` 这一项咨询师待办。
 
 `session_review_drafts`
 
 - `id`, `session_id`, `order_id`, `client_id`, `counselor_id`, `status`, `version`
-- `clinical_summary_encrypted`, `client_summary_json`, `counselor_reflection_encrypted`
+- `clinical_summary_encrypted`, `client_summary_json`
 - `source_snapshot_json`, `created_at`, `updated_at`, `submitted_at`
 - `status`: `ai_generating`, `draft`, `submitted`
 - `source_snapshot_json` 只保存冻结后的来源 ID 和生成版本；原始转录、笔记、洞察仍使用独立表。
@@ -272,7 +282,7 @@ draft
 `session_summary_versions`
 
 - `id`, `review_draft_id`, `version`, `clinical_summary_encrypted`, `client_summary_json`
-- `counselor_reflection_encrypted`, `created_by`, `created_at`, `change_reason`
+- `created_by`, `created_at`, `change_reason`
 - 正式提交后不可覆盖旧版本；更正应创建新版本并记录原因。
 
 `settlement_holds`
@@ -282,11 +292,12 @@ draft
 - 会谈结束创建 `session_review_required`；咨询师总结提交事务成功后释放。
 - 用户评价不是咨询师结算前置条件，不能因用户未评价长期冻结咨询师收入。
 
-`session_review_drafts` 的三个字段必须严格分权：
+`session_review_drafts` 的两个 MVP 内容字段必须严格分权：
 
 - `clinical_summary_encrypted`：咨询师和获授权督导可见；普通用户、财务、运营不可见。
 - `client_summary_json`：提交后可通过用户 IM 和回顾页展示。
-- `counselor_reflection_encrypted`：仅咨询师本人和明确授权的督导可见，不进入用户消息卡片。
+
+专业自评不是当前 MVP 的草稿字段、待办或提交条件。若为兼容历史草稿暂存了同名数据，MVP API 不读取、不校验、不写入也不展示；未来督导/咨询师成长功能可用独立、仅咨询师和获授权督导可见的扩展资源保存，且绝不进入用户消息、总结提交事务或结算门槛。
 
 ### 5.7 评估、风险与危机处理
 
@@ -460,10 +471,11 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 - `POST /sessions/:id/summaries/ai-draft`
 - `PUT /sessions/:id/summaries/:summaryId/approve`
 - `GET /workflow/tasks?actor=me&status=pending`：返回用户或咨询师当前业务待办。
+- `GET /counselor/journeys?status=`：按订单/会谈返回固定四阶段 `phase_order`、节点状态和唯一 `current_task_id` 的服务端投影；客户端不可自行改变顺序或解锁节点。
 - `GET /sessions/:id/review`：一次返回草稿、来源快照、权限裁剪后的字段和结算门禁。
-- `PUT /sessions/:id/review/draft`：保存临床总结、用户回顾和专业自评；使用 `If-Match` 处理版本冲突。
+- `PUT /sessions/:id/review/draft`：保存临床总结和用户回顾；使用 `If-Match` 处理版本冲突。
 - `POST /sessions/:id/review/submit`：正式提交并归档，必须携带 `Idempotency-Key`。
-- `GET /sessions/:id/recap`：用户读取已分享的 `client_summary_json`，绝不返回临床记录和咨询师自评。
+- `GET /sessions/:id/recap`：用户读取已分享的 `client_summary_json`，绝不返回临床记录。
 - `POST /workflow/tasks/:id/complete`：只允许完成属于当前操作者且符合前置状态的任务。
 
 ### 评估、档案与风险
@@ -493,9 +505,9 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 
 `POST /sessions/:id/review/submit` 不能拆成多个由前端串行调用的接口。服务端应在同一数据库事务中：
 
-1. 校验调用者是本次会谈咨询师，草稿版本与 `If-Match` 一致，三个必填分区完整。
+1. 校验调用者是本次会谈咨询师，草稿版本与 `If-Match` 一致，临床总结和用户回顾两个必填分区完整。
 2. 把草稿标记为 `submitted`，写入不可变 `session_summary_versions`。
-3. 完成 `complete_session_review` 与 `counselor_reflection` 待办。
+3. 完成唯一的 `complete_session_review` 咨询师待办。
 4. 将咨询师 IM 中“待确认总结”卡片更新为“已归档”。
 5. 创建用户 `summary_card` 消息，以及 `read_session_recap`、`review_counselor` 待办。
 6. 释放 `session_review_required` 结算冻结，写入 `ledger_entries` 或 T+1 结算候选。
@@ -584,7 +596,7 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 ### 阶段 4.1：业务待办、复盘与结算门禁
 
 1. 先用 `workflow_tasks` 替换 Zustand 中由订单状态推导的待办。
-2. 接入会谈复盘查询与版本化草稿保存，确保临床记录、用户回顾、咨询师自评分字段授权。
+2. 接入会谈总结查询与版本化草稿保存，确保临床记录和用户回顾分字段授权；专业自评留待未来督导/成长扩展实现。
 3. 最后接入原子提交事务，让 IM 双端卡片、用户回顾、评价待办和结算解锁由同一领域事件驱动。
 
 ### 阶段 5：评估、档案和风险
@@ -610,7 +622,8 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 - [ ] 会谈结束会生成复盘草稿、咨询师待办、IM 待确认卡片和结算冻结。
 - [ ] 复盘提交是幂等原子事务，同时归档、发卡片、建用户待办并释放结算。
 - [ ] 每条 AI 洞察可追溯到转录、笔记、前序资料或历史记录。
-- [ ] 用户回顾接口永远不返回临床总结和咨询师专业自评。
+- [ ] 用户回顾接口永远不返回临床总结；未来专业自评扩展也不向用户暴露。
+- [ ] 咨询师工作台旅程由服务端按固定四阶段返回，含稳定 `phase_order`、唯一 `current_task_id` 和 `completed`/`skipped`/`current`/`locked` 状态。
 - [ ] 风险事件、档案访问、退款和提现写审计日志。
 - [ ] 列表接口支持分页、筛选和稳定排序。
 - [ ] 实时事件支持鉴权、去重和断线补拉。

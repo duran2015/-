@@ -39,7 +39,7 @@
 
 ### 4.3 双层内容权限
 
-- 内部层：转录证据、AI 洞察、风险复核、咨询师笔记、临床总结和会谈自评，仅咨询师可见。
+- 内部层：转录证据、AI 洞察、风险复核、咨询师笔记和临床总结，仅咨询师可见。
 - 用户层：经咨询师确认的咨询回顾、行动建议和下次计划，通过用户 IM 卡片发送。
 
 ### 4.4 AI 只生成可追溯草稿
@@ -55,11 +55,11 @@
 | 前序材料 | 填写或跳过 | 材料提交后查阅 | 创建可跳过任务；逾期不阻塞进入咨询 | 否 |
 | 咨询准备 | 到时进入咨询室 | 查阅材料并进入咨询室 | 双方提醒、创建会话 | 否 |
 | 咨询进行中 | 参与会谈 | 记录笔记、查看 Mock 转录/AI 重点、上报风险 | 保存会中草稿 | 否 |
-| 会话结束 | 等待咨询回顾 | 审核总结并完成会谈复盘自评 | 创建两个关联子任务和 IM 卡片；结算锁定 | 是 |
+| 会话结束 | 等待咨询回顾 | 审核并提交咨询总结 | 创建唯一的总结待办和 IM 卡片；结算锁定 | 是 |
 | 总结分享 | 查看回顾和行动建议 | 确认用户可见版 | 归档正式总结、推送用户卡片、进入 T+1 | 否 |
 | 用户评价 | 评价咨询师 | 查看评价结果 | 归档用户评价；不反向阻塞结算 | 否 |
 
-前序材料和用户评价属于业务待办但不是结算门槛。咨询师“会谈复盘自评”是复盘工作台的必填部分，不使用“评价用户”这一表述。
+前序材料和用户评价属于业务待办但不是结算门槛。资料未填写时，咨询师的“查阅资料”阶段应标为跳过，并继续开放“开始咨询”。当前 MVP 仅以咨询师提交咨询总结作为结算门槛。
 
 ## 6. 状态模型
 
@@ -107,11 +107,23 @@ type WorkflowTaskType =
   | "enter_session"
   | "complete_session_review"
   | "read_session_recap"
-  | "review_counselor"
-  | "counselor_reflection";
+  | "review_counselor";
 ```
 
 状态迁移由纯函数执行，组件不能直接分别修改订单、待办、IM 和结算状态。
+
+### 6.5 咨询师工作台旅程投影
+
+Builder 为每个 `orderId`（会谈结束后关联同一 `sessionId`）返回固定四阶段，而不是把同时存在的底层待办直接暴露给客户端：
+
+| `phase_order` | `task_type` | 标签 |
+| --- | --- | --- |
+| 1 | `confirm_booking` | 确认预约 |
+| 2 | `review_intake` | 查阅资料 |
+| 3 | `enter_session` | 开始咨询 |
+| 4 | `complete_session_review` | 确认总结 |
+
+每个阶段包含 `phase_order`、`task_id`（跳过时可为 `null`）和 `status: completed | skipped | current | locked`；旅程还返回唯一的 `current_task_id`。未完成旅程必须恰有一个 `current` 节点，之前的节点只能是 `completed` 或 `skipped`，之后的节点必须为 `locked`。未填写前序资料时第二阶段为 `skipped`，第三阶段仍可成为唯一 `current`。全部完成后 `current_task_id` 为 `null`。服务端负责此确定性投影，客户端只渲染状态和唯一当前操作。
 
 ## 7. Mock 数据模型
 
@@ -176,15 +188,12 @@ interface SessionReviewDraft {
     actionItems: string[];
     nextPlan: string;
   };
-  counselorReflection: {
-    allianceQuality: "needs_attention" | "stable" | "strong" | null;
-    goalProgress: "limited" | "partial" | "clear" | null;
-    reflection: string;
-  };
   updatedAt: string;
   submittedAt?: string;
 }
 ```
+
+专业自评是未来督导/咨询师成长功能的扩展字段。当前 MVP 即使为旧草稿兼容而保留该字段，也不在页面展示、不参与校验、不生成待办、不随总结提交，也不影响结算；未来应以独立、受督导授权的资源/API 建模，而非回填为当前总结的必填字段。
 
 ### 7.4 业务待办
 
@@ -237,11 +246,10 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 
 - Material 3 顶部应用栏：返回、标题、来访者/次数、草稿状态。
 - 结算状态横幅：解释当前为何锁定以及提交后的 T+1 规则。
-- 四个内容区：AI 证据、临床总结、用户分享、会谈自评。
+- 三个内容区：AI 证据、临床总结、用户分享。
 - AI 证据区：数据来源状态、重点标签、带时间戳的转录引用、会中笔记和历史连续性。
 - 临床总结区：核心议题、身心状态、干预方式、观察、风险复核、下次计划。
 - 用户分享区：仅用户可见的回顾、行动建议、下次计划及发送预览。
-- 会谈自评区：关系质量、目标进展和专业反思。
 - Material 3 底部操作栏：`保存草稿并返回`、`正式提交总结`。
 
 移动端采用单列和横向滚动分段按钮；宽屏采用左侧证据、右侧编辑的双栏布局。所有编辑自动写入 Mock store，页面退出前再执行一次显式保存。
@@ -252,7 +260,6 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 
 - 核心议题、干预方式、咨询师观察、风险复核和下次计划完整。
 - 用户可见回顾、至少一条行动建议和下次计划完整。
-- 会谈关系质量、目标进展和专业反思完整。
 - 咨询师确认用户可见内容不包含私密笔记、诊断性标签或风险内部判断。
 
 确认对话框展示两项结果：“用户可见版将发送”和“提交后进入 T+1 结算”。提交后仍可查看；未来 Builder 需要通过新版本修订而不是覆盖历史版本。
@@ -281,7 +288,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 必须通过一个原子状态迁移完成：
 
 1. 草稿转为 `submitted` 并生成正式版本。
-2. `complete_session_review` 和 `counselor_reflection` 任务转为完成。
+2. 唯一的 `complete_session_review` 咨询师任务转为完成。
 3. 咨询师 IM 卡片原位更新为“总结已提交”。
 4. 用户 IM 新增仅包含 `clientSummary` 的回顾卡片。
 5. 来访者档案和咨询记录新增正式记录。
@@ -302,7 +309,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 
 - 正式提交后推送“本次咨询回顾”，包含回顾、行动建议和下次计划。
 - 卡片提供“查看完整回顾”和“评价咨询师”。
-- 不展示临床总结、完整转录、私密笔记、风险判断和咨询师会谈自评。
+- 不展示临床总结、完整转录、私密笔记、风险判断或任何未来督导成长扩展内容。
 
 ### 10.3 工作台待办
 
@@ -343,7 +350,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 ## 13. 隐私与权限
 
 - 咨询师只能访问与自己存在有效服务关系的会话。
-- 转录、私密笔记、临床总结、风险复核和会谈自评只能由咨询师及获授权督导读取。
+- 转录、私密笔记、临床总结和风险复核只能由咨询师及获授权督导读取。
 - 用户只读取自己会话的 `clientSummary`。
 - AI 草稿和正式提交都保留来源、编辑人、提交人和版本审计。
 - IM `summary_card` 根据 `audience` 生成内容，不能由前端隐藏字段来替代后端字段级授权。
@@ -354,8 +361,9 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 
 ### 14.1 新增或细化表
 
-- `workflow_tasks`：actor、task_type、status、blocking_settlement、entity refs、due_at。
-- `session_review_drafts`：session、status、version、source_snapshot_json、四个内容分区、updated_at、submitted_at。
+- `workflow_tasks`：actor、task_type、status、blocking_settlement、entity refs、due_at；会谈结束仅创建 `complete_session_review` 这一项咨询师任务。
+- 咨询师旅程投影：每笔 order/session 返回固定四阶段 `phase_order`、节点的 `completed`/`skipped`/`current`/`locked` 状态，以及唯一 `current_task_id`。
+- `session_review_drafts`：session、status、version、source_snapshot_json、临床总结和用户回顾两个 MVP 内容分区、updated_at、submitted_at。
 - `session_summary_versions`：正式版本、提交人、用户可见内容、内部加密内容、审计信息。
 - `settlement_holds`：order、reason=`summary_required`、status、released_at、release_event_id。
 - `messages.metadata_json`：summary card 的 sessionId、draftId、audience、status、action。
@@ -368,6 +376,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 - `PUT /sessions/:id/review-draft`
 - `POST /sessions/:id/review-draft/submit`
 - `GET /workflow-tasks?actorRole=&status=`
+- `GET /counselor/journeys?status=`
 - `POST /workflow-tasks/:id/skip`
 - `GET /threads/:id/messages`
 - `POST /orders/:id/reviews`
@@ -382,7 +391,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 - 会话结束创建草稿、咨询师待办、IM 卡片和结算锁。
 - 保存草稿不完成任务、不发送用户卡片、不解锁结算。
 - 正式提交一次性完成所有下游联动。
-- 缺少必填字段时拒绝提交并保持原状态。
+- 缺少临床总结或用户回顾必填字段时拒绝提交并保持原状态。
 - 重复提交不重复创建消息、任务或结算事件。
 - 咨询师视图能读取内部内容，用户视图只能读取 `clientSummary`。
 
@@ -394,7 +403,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 4. 从两个入口分别恢复，内容和完成度一致。
 5. 正式提交后，待办消失、咨询师 IM 卡片更新、咨询记录新增、收入状态进入 T+1。
 6. 切换用户端，用户 IM 只出现可见版回顾，并生成评价待办。
-7. 完成用户评价，并确认会谈复盘自评已随正式总结归档且两者都不改变结算状态。
+7. 完成用户评价，并确认其不改变已由总结提交解锁的结算状态。
 8. 浏览器控制台无 React、DOM、类型或运行时错误。
 
 ## 16. 实施边界
