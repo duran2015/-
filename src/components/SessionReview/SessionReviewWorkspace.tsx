@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
-  Bot,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -21,7 +20,7 @@ import { useAppStore } from "../../client-app/store";
 import { getReviewProgress } from "../../sessionReviewPresentation";
 import type { SessionReviewDraft, SessionInsight } from "../../types";
 
-type ReviewTab = "evidence" | "clinical" | "client" | "reflection";
+type ReviewTab = "evidence" | "clinical" | "client";
 
 interface SessionReviewWorkspaceProps {
   draftId: string;
@@ -33,7 +32,6 @@ const tabItems: Array<{ id: ReviewTab; label: string; shortLabel: string }> = [
   { id: "evidence", label: "AI 证据", shortLabel: "证据" },
   { id: "clinical", label: "临床总结", shortLabel: "临床" },
   { id: "client", label: "用户回顾", shortLabel: "分享" },
-  { id: "reflection", label: "咨询师复盘", shortLabel: "复盘" },
 ];
 
 const fieldClass =
@@ -152,7 +150,7 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
       <div className="fixed inset-0 z-[300] grid place-items-center bg-[#FFFBFE] p-6">
         <div className="text-center">
           <AlertCircle className="mx-auto text-[#BA1A1A]" />
-          <p className="mt-3 text-sm font-bold">未找到本次咨询复盘</p>
+          <p className="mt-3 text-sm font-bold">未找到本次咨询总结</p>
           <button onClick={onClose} className="mt-4 rounded-full bg-[#6750A4] px-5 py-2.5 text-sm font-bold text-white">
             返回工作台
           </button>
@@ -171,18 +169,10 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
     setDraft((current) =>
       current ? { ...current, clientSummary: { ...current.clientSummary, ...patch } } : current,
     );
-  const updateReflection = (patch: Partial<SessionReviewDraft["counselorReflection"]>) =>
-    setDraft((current) =>
-      current
-        ? { ...current, counselorReflection: { ...current.counselorReflection, ...patch } }
-        : current,
-    );
-
   const handleSave = () => {
     saveSessionReview(draft.id, {
       clinicalSummary: draft.clinicalSummary,
       clientSummary: draft.clientSummary,
-      counselorReflection: draft.counselorReflection,
     });
     setFeedback("草稿已保存，结算将在正式提交后解锁");
     window.setTimeout(() => setFeedback(""), 2200);
@@ -192,7 +182,6 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
     const result = submitSessionReview(draft.id, {
       clinicalSummary: draft.clinicalSummary,
       clientSummary: draft.clientSummary,
-      counselorReflection: draft.counselorReflection,
     });
     if (!result.ok) {
       setFeedback(result.errors.join("；"));
@@ -214,7 +203,7 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-[18px] font-black text-[#1D1B20]">会谈复盘</h1>
+                <h1 className="truncate text-[18px] font-black text-[#1D1B20]">咨询总结</h1>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${isSubmitted ? "bg-[#C4EED0] text-[#163723]" : "bg-[#EADDFF] text-[#4F378B]"}`}>
                   {isSubmitted ? "已提交" : "AI 草稿"}
                 </span>
@@ -225,7 +214,7 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
             </div>
             <div className="text-right">
               <div className="text-[12px] font-black text-[#6750A4]">{progress?.percentage}%</div>
-              <div className="text-[9px] text-[#79747E]">{progress?.completed}/3 已完整</div>
+              <div className="text-[9px] text-[#79747E]">{progress?.completed}/2 已完整</div>
             </div>
           </div>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#E8DEF8]">
@@ -245,7 +234,7 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
           </div>
         </div>
 
-        <nav className="mx-4 mt-3 grid shrink-0 grid-cols-4 rounded-full bg-[#F3EDF7] p-1">
+        <nav className="mx-4 mt-3 grid shrink-0 grid-cols-3 rounded-full bg-[#F3EDF7] p-1">
           {tabItems.map((tab) => (
             <button
               key={tab.id}
@@ -335,35 +324,6 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
             </div>
           )}
 
-          {activeTab === "reflection" && (
-            <div className="space-y-5">
-              <section className="rounded-[22px] bg-[#F3EDF7] p-4">
-                <div className="flex items-center gap-2 text-[#4F378B]"><Bot size={18} /><h2 className="text-[14px] font-black">专业复盘与自评</h2></div>
-                <p className="mt-2 text-[11px] leading-5 text-[#6750A4]">用于持续提升服务质量，不向用户展示，也不影响本次咨询评价结果。</p>
-              </section>
-              <label className="block">
-                <span className="text-[12px] font-bold text-[#49454F]">咨询关系质量</span>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {(["needs_attention", "stable", "strong"] as const).map((value) => (
-                    <button key={value} disabled={isSubmitted} onClick={() => updateReflection({ allianceQuality: value })} className={`rounded-[16px] border px-2 py-3 text-[11px] font-black ${draft.counselorReflection.allianceQuality === value ? "border-[#6750A4] bg-[#EADDFF] text-[#4F378B]" : "border-[#CAC4D0] bg-white text-[#49454F]"}`}>
-                      {{ needs_attention: "需关注", stable: "稳定", strong: "良好" }[value]}
-                    </button>
-                  ))}
-                </div>
-              </label>
-              <label className="block">
-                <span className="text-[12px] font-bold text-[#49454F]">目标进展</span>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {(["limited", "partial", "clear"] as const).map((value) => (
-                    <button key={value} disabled={isSubmitted} onClick={() => updateReflection({ goalProgress: value })} className={`rounded-[16px] border px-2 py-3 text-[11px] font-black ${draft.counselorReflection.goalProgress === value ? "border-[#6750A4] bg-[#EADDFF] text-[#4F378B]" : "border-[#CAC4D0] bg-white text-[#49454F]"}`}>
-                      {{ limited: "有限", partial: "部分", clear: "明确" }[value]}
-                    </button>
-                  ))}
-                </div>
-              </label>
-              <Field label="复盘记录" value={draft.counselorReflection.reflection} onChange={(value) => updateReflection({ reflection: value })} disabled={isSubmitted} rows={6} />
-            </div>
-          )}
         </main>
 
         <footer className="absolute inset-x-0 bottom-0 border-t border-[#E7E0EC] bg-[#FFFBFE]/95 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">

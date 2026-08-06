@@ -105,7 +105,7 @@ const buildCounselorMessage = (order: Order, draft: SessionReviewDraft, timestam
   status: "pending_review",
   title: "本次咨询总结待确认",
   description: `${order.clientName} 的 AI 草稿已准备，请完成复核后提交。`,
-  actionLabel: "打开复盘",
+  actionLabel: "确认总结",
   createdAt: timestamp,
   updatedAt: timestamp,
 });
@@ -213,7 +213,7 @@ export function submitReviewDraft(
   timestamp: string,
 ): ReviewSubmissionResult {
   const draft = state.reviewDrafts.find((item) => item.id === draftId);
-  if (!draft) return { ok: false, state, errors: ["未找到咨询复盘草稿"] };
+  if (!draft) return { ok: false, state, errors: ["未找到咨询总结草稿"] };
   if (draft.status === "submitted") return { ok: true, state, errors: [] };
 
   const errors = validateReviewDraft(draft);

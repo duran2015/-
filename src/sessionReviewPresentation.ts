@@ -4,13 +4,12 @@ export type ReviewProgress = {
   completed: number;
   total: number;
   percentage: number;
-  missingSections: Array<"clinical" | "client" | "reflection">;
+  missingSections: Array<"clinical" | "client">;
 };
 
 export function getReviewProgress(draft: SessionReviewDraft): ReviewProgress {
   const clinical = draft.clinicalSummary;
   const client = draft.clientSummary;
-  const reflection = draft.counselorReflection;
   const sections = {
     clinical:
       Boolean(clinical.mainConcern.trim()) &&
@@ -23,10 +22,6 @@ export function getReviewProgress(draft: SessionReviewDraft): ReviewProgress {
       Boolean(client.recap.trim()) &&
       client.actionItems.length > 0 &&
       Boolean(client.nextPlan.trim()),
-    reflection:
-      Boolean(reflection.allianceQuality) &&
-      Boolean(reflection.goalProgress) &&
-      Boolean(reflection.reflection.trim()),
   };
   const missingSections = (Object.entries(sections) as Array<[keyof typeof sections, boolean]>)
     .filter(([, complete]) => !complete)
@@ -34,8 +29,8 @@ export function getReviewProgress(draft: SessionReviewDraft): ReviewProgress {
   const completed = Object.values(sections).filter(Boolean).length;
   return {
     completed,
-    total: 3,
-    percentage: Math.round((completed / 3) * 100),
+    total: 2,
+    percentage: Math.round((completed / 2) * 100),
     missingSections,
   };
 }

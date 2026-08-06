@@ -33,17 +33,17 @@ const draft: SessionReviewDraft = {
     nextPlan: "下次复盘",
   },
   counselorReflection: {
-    allianceQuality: "stable",
-    goalProgress: "partial",
-    reflection: "增加情绪体验停留",
+    allianceQuality: null,
+    goalProgress: null,
+    reflection: "",
   },
   updatedAt: "2026-08-06T10:00:00.000Z",
 };
 
-test("review progress reports all required sections without counting evidence", () => {
+test("review progress does not require legacy counselor reflection", () => {
   assert.deepEqual(getReviewProgress(draft), {
-    completed: 3,
-    total: 3,
+    completed: 2,
+    total: 2,
     percentage: 100,
     missingSections: [],
   });
