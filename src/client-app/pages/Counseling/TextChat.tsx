@@ -5,7 +5,7 @@ import { useAppStore } from "../../store";
 import { mockCounselors, mockConsultationRecords } from "../../data";
 
 export function TextChat() {
-    const { popView, pushView, bookingOrder, selectedCounselorId, setSelectedCounselorId, selectedConsultationId, appMode, selectedCounselorOrder, setActiveCallSession, setIsSessionCounselorDetail, counselorStatus, bookingSummary } =
+    const { popView, pushView, bookingOrder, selectedCounselorId, setSelectedCounselorId, selectedConsultationId, appMode, selectedCounselorOrder, setActiveCallSession, setIsSessionCounselorDetail, counselorStatus, bookingSummary, consultationWorkflow, completeWorkflowTask } =
       useAppStore();
 
   const isCounselorMode = appMode === "counselor";
@@ -13,6 +13,10 @@ export function TextChat() {
   // Get current order context
   const order = isCounselorMode ? selectedCounselorOrder : bookingOrder;
   const isVoiceOrVideo = order?.type === "voice" || order?.type === "video";
+  const clientWorkflowMessage = !isCounselorMode
+    ? consultationWorkflow.messages.find((message) => message.audience === "client" && message.orderId === order?.id)
+      || consultationWorkflow.messages.find((message) => message.audience === "client")
+    : undefined;
 
   const record = mockConsultationRecords.find(r => r.id === selectedConsultationId);
   const targetCounselorId = record?.counselorId || order?.counselorId || selectedCounselorId;
@@ -653,6 +657,36 @@ export function TextChat() {
             </div>
           );
         })}
+        {clientWorkflowMessage && (
+          <div className="flex flex-col items-start">
+            <div className="flex max-w-[88%] items-end gap-2">
+              <img src={otherParty.avatar} alt="" className="mb-1 h-6 w-6 shrink-0 rounded-full object-cover" />
+              <button
+                onClick={() => {
+                  const task = consultationWorkflow.tasks.find(
+                    (item) => item.draftId === clientWorkflowMessage.draftId && item.taskType === "read_session_recap",
+                  );
+                  if (task) completeWorkflowTask(task.id);
+                  pushView("counseling-summary");
+                }}
+                className="w-64 overflow-hidden rounded-[20px] border border-[#D0BCFF] bg-white text-left shadow-sm active:scale-[0.99]"
+              >
+                <div className="bg-[#EADDFF] p-4 text-[#21005D]">
+                  <div className="flex items-center justify-between">
+                    <div className="grid h-9 w-9 place-items-center rounded-[13px] bg-white/60"><Sparkles size={18} /></div>
+                    <span className="rounded-full bg-[#C4EED0] px-2 py-1 text-[9px] font-black text-[#163723]">咨询师已确认</span>
+                  </div>
+                  <h3 className="mt-3 text-[15px] font-black">{clientWorkflowMessage.title}</h3>
+                  <p className="mt-1 line-clamp-3 text-[11px] leading-5 opacity-80">{clientWorkflowMessage.description}</p>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 text-[11px] font-black text-[#6750A4]">
+                  {clientWorkflowMessage.actionLabel}<ArrowRight size={15} />
+                </div>
+              </button>
+            </div>
+            <div className="ml-8 mt-1 text-[9px] text-[#A8A398]">仅含用户可见回顾 · 内部记录未分享</div>
+          </div>
+        )}
       </div>
 
       {/* Input Area */}

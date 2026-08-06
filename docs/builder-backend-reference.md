@@ -36,6 +36,9 @@
 | `src/components/Growth/*` | 选题、内容、发布计划、私域线索 | 内容资产、发布计划、线索、转化统计接口 |
 | `src/components/Schedule/ScheduleTab.tsx` | 日历和档期交互状态 | 可用时间规则、时段、预约接口 |
 | `src/components/Profile/IncomeView.tsx` | 银行卡、账单、提现 | 财务台账、结算、收款账户、提现接口 |
+| `src/consultationWorkflow.ts` | 预约到评价的演示状态机、待办、IM 卡片、总结提交和结算门禁 | 后端领域服务与事务规则的直接参考 |
+| `src/consultationWorkflowMock.ts` | 实时转录、咨询师随手记、AI 洞察和 AI 总结草稿 | 音视频转录、笔记、洞察和总结生成服务 |
+| `src/components/SessionReview/SessionReviewWorkspace.tsx` | 咨询师复盘工作台，区分内部记录和用户可见回顾 | 复盘查询、草稿保存、提交归档和消息推送接口 |
 
 组件内部的展开/关闭、当前 Tab、输入框内容、动画阶段等纯 UI 状态无需进入数据库。
 
@@ -227,6 +230,64 @@ draft
 - `ai_draft_json`, `approved_by`, `approved_at`, `created_at`
 - AI 输出先作为草稿，由咨询师确认后才进入正式记录。
 
+#### 5.6.1 咨询业务闭环与复盘版本
+
+当前前端已按下面的业务链路做 Mock 状态联动，Builder 应保留相同语义：
+
+```text
+用户预约
+  -> 咨询师确认
+  -> 用户填写前序资料（可跳过）
+  -> 咨询师查阅资料
+  -> 双方进入咨询室
+  -> 会谈结束并固化转录/笔记/AI 洞察快照
+  -> 咨询师确认临床总结、用户回顾和专业自评
+  -> 提交归档并向用户推送回顾卡片
+  -> 用户阅读回顾并评价咨询师
+  -> 咨询师总结提交后订单进入 T+1 可结算
+```
+
+`workflow_tasks`
+
+- `id`, `task_type`, `actor_role`, `actor_id`, `order_id`, `session_id`, `review_draft_id`
+- `status`: `pending`, `in_progress`, `completed`, `skipped`
+- `blocking_settlement`, `due_at`, `completed_at`, `created_at`, `version`
+- `task_type`: `confirm_booking`, `complete_intake`, `review_intake`, `enter_session`, `complete_session_review`, `counselor_reflection`, `read_session_recap`, `review_counselor`
+- 对 `(task_type, actor_id, order_id)` 建唯一索引，事件重放不得制造重复待办。
+
+`session_review_drafts`
+
+- `id`, `session_id`, `order_id`, `client_id`, `counselor_id`, `status`, `version`
+- `clinical_summary_encrypted`, `client_summary_json`, `counselor_reflection_encrypted`
+- `source_snapshot_json`, `created_at`, `updated_at`, `submitted_at`
+- `status`: `ai_generating`, `draft`, `submitted`
+- `source_snapshot_json` 只保存冻结后的来源 ID 和生成版本；原始转录、笔记、洞察仍使用独立表。
+
+`session_insights`
+
+- `id`, `session_id`, `category`, `title`, `detail_encrypted`, `source_type`
+- `source_ids`, `confidence`, `model`, `prompt_version`, `created_at`
+- 每条 AI 洞察必须指向转录片段、笔记、前序资料或历史记录，前端才能展示“查看来源”。
+
+`session_summary_versions`
+
+- `id`, `review_draft_id`, `version`, `clinical_summary_encrypted`, `client_summary_json`
+- `counselor_reflection_encrypted`, `created_by`, `created_at`, `change_reason`
+- 正式提交后不可覆盖旧版本；更正应创建新版本并记录原因。
+
+`settlement_holds`
+
+- `id`, `order_id`, `hold_type`, `status`, `released_at`, `released_by_event_id`, `created_at`
+- `hold_type`: `session_review_required`, `risk_review_required`, `refund_pending`
+- 会谈结束创建 `session_review_required`；咨询师总结提交事务成功后释放。
+- 用户评价不是咨询师结算前置条件，不能因用户未评价长期冻结咨询师收入。
+
+`session_review_drafts` 的三个字段必须严格分权：
+
+- `clinical_summary_encrypted`：咨询师和获授权督导可见；普通用户、财务、运营不可见。
+- `client_summary_json`：提交后可通过用户 IM 和回顾页展示。
+- `counselor_reflection_encrypted`：仅咨询师本人和明确授权的督导可见，不进入用户消息卡片。
+
 ### 5.7 评估、风险与危机处理
 
 `assessment_definitions`
@@ -398,6 +459,12 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 - `PUT /sessions/:id/notes`
 - `POST /sessions/:id/summaries/ai-draft`
 - `PUT /sessions/:id/summaries/:summaryId/approve`
+- `GET /workflow/tasks?actor=me&status=pending`：返回用户或咨询师当前业务待办。
+- `GET /sessions/:id/review`：一次返回草稿、来源快照、权限裁剪后的字段和结算门禁。
+- `PUT /sessions/:id/review/draft`：保存临床总结、用户回顾和专业自评；使用 `If-Match` 处理版本冲突。
+- `POST /sessions/:id/review/submit`：正式提交并归档，必须携带 `Idempotency-Key`。
+- `GET /sessions/:id/recap`：用户读取已分享的 `client_summary_json`，绝不返回临床记录和咨询师自评。
+- `POST /workflow/tasks/:id/complete`：只允许完成属于当前操作者且符合前置状态的任务。
 
 ### 评估、档案与风险
 
@@ -422,6 +489,20 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 - `POST /counselor/payout-accounts`
 - `POST /counselor/withdrawals`
 
+### 复盘提交事务边界
+
+`POST /sessions/:id/review/submit` 不能拆成多个由前端串行调用的接口。服务端应在同一数据库事务中：
+
+1. 校验调用者是本次会谈咨询师，草稿版本与 `If-Match` 一致，三个必填分区完整。
+2. 把草稿标记为 `submitted`，写入不可变 `session_summary_versions`。
+3. 完成 `complete_session_review` 与 `counselor_reflection` 待办。
+4. 将咨询师 IM 中“待确认总结”卡片更新为“已归档”。
+5. 创建用户 `summary_card` 消息，以及 `read_session_recap`、`review_counselor` 待办。
+6. 释放 `session_review_required` 结算冻结，写入 `ledger_entries` 或 T+1 结算候选。
+7. 写入 `outbox_events`，事务提交后再异步推送 WebSocket/通知。
+
+相同 `Idempotency-Key` 重试必须返回第一次提交结果，不能重复创建用户消息、待办、归档版本或财务记录。
+
 ## 7. 实时通信建议
 
 使用 WebSocket 或托管实时服务，鉴权后按用户订阅，不允许客户端任意指定他人频道。
@@ -432,6 +513,7 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 | `thread:{threadId}` | `message.created`, `message.read`, `typing.changed` |
 | `session:{sessionId}` | `participant.joined`, `session.started`, `session.ended`, `risk.alerted` |
 | `counselor:{counselorId}` | `booking.created`, `booking.cancelled`, `payout.updated` |
+| `workflow:{userId}` | `task.created`, `task.completed`, `review.submitted`, `settlement.unblocked` |
 
 每个事件包含 `eventId`、`type`、`occurredAt`、`resourceId`、`version`，客户端按 `eventId` 去重并在断线后通过 REST 补拉。
 
@@ -497,6 +579,13 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 1. 订单详情返回 thread/session 标识。
 2. 替换 `mockConsultationRecords` 和 TextChat 的本地自动回复。
 3. 接入消息历史、实时消息、已读回执和会话令牌。
+4. 接入 `session_transcripts`、`session_notes`、`session_insights`，会谈结束时固化可追溯快照。
+
+### 阶段 4.1：业务待办、复盘与结算门禁
+
+1. 先用 `workflow_tasks` 替换 Zustand 中由订单状态推导的待办。
+2. 接入会谈复盘查询与版本化草稿保存，确保临床记录、用户回顾、咨询师自评分字段授权。
+3. 最后接入原子提交事务，让 IM 双端卡片、用户回顾、评价待办和结算解锁由同一领域事件驱动。
 
 ### 阶段 5：评估、档案和风险
 
@@ -518,6 +607,10 @@ AI 请求应记录模型版本、提示词模板版本、调用耗时、Token/�
 - [ ] 下单占位和支付回调具备事务与幂等性。
 - [ ] 敏感心理数据、联系电话、证件和收款账号加密。
 - [ ] 咨询师笔记与用户可见小结分离。
+- [ ] 会谈结束会生成复盘草稿、咨询师待办、IM 待确认卡片和结算冻结。
+- [ ] 复盘提交是幂等原子事务，同时归档、发卡片、建用户待办并释放结算。
+- [ ] 每条 AI 洞察可追溯到转录、笔记、前序资料或历史记录。
+- [ ] 用户回顾接口永远不返回临床总结和咨询师专业自评。
 - [ ] 风险事件、档案访问、退款和提现写审计日志。
 - [ ] 列表接口支持分页、筛选和稳定排序。
 - [ ] 实时事件支持鉴权、去重和断线补拉。

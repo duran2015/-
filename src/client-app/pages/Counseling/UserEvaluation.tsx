@@ -6,7 +6,7 @@ import { mockCounselors } from "../../data";
 import { MissingDataPage } from "../../components/EmptyState";
 
 export function UserEvaluation() {
-  const { popView, bookingOrder, updateOrder, pushView, selectedCounselorId } = useAppStore();
+  const { popView, bookingOrder, updateOrder, pushView, selectedCounselorId, consultationWorkflow, completeWorkflowTask } = useAppStore();
   const [rating, setRating] = useState(5);
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState("");
@@ -97,9 +97,14 @@ export function UserEvaluation() {
       return;
     }
     updateOrder(bookingOrder.id, { isEvaluated: true });
+    const evaluationTask = consultationWorkflow.tasks.find(
+      (task) => task.taskType === "review_counselor" && task.orderId === bookingOrder.id && task.status !== "completed",
+    ) || consultationWorkflow.tasks.find(
+      (task) => task.taskType === "review_counselor" && task.status !== "completed",
+    );
+    if (evaluationTask) completeWorkflowTask(evaluationTask.id);
     alert("评价提交成功，感谢您的反馈！");
     setSubmitted(true);
-    popView();
   };
 
   return (

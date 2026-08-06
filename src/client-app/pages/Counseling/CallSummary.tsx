@@ -14,11 +14,15 @@ import {
 import { mockCounselors } from "../../data";
 
 export function CallSummary() {
-  const { resetToView, popView, bookingOrder, selectedCounselorOrder, selectedCounselorId } = useAppStore();
+  const { resetToView, popView, bookingOrder, selectedCounselorOrder, selectedCounselorId, consultationWorkflow } = useAppStore();
   
   // 区分是咨询师端还是用户端
   const isCounselorView = !!selectedCounselorOrder;
   const order = isCounselorView ? selectedCounselorOrder : bookingOrder;
+  const sharedReview = consultationWorkflow.messages.find(
+    (message) => message.audience === "client" && message.orderId === order?.id,
+  ) || consultationWorkflow.messages.find((message) => message.audience === "client");
+  const clientSummary = sharedReview?.clientSummary;
 
   const counselor =
     mockCounselors.find(
@@ -37,10 +41,10 @@ export function CallSummary() {
   const [addedToPlan, setAddedToPlan] = useState(false);
 
   // Mock Tasks generated from session
-  const tasks = [
-    { text: "睡前尝试 5 分钟的躯体扫描静观", done: false },
-    { text: "当恐慌感袭来时，进行 4-7-8 呼吸法", done: false },
-  ];
+  const tasks = (clientSummary?.actionItems || [
+    "睡前尝试 5 分钟的躯体扫描静观",
+    "当恐慌感袭来时，进行 4-7-8 呼吸法",
+  ]).map((text) => ({ text, done: false }));
 
   const handleSubmitEvaluation = () => {
     setSubmitted(true);
@@ -160,14 +164,14 @@ export function CallSummary() {
                 <span className="text-sm font-bold text-primary block mb-1">
                   本次核心探讨：
                 </span>
-                探讨了对于即将到来的期末考试产生的弥散性焦虑情绪，以及在学习小组中因害怕拒绝别人请求而导致的精力耗竭。
+                {clientSummary?.recap || "探讨了近期压力、情绪变化以及这些体验与日常生活之间的联系。"}
               </div>
               {!isCounselorView && (
                 <div className="p-4 bg-surface rounded-2xl border border-gray-50">
                   <span className="text-sm font-bold text-gray-900 block mb-1">
                     咨询师赠言：
                   </span>
-                  “讨好别人并不能买来真正的友谊。我们需要先稳住自己的内核，学会温和但坚定地说‘不’。情绪没有好坏之分，给自己一些接纳和喘息的空间。”
+                  {clientSummary?.nextPlan || "下次会谈将继续回顾这段时间的变化，并一起调整适合你的行动节奏。"}
                 </div>
               )}
             </div>
