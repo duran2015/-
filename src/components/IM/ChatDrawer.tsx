@@ -16,9 +16,10 @@ interface ChatDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onViewClientProfile?: (order: Order) => void;
+  onOpenOrderInfo?: (order: Order) => void;
 }
 
-export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, onViewClientProfile }) => {
+export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, onViewClientProfile, onOpenOrderInfo }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [showQuestionnaireMenu, setShowQuestionnaireMenu] = useState(false);
@@ -91,15 +92,15 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
           <div className="flex items-center gap-3">
             <button 
               onClick={() => onViewClientProfile?.(order)}
-              className="relative rounded-full focus:outline-none focus:ring-2 focus:ring-[#2E521C]/50 transition-transform active:scale-95"
+              className="relative rounded-full focus:outline-none focus:ring-2 focus:ring-[#6750A4]/50 transition-transform active:scale-95"
               title="查看档案"
             >
-              <img src={order.clientAvatar} alt={order.clientName} className="w-10 h-10 rounded-full object-cover ring-2 ring-[#2E521C]/20 cursor-pointer" />
+              <img src={order.clientAvatar} alt={order.clientName} className="w-10 h-10 rounded-full object-cover ring-2 ring-[#6750A4]/20 cursor-pointer" />
             </button>
             <div>
               <div className="font-bold text-[#1D1B16] flex items-center gap-2">
                 <span>{order.clientName}</span>
-                <span className="text-[10px] bg-[#E8E2D5] text-[#2E521C] px-1.5 py-0.2 rounded-md font-medium">{order.serviceTypeName}</span>
+                <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-1.5 py-0.2 rounded-md font-medium">{order.serviceTypeName}</span>
               </div>
               <div className="text-[11px] text-[#7A756C] flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -107,12 +108,23 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
               </div>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 text-[#7A756C] hover:text-[#1D1B16] hover:bg-[#F3E3DA] rounded-full transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onOpenOrderInfo && (
+              <button 
+                onClick={() => onOpenOrderInfo(order)}
+                className="p-2 text-[#7A756C] hover:text-[#1D1B16] hover:bg-[#F3E3DA] rounded-full transition"
+                title="查看订单详情"
+              >
+                <FileText className="w-5 h-5" />
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              className="p-2 text-[#7A756C] hover:text-[#1D1B16] hover:bg-[#F3E3DA] rounded-full transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Messages Area */}
@@ -131,7 +143,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                   {msg.sender === 'client' && (
                     <button 
                       onClick={() => onViewClientProfile?.(order)}
-                      className="shrink-0 mb-1 rounded-full focus:outline-none focus:ring-1 focus:ring-[#2E521C]/50 transition-transform active:scale-95"
+                      className="shrink-0 mb-1 rounded-full focus:outline-none focus:ring-1 focus:ring-[#6750A4]/50 transition-transform active:scale-95"
                     >
                       <img src={order.clientAvatar} alt="" className="w-6 h-6 rounded-full object-cover cursor-pointer" />
                     </button>
@@ -141,7 +153,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                     {msg.type === 'text' && (
                       <div className={`px-3.5 py-2.5 rounded-[16px] text-sm leading-relaxed ${
                         msg.sender === 'consultant' 
-                          ? 'bg-[#2E521C] text-white rounded-br-sm' 
+                          ? 'bg-[#6750A4] text-white rounded-br-sm' 
                           : 'bg-white border border-[#ECE6DC] text-[#1D1B16] rounded-bl-sm shadow-xs'
                       }`}>
                         {msg.content}
@@ -159,7 +171,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                         <div className="text-[10px] text-[#7A756C] mb-3 line-clamp-2 leading-relaxed">
                           {msg.metadata?.desc}
                         </div>
-                        <button className="w-full py-1.5 bg-[#FAF8F5] border border-[#ECE6DC] text-[#2E521C] text-[11px] font-bold rounded-lg cursor-default">
+                        <button className="w-full py-1.5 bg-[#FAF8F5] border border-[#ECE6DC] text-[#6750A4] text-[11px] font-bold rounded-lg cursor-default">
                           等待来访者填写...
                         </button>
                       </div>
@@ -187,7 +199,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                 onClick={() => handleSendQuestionnaire('PHQ-9 抑郁症筛查量表', '用于评估近两周内的抑郁症状严重程度，共9题。')}
                 className="w-full text-left px-3 py-2 hover:bg-[#FAF8F5] rounded-xl transition flex items-start gap-2"
               >
-                <CheckCircle2 className="w-4 h-4 text-[#2E521C] mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#6750A4] mt-0.5 shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-[#1D1B16]">PHQ-9 抑郁症筛查量表</div>
                   <div className="text-[10px] text-[#7A756C] mt-0.5">评估近期情绪低落情况</div>
@@ -197,7 +209,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                 onClick={() => handleSendQuestionnaire('GAD-7 焦虑症筛查量表', '用于评估近两周内的广泛性焦虑症状，共7题。')}
                 className="w-full text-left px-3 py-2 hover:bg-[#FAF8F5] rounded-xl transition flex items-start gap-2 mt-1"
               >
-                <CheckCircle2 className="w-4 h-4 text-[#2E521C] mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#6750A4] mt-0.5 shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-[#1D1B16]">GAD-7 焦虑症筛查量表</div>
                   <div className="text-[10px] text-[#7A756C] mt-0.5">评估近期焦虑紧张程度</div>
@@ -207,7 +219,7 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                 onClick={() => handleSendQuestionnaire('咨询前评估登记表', '用于初诊前的基本信息及核心诉求收集。')}
                 className="w-full text-left px-3 py-2 hover:bg-[#FAF8F5] rounded-xl transition flex items-start gap-2 mt-1"
               >
-                <FileText className="w-4 h-4 text-[#2E521C] mt-0.5 shrink-0" />
+                <FileText className="w-4 h-4 text-[#6750A4] mt-0.5 shrink-0" />
                 <div>
                   <div className="text-xs font-bold text-[#1D1B16]">咨询前初始评估表</div>
                   <div className="text-[10px] text-[#7A756C] mt-0.5">初次预约补充信息</div>
@@ -242,13 +254,13 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
                 }
               }}
               placeholder="发送消息..."
-              className="flex-1 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[16px] px-3.5 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#2E521C] min-h-[44px] max-h-[120px] resize-none"
+              className="flex-1 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[16px] px-3.5 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#6750A4] min-h-[44px] max-h-[120px] resize-none"
               rows={1}
             />
             <button 
               onClick={handleSend}
               disabled={!inputValue.trim()}
-              className="w-11 h-11 shrink-0 bg-[#2E521C] text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:bg-[#A8A398] hover:bg-[#234114] shadow-xs transition active:scale-95"
+              className="w-11 h-11 shrink-0 bg-[#6750A4] text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:bg-[#A8A398] hover:bg-[#594294] shadow-xs transition active:scale-95"
             >
               <Send className="w-4.5 h-4.5 ml-0.5" />
             </button>

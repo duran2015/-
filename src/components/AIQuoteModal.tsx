@@ -98,7 +98,7 @@ export const AIQuoteModal: React.FC<AIQuoteModalProps> = ({ consultant, onClose 
           <button
             onClick={handleGenerate}
             disabled={isLoading}
-            className="px-4 py-1.5 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] transition shadow-2xs flex items-center gap-1 disabled:opacity-60 shrink-0 active:scale-95"
+            className="px-4 py-1.5 rounded-full bg-[#6750A4] text-white text-xs font-semibold hover:bg-[#594294] transition shadow-2xs flex items-center gap-1 disabled:opacity-60 shrink-0 active:scale-95"
           >
             {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             <span>生成</span>
@@ -113,7 +113,7 @@ export const AIQuoteModal: React.FC<AIQuoteModalProps> = ({ consultant, onClose 
               onClick={() => setSelectedQuoteIndex(idx)}
               className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition active:scale-95 ${
                 selectedQuoteIndex === idx
-                  ? 'bg-[#2E521C] text-white shadow-2xs'
+                  ? 'bg-[#6750A4] text-white shadow-2xs'
                   : 'bg-white border border-[#E6E0D6] text-[#49463D] hover:bg-[#E8E2D5]'
               }`}
             >
@@ -123,7 +123,7 @@ export const AIQuoteModal: React.FC<AIQuoteModalProps> = ({ consultant, onClose 
         </div>
 
         {/* Poster Card Live Visualizer */}
-        <div className="bg-[#2E521C] rounded-[20px] p-5 text-white shadow-md space-y-3 relative overflow-hidden border border-[#386A20]/30">
+        <div className="bg-[#6750A4] rounded-[20px] p-5 text-white shadow-md space-y-3 relative overflow-hidden border border-[#386A20]/30">
           <div className="flex items-center justify-between text-[11px] text-emerald-200 font-medium">
             <span>#{activeQuote.tag || '心灵治愈'}</span>
             <span className="font-mono">心屿咨询 • 日历</span>
@@ -162,13 +162,13 @@ export const AIQuoteModal: React.FC<AIQuoteModalProps> = ({ consultant, onClose 
             onClick={() => handleCopy(selectedQuoteIndex, `“${activeQuote.title}”\n${activeQuote.quote}\n—— ${consultant.name} 咨询师`)}
             className="flex-1 py-2 rounded-full border border-[#E6E0D6] bg-white text-xs font-semibold text-[#1D1B16] hover:bg-[#E8E2D5] transition flex items-center justify-center gap-1 active:scale-95"
           >
-            {copiedIndex === selectedQuoteIndex ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#2E521C]" />}
+            {copiedIndex === selectedQuoteIndex ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#6750A4]" />}
             <span>{copiedIndex === selectedQuoteIndex ? '已复制' : '复制文案'}</span>
           </button>
 
           <button
             onClick={() => alert('已为您导出海报图！')}
-            className="flex-1 py-2 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] transition shadow-2xs flex items-center justify-center gap-1 active:scale-95"
+            className="flex-1 py-2 rounded-full bg-[#6750A4] text-white text-xs font-semibold hover:bg-[#594294] transition shadow-2xs flex items-center justify-center gap-1 active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
             <span>导出海报</span>

@@ -34,7 +34,7 @@ export const EmergencyListeningWidget: React.FC<EmergencyListeningWidgetProps> =
           title="开启/关闭接单"
         >
           {consultant.isListeningActive ? (
-            <ToggleRight className="w-9 h-9 text-[#2E521C]" />
+            <ToggleRight className="w-9 h-9 text-[#6750A4]" />
           ) : (
             <ToggleLeft className="w-9 h-9 text-stone-300" />
           )}
@@ -72,7 +72,7 @@ export const EmergencyListeningWidget: React.FC<EmergencyListeningWidgetProps> =
       {/* M3 Card Footer */}
       <div className="flex items-center justify-between text-[11px] text-[#7A756C] pt-2 border-t border-[#ECE6DC] mt-2">
         <span className="flex items-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#2E521C]" />
+          <ShieldCheck className="w-3.5 h-3.5 text-[#6750A4]" />
           高清加密音频通道
         </span>
         <span className="flex items-center gap-1 font-medium text-[#1D1B16]">

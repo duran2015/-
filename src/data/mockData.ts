@@ -1,6 +1,89 @@
 import { Order, ConsultantProfile, TimeSlot, ServiceProduct, SettlementRecord, SessionSummary, ViralVoucher, TherapyQuote, ClientProfile, BankAccount, WithdrawalRecord, BillRecord } from '../types';
 
 export const INITIAL_CLIENT_PROFILES: Record<string, ClientProfile> = {
+  'cli_107': {
+    id: 'cli_107',
+    name: '周明宇',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    gender: '男',
+    age: 32,
+    occupation: '资深后端开发',
+    city: '北京',
+    phone: '135****8899',
+    emergencyContact: {
+      name: '王女士',
+      relation: '配偶',
+      phone: '139****1122'
+    },
+    intakeDate: '2026-05-10',
+    riskLevel: 'moderate',
+    tags: ['职场倦怠', '躯体化', '存在主义危机'],
+    phq9Score: { score: 14, level: '中度抑郁', date: '2026-08-01' },
+    gad7Score: { score: 16, level: '重度焦虑', date: '2026-08-01' },
+    historySummary: {
+      totalSessions: 6,
+      attendanceRate: '100%',
+      primaryGoals: ['缓解工作引发的严重焦虑', '探索个人生活意义', '改善睡眠与进食状态'],
+      counselorWorkingNotes: '来访者属于典型的高成就动机群体，但在遭遇行业调整和连续高压后崩溃。前期咨询已建立了稳定的治疗联盟，目前重点在于帮助他脱离“工作成就=自我价值”的单一评价体系，并使用 CBT 技术干预其对工作的灾难化想象。'
+    },
+    sessionLogs: [
+      {
+        sessionNo: 6,
+        date: '2026-07-28',
+        topic: '面对新项目的恐惧感',
+        keyBreakthrough: '识别到了在接到新需求时的自动化思维：“如果我搞砸了，我就彻底完了”。尝试引入了认知重评技术。'
+      },
+      {
+        sessionNo: 5,
+        date: '2026-07-21',
+        topic: '睡眠状态的回顾与放松训练',
+        keyBreakthrough: '教授了渐进式肌肉放松法。来访者反馈在使用后，入睡时间从 2 小时缩短至 40 分钟，躯体紧绷感有所下降。'
+      },
+      {
+        sessionNo: 4,
+        date: '2026-07-14',
+        topic: '工作与个人边界的划定',
+        keyBreakthrough: '共同制定了“下班后物理断联半小时”的实验计划。来访者首次意识到自己一直在强迫自己处于“随时待命”的状态。'
+      },
+      {
+        sessionNo: 3,
+        date: '2026-06-25',
+        topic: '探索“必须完美”的内在信念',
+        keyBreakthrough: '回溯了原生家庭中严苛的教养方式对其完美主义的深远影响。来访者在咨询中表现出较强的情绪释放（流泪）。'
+      },
+      {
+        sessionNo: 2,
+        date: '2026-06-11',
+        topic: '职场人际冲突的复盘',
+        keyBreakthrough: '探讨了近期与主管的一次冲突，发现其防御机制多为“理智化”和“抽离”。'
+      },
+      {
+        sessionNo: 1,
+        date: '2026-05-10',
+        topic: '首诊：症状评估与目标建立',
+        keyBreakthrough: '完成摄入性会谈。确认其躯体症状（胸闷、失眠）与工作压力高度相关，排除了双相及精神分裂风险，确立了短期缓解焦虑、长期探索价值感的咨询目标。'
+      }
+    ],
+    preSessionCheckIns: [],
+    crisisInterventions: [
+      {
+        id: 'ci_001',
+        date: '2026-07-02',
+        type: 'suicide_risk',
+        description: '在平台深夜留言板表达了“如果一直这样失眠，不如彻底解脱”的消极想法。',
+        actionTaken: '平台值班咨询师第一时间介入，评估自杀意念与计划。联系了其妻子（紧急联系人）确认其居家安全，并与主治医生联动。',
+        status: 'resolved'
+      },
+      {
+        id: 'ci_002',
+        date: '2026-06-15',
+        type: 'self_harm',
+        description: '诉说在极度焦虑时有用指甲划伤手臂的冲动，虽然未实施但存在风险。',
+        actionTaken: '在咨询中制定了《安全计划》，列出了替代性应对策略（如冰水洗脸、捏冰块）。',
+        status: 'monitoring'
+      }
+    ]
+  },
   'cli_101': {
     id: 'cli_101',
     name: '林海燕',
@@ -266,7 +349,7 @@ export const INITIAL_CONSULTANT: ConsultantProfile = {
   personalTherapyHours: 220,
   specialties: ['职场焦虑与倦怠', '亲密关系与沟通', '情绪过载与自我关怀', '高敏感人群适应', '个人成长与自我认同'],
   targetAudience: ['成人 (18-50岁)', '高压职场白领/管理者', '高敏感人群', '高校学生'],
-  proficientServices: ['50分钟个体心理咨询 (视频/语音)', '15分钟极简舒压倾听', '4次深度连续疗程套餐', '21天文字即时陪伴'],
+  proficientServices: ['50分钟个体心理咨询 (视频/语音)', '15分钟极简舒压倾听'],
   workingLanguages: ['普通话 (标准)', '英语 (Fluent)', '粤语 (基础)'],
   counselingStyle: '温暖接纳、敏锐洞察、温和而坚定。注重陪伴来访者在安全氛围中自发探索，结合逻辑梳理与躯体感知。',
   earnings: {
@@ -285,6 +368,29 @@ export const INITIAL_CONSULTANT: ConsultantProfile = {
 
 export const INITIAL_ORDERS: Order[] = [
   {
+    id: 'ord_107',
+    orderNo: 'ORD20260804-09',
+    clientId: 'cli_107',
+    clientName: '周明宇',
+    clientAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    serviceType: '50min_video',
+    serviceTypeName: '50分钟标准视频咨询',
+    status: 'scheduled',
+    bookingDate: '2026-08-04',
+    bookingTimeSlot: '16:00 - 16:50',
+    complaintTopic: '长期加班导致的身心俱疲，对工作意义产生严重怀疑。',
+    price: 600,
+    hasSummary: false,
+    createdAt: '2026-08-01 10:00',
+    intakeForm: {
+      primaryIssueDetail: '作为大厂后端开发，长期高强度加班。最近半个月出现失眠、食欲不振，一想到要去公司就感到胸闷气短，对曾经热爱的编程完全丧失兴趣。',
+      expectations: '希望能缓解目前的躯体焦虑症状，重新梳理职业规划和生活重心。',
+      riskAssessmentPassed: true,
+      hasCounselingHistory: true,
+      previousCounselingType: '本机构长程咨询'
+    }
+  },
+  {
     id: 'ord_101',
     orderNo: 'ORD20260803-01',
     clientName: '林海燕',
@@ -299,7 +405,14 @@ export const INITIAL_ORDERS: Order[] = [
     complaintTopic: '职场决策陷入严重焦虑，伴随睡眠质量下降与躯体化肩紧',
     note: '第 4 次咨询。上周执行了“情绪触发事件记录”，准备在本次会谈中讨论。',
     hasSummary: false,
-    createdAt: '2026-08-01 14:20'
+    createdAt: '2026-08-01 14:20',
+    intakeForm: {
+      primaryIssueDetail: '最近面临部门调整和晋升答辩，经常在深夜醒来，感到心慌、出汗，白天注意力难以集中，总是担心自己做不好。',
+      expectations: '希望能够缓解躯体上的紧张感，并学会如何应对工作中突如其来的不确定性。',
+      riskAssessmentPassed: true,
+      hasCounselingHistory: true,
+      previousCounselingType: 'CBT 认知行为疗法'
+    }
   },
   {
     id: 'ord_102',
@@ -330,7 +443,7 @@ export const INITIAL_ORDERS: Order[] = [
     price: 480,
     status: 'completed',
     preMoodScore: 5,
-    complaintTopic: '亲密关系中的回避型沟通与安全感确立',
+    complaintTopic: '', // Test empty topic,
     note: '第 2 次咨询已完成。待撰写咨询小结。',
     hasSummary: false,
     createdAt: '2026-07-30 18:00'
@@ -340,8 +453,8 @@ export const INITIAL_ORDERS: Order[] = [
     orderNo: 'ORD20260801-08',
     clientName: '许默凡',
     clientAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    serviceType: 'package_4sessions',
-    serviceTypeName: '4次深度探索疗程包 (第1/4次)',
+    serviceType: '50min_video',
+    serviceTypeName: '50分钟标准视频咨询 (第1/4次)',
     bookingDate: '2026-08-01',
     bookingTimeSlot: '19:00 - 19:50',
     price: 1800,
@@ -381,7 +494,7 @@ export const INITIAL_ORDERS: Order[] = [
     price: 39,
     status: 'refunded',
     preMoodScore: 8,
-    complaintTopic: '因临时工作加班无法准时上线，申请顺延退款',
+    complaintTopic: '', // test empty topic
     note: '已按平台规则友好办理改期退款，客户表示感谢。',
     hasSummary: false,
     createdAt: '2026-07-29 20:30'
@@ -398,7 +511,6 @@ export const INITIAL_SERVICE_PRODUCTS: ServiceProduct[] = [
     salesCount: 312,
     isPublished: true,
     description: '高清视频/语音双选，一对一系统探索情绪与生活议题，支持评估、干预与复盘。',
-    badge: '最受欢迎'
   },
   {
     id: 'prod_2',
@@ -409,28 +521,6 @@ export const INITIAL_SERVICE_PRODUCTS: ServiceProduct[] = [
     salesCount: 184,
     isPublished: true,
     description: '适合急性情绪排毒、突发焦虑接纳，无门槛体验即时温暖陪伴。',
-    badge: '新客裂变首选'
-  },
-  {
-    id: 'prod_3',
-    name: '4次深度增长疗程套餐',
-    type: 'package_4sessions',
-    durationMinutes: 200,
-    price: 1800,
-    salesCount: 68,
-    isPublished: true,
-    description: '包含4次50分钟深度咨询 + 阶段性心理健康测评报告 + 课后练习辅导。',
-    badge: '优惠立省¥200'
-  },
-  {
-    id: 'prod_4',
-    name: '21天文字即时陪伴',
-    type: 'instant_chat',
-    durationMinutes: 0,
-    price: 1280,
-    salesCount: 29,
-    isPublished: true,
-    description: '工作日每日定时异步留言回复，建立长期稳固的心理安全容器。',
   }
 ];
 

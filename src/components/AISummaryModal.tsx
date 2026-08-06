@@ -82,7 +82,7 @@ export const AISummaryModal: React.FC<AISummaryModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 rounded-full bg-[#2E521C] text-white flex items-center justify-center font-bold shadow-2xs shrink-0">
+          <div className="w-9 h-9 rounded-full bg-[#6750A4] text-white flex items-center justify-center font-bold shadow-2xs shrink-0">
             <Sparkles className="w-4 h-4 text-emerald-200" />
           </div>
           <div className="flex-1">
@@ -92,7 +92,7 @@ export const AISummaryModal: React.FC<AISummaryModalProps> = ({
           {onOpenChat && (
             <button
               onClick={() => onOpenChat(order)}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E6E0D6] text-[#2E521C] text-[11px] font-bold hover:bg-[#FAF8F5] transition active:scale-95 shadow-2xs"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E6E0D6] text-[#6750A4] text-[11px] font-bold hover:bg-[#FAF8F5] transition active:scale-95 shadow-2xs"
             >
               <MessageCircle className="w-3.5 h-3.5" />
               <span>查阅私信</span>
@@ -115,7 +115,7 @@ export const AISummaryModal: React.FC<AISummaryModalProps> = ({
           <button
             onClick={handleGenerateAI}
             disabled={isLoading}
-            className="w-full py-2.5 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] transition shadow-2xs flex items-center justify-center gap-2 disabled:opacity-60 active:scale-95"
+            className="w-full py-2.5 rounded-full bg-[#6750A4] text-white text-xs font-semibold hover:bg-[#594294] transition shadow-2xs flex items-center justify-center gap-2 disabled:opacity-60 active:scale-95"
           >
             {isLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -129,9 +129,9 @@ export const AISummaryModal: React.FC<AISummaryModalProps> = ({
         {/* Generated Result Preview */}
         {generatedSummary && (
           <div className="space-y-3 bg-white p-4 rounded-[18px] border border-[#E6E0D6] text-xs text-[#1D1B16] shadow-2xs">
-            <div className="font-bold text-xs text-[#2E521C] pb-2 border-b border-[#ECE6DC] flex items-center justify-between">
+            <div className="font-bold text-xs text-[#6750A4] pb-2 border-b border-[#ECE6DC] flex items-center justify-between">
               <span>生成的结构化小结</span>
-              <span className="text-[10px] bg-[#E8E2D5] text-[#2E521C] px-2 py-0.2 rounded-full font-bold">
+              <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-2 py-0.2 rounded-full font-bold">
                 符合注册系统标准
               </span>
             </div>
@@ -182,34 +182,42 @@ export const AISummaryModal: React.FC<AISummaryModalProps> = ({
 
             {/* Post Consultation Automated Actions */}
             <div className="pt-2 border-t border-[#ECE6DC] space-y-2">
-              <div className="text-[10px] font-bold text-[#2E521C] flex items-center justify-between">
+              <div className="text-[10px] font-bold text-[#6750A4] flex items-center justify-between">
                 <span>咨询结案自动触发闭环：</span>
                 <span className="text-[#A23F1E]">系统自动打款解冻</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => alert(`已向来访者【${order.clientName}】微信推送《课后情绪觉察与4-7-8呼吸练习卡》！`)}
-                  className="p-2 rounded-[12px] bg-[#FAF2ED] text-[#A23F1E] border border-[#F3E3DA] font-medium text-left hover:bg-[#F3E3DA] transition"
-                >
-                  <div className="font-bold">1. 推送课后作业卡</div>
-                  <div className="text-[9px] opacity-80 mt-0.5">微信同步练习任务</div>
-                </button>
+              <div className="bg-white border border-[#E6E0D6] rounded-[20px] p-4 shadow-2xs space-y-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#6750A4]/5 rounded-full blur-2xl pointer-events-none" />
+                
+                <h4 className="text-xs font-bold text-[#7A756C] flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#6750A4]" />
+                  AI 智能推荐下一步 (SOP)
+                </h4>
 
-                <button
-                  type="button"
-                  onClick={() => alert(`已为来访者【${order.clientName}】生成并推荐《4次深度疗程套餐 (85折优惠卡)》！`)}
-                  className="p-2 rounded-[12px] bg-[#FAF8F5] text-[#2E521C] border border-[#CBE6C3] font-medium text-left hover:bg-[#E8E2D5] transition"
-                >
-                  <div className="font-bold">2. 发送续约推荐卡</div>
-                  <div className="text-[9px] opacity-80 mt-0.5">推荐下期/4次套餐</div>
-                </button>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => alert(`已为来访者【${order.clientName}】布置课后行为观察作业！`)}
+                    className="p-2 rounded-[12px] bg-[#FAF8F5] text-[#6750A4] border border-[#ECE6DC] font-medium text-left hover:bg-[#E8E2D5] transition"
+                  >
+                    <div className="font-bold">1. 布置课后作业</div>
+                    <div className="text-[9px] opacity-80 mt-0.5">行为观察/情绪日记</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => alert(`已为来访者【${order.clientName}】生成并推荐《下次咨询 (9折优惠卡)》！`)}
+                    className="p-2 rounded-[12px] bg-[#FAF8F5] text-[#6750A4] border border-[#D0BCFF] font-medium text-left hover:bg-[#E8E2D5] transition"
+                  >
+                    <div className="font-bold">2. 发送复诊推荐卡</div>
+                    <div className="text-[9px] opacity-80 mt-0.5">推荐下次咨询</div>
+                  </button>
+                </div>
               </div>
 
               <div className="p-2 rounded-[12px] bg-emerald-50 text-emerald-900 border border-emerald-200 text-[10px] flex items-center justify-between font-mono">
                 <span>自动财务结算解冻：</span>
-                <strong className="text-[#2E521C]">+¥{(order.price * 0.9).toFixed(2)} (已扣除平台10%服务费)</strong>
+                <strong className="text-[#6750A4]">+¥{(order.price * 0.9).toFixed(2)} (已扣除平台10%服务费)</strong>
               </div>
             </div>
           </div>
@@ -226,7 +234,7 @@ export const AISummaryModal: React.FC<AISummaryModalProps> = ({
           {generatedSummary && (
             <button
               onClick={handleSave}
-              className="px-5 py-2 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] shadow-2xs flex items-center gap-1.5 active:scale-95"
+              className="px-5 py-2 rounded-full bg-[#6750A4] text-white text-xs font-semibold hover:bg-[#594294] shadow-2xs flex items-center gap-1.5 active:scale-95"
             >
               <Save className="w-3.5 h-3.5" />
               <span>保存至电子档案</span>

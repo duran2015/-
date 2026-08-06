@@ -47,7 +47,7 @@ export const NextSessionCard: React.FC<NextSessionCardProps> = ({
       {/* Header: M3 Badge and Countdown Assist Chip */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#2E521C] text-white shadow-2xs">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#6750A4] text-white shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
             下一个预约
           </span>
@@ -74,14 +74,14 @@ export const NextSessionCard: React.FC<NextSessionCardProps> = ({
                 alt={nextOrder.clientName}
                 className="w-12 h-12 rounded-full object-cover ring-1 ring-[#386A20]/20"
               />
-              <span className="absolute -bottom-1 -right-1 bg-[#2E521C] text-white text-[9px] font-bold px-1 py-0.2 rounded-md">
+              <span className="absolute -bottom-1 -right-1 bg-[#6750A4] text-white text-[9px] font-bold px-1 py-0.2 rounded-md">
                 第4次
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-[#1D1B16]">{nextOrder.clientName}</h2>
-                <span className="text-[10px] bg-[#E8E2D5] text-[#2E521C] px-1.5 py-0.2 rounded-md font-medium">
+                <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-1.5 py-0.2 rounded-md font-medium">
                   {nextOrder.serviceTypeName}
                 </span>
               </div>
@@ -93,7 +93,7 @@ export const NextSessionCard: React.FC<NextSessionCardProps> = ({
           
           <button
             onClick={() => onViewClientFile(nextOrder)}
-            className="shrink-0 text-[#2E521C] text-[10px] font-bold bg-[#E8E2D5] hover:bg-[#D5CEBC] px-2 py-1 rounded-full transition"
+            className="shrink-0 text-[#6750A4] text-[10px] font-bold bg-[#E8E2D5] hover:bg-[#D5CEBC] px-2 py-1 rounded-full transition"
           >
             查阅档案
           </button>
@@ -103,7 +103,7 @@ export const NextSessionCard: React.FC<NextSessionCardProps> = ({
         <div className="flex gap-2">
           <button
             onClick={() => onEnterRoom(nextOrder)}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#2E521C] text-white py-3 px-4 rounded-[16px] font-bold text-xs hover:bg-[#234114] shadow-xs active:scale-[0.98] transition"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#6750A4] text-white py-3 px-4 rounded-[16px] font-bold text-xs hover:bg-[#594294] shadow-xs active:scale-[0.98] transition"
           >
             <Video className="w-4 h-4 text-emerald-200" />
             <span>进入咨询室</span>
@@ -114,7 +114,7 @@ export const NextSessionCard: React.FC<NextSessionCardProps> = ({
             className="w-12 flex items-center justify-center bg-[#FAF8F5] text-[#1D1B16] border border-[#E6E0D6] rounded-[16px] hover:bg-[#E8E2D5] active:scale-[0.98] transition"
             title="私信沟通"
           >
-            <MessageCircle className="w-5 h-5 text-[#2E521C]" />
+            <MessageCircle className="w-5 h-5 text-[#6750A4]" />
           </button>
         </div>
       </div>

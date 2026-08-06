@@ -78,7 +78,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
           <img
             src={order.clientAvatar}
             alt={order.clientName}
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-[#CBE6C3]/30 shrink-0"
+            className="w-10 h-10 rounded-full object-cover ring-2 ring-[#D0BCFF]/30 shrink-0"
           />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
 
             <button
               onClick={() => onFinishSessionAndSummary(order, scratchpad)}
-              className="px-5 py-2.5 rounded-full bg-[#2E521C] text-white text-xs font-bold hover:bg-[#234114] transition shadow-md flex items-center gap-1.5 active:scale-95"
+              className="px-5 py-2.5 rounded-full bg-[#6750A4] text-white text-xs font-bold hover:bg-[#594294] transition shadow-md flex items-center gap-1.5 active:scale-95"
             >
               <Sparkles className="w-4 h-4 text-emerald-200" />
               <span>完成咨询 & AI 结案小结</span>
@@ -253,7 +253,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
                   <div
                     className={`p-2.5 rounded-[14px] max-w-[85%] leading-relaxed ${
                       m.sender === 'consultant'
-                        ? 'bg-[#2E521C] text-white rounded-br-xs'
+                        ? 'bg-[#6750A4] text-white rounded-br-xs'
                         : 'bg-[#1B1E19] text-[#FAF8F5] border border-[#49463D] rounded-bl-xs'
                     }`}
                   >
@@ -275,7 +275,7 @@ export const ActiveSessionModal: React.FC<ActiveSessionModalProps> = ({
               />
               <button
                 type="submit"
-                className="p-2 rounded-full bg-[#2E521C] text-white hover:bg-[#234114] transition active:scale-95"
+                className="p-2 rounded-full bg-[#6750A4] text-white hover:bg-[#594294] transition active:scale-95"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

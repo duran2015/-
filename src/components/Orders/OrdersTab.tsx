@@ -17,6 +17,9 @@ interface OrdersTabProps {
   onSendReminder: (order: Order) => void;
   onOpenChat?: (order: Order) => void;
   onSubPageChange?: (isSubPage: boolean) => void;
+  onOpenOrderInfo?: (order: Order) => void;
+  initialSelectedOrder?: Order | null;
+  onClearInitialOrder?: () => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -27,6 +30,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onSendReminder,
   onOpenChat,
   onSubPageChange,
+  onOpenOrderInfo,
+  initialSelectedOrder,
+  onClearInitialOrder,
 }) => {
   const [activeStatus, setActiveStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'order_detail' | 'client_profile'>('list');
@@ -35,6 +41,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     profile: ClientProfile;
     order?: Order;
   } | null>(null);
+
+  useEffect(() => {
+    if (initialSelectedOrder) {
+      setSelectedOrder(initialSelectedOrder);
+      setViewMode('order_detail');
+      onClearInitialOrder?.();
+    }
+  }, [initialSelectedOrder, onClearInitialOrder]);
 
   useEffect(() => {
     if (onSubPageChange) {
@@ -59,9 +73,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       case 'pending_confirm':
         return <span className="bg-amber-100 text-amber-900 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-amber-300">待确认接单</span>;
       case 'scheduled':
-        return <span className="bg-[#E8E2D5] text-[#2E521C] text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-[#CBE6C3]">待咨询</span>;
+        return <span className="bg-[#EADDFF] text-[#21005D] text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-[#D0BCFF]">待咨询</span>;
       case 'in_progress':
-        return <span className="bg-[#2E521C] text-white text-[11px] px-2.5 py-0.5 rounded-full font-semibold animate-pulse">服务中</span>;
+        return <span className="bg-[#6750A4] text-white text-[11px] px-2.5 py-0.5 rounded-full font-semibold animate-pulse">服务中</span>;
       case 'completed':
         return <span className="bg-stone-100 text-[#7A756C] text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-[#ECE6DC]">已完成</span>;
       case 'refunded':
@@ -120,7 +134,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         onConfirmOrder={onConfirmOrder}
         onEnterRoom={onEnterRoom}
         onWriteSummary={onWriteSummary}
-      />
+            onOpenOrderInfo={(order) => onOpenOrderInfo?.(order)}
+          />
     );
   }
 
@@ -144,51 +159,32 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     );
   }
 
-  // Primary View Render: Orders List
+  // Primary View Render: Service Thread List (Messages Style)
   return (
     <div className="space-y-3 animate-in fade-in duration-200">
-      
-      {/* Page Title Header */}
-      <div className="flex items-center justify-between px-1 pt-1">
-        <h1 className="text-base font-bold text-[#1D1B16]">咨询订单</h1>
-        <span className="text-xs text-[#7A756C] font-mono">共 {orders.length} 笔记录</span>
+      <div className="flex items-center justify-between pb-1">
+        <h2 className="text-xl font-bold text-[#1D1B16]">进行中的服务流</h2>
       </div>
 
-      {/* M3 Filter Chips Bar */}
-      <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-3 shadow-2xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveStatus(tab.key)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 active:scale-95 ${
-                activeStatus === tab.key
-                  ? 'bg-[#2E521C] text-white shadow-2xs'
-                  : 'bg-[#FAF8F5] text-[#49463D] border border-[#ECE6DC] hover:bg-[#E8E2D5]'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-semibold ${
-                  activeStatus === tab.key ? 'bg-white/20 text-white' : 'bg-[#E8E2D5] text-[#2E521C]'
-                }`}
-              >
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
+      {/* Filter Chips */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveStatus(tab.key)}
+            className={`px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap transition active:scale-95 ${
+              activeStatus === tab.key
+                ? 'bg-[#EADDFF] text-[#21005D]'
+                : 'bg-white border border-[#E6E0D6] text-[#49463D] hover:bg-[#EAE5DB]'
+            }`}
+          >
+            {tab.label} {tab.count > 0 && <span className="opacity-80">({tab.count})</span>}
+          </button>
+        ))}
       </div>
 
-      {/* Orders List */}
-      <div className="space-y-3">
-        {filteredOrders.length === 0 ? (
-          <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-8 text-center text-[#7A756C]">
-            <Calendar className="w-8 h-8 text-[#2E521C] mx-auto mb-2 opacity-50" />
-            <h4 className="font-bold text-sm text-[#1D1B16]">暂无符合条件的订单</h4>
-            <p className="text-xs text-[#7A756C] mt-1">请切换上方状态分类标签查看。</p>
-          </div>
-        ) : (
+      <div className="space-y-3 mt-2">
+        {filteredOrders.length > 0 ? (
           filteredOrders.map((order) => (
             <div
               key={order.id}
@@ -196,109 +192,52 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                 if ((e.target as HTMLElement).closest('button')) return;
                 handleOpenOrderDetail(order);
               }}
-              className="bg-white border border-[#E6E0D6] rounded-[20px] p-4 shadow-2xs hover:shadow-xs hover:border-[#386A20]/50 transition space-y-3 cursor-pointer group flex flex-col"
+              className="bg-white rounded-[28px] p-5 shadow-sm hover:bg-[#FAF8F5] transition cursor-pointer group flex items-center gap-4 relative border border-transparent hover:border-[#E6E0D6]"
             >
-              {/* Top Row: Client & Time */}
-              <div className="flex items-start justify-between">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenClientProfile(order);
-                  }}
-                  className="flex items-center gap-3 text-left transition active:scale-95"
-                  title="点击打开来访者档案"
-                >
-                  <img
-                    src={order.clientAvatar}
-                    alt={order.clientName}
-                    className="w-10 h-10 rounded-full object-cover ring-1 ring-[#386A20]/20 group-hover:ring-[#386A20] transition"
-                  />
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="font-bold text-sm text-[#1D1B16] group-hover:text-[#2E521C] transition">
-                        {order.clientName}
-                      </h3>
-                      {getStatusBadge(order.status)}
-                    </div>
-                    <div className="text-[11px] font-mono text-[#7A756C] flex items-center gap-1.5">
-                      <Calendar className="w-3 h-3" />
-                      <span>{order.bookingDate} {order.bookingTimeSlot}</span>
-                    </div>
-                  </div>
-                </button>
+              {/* Unread dot mock */}
+              {(order.status === 'pending_confirm' || order.status === 'scheduled') && (
+                <div className="absolute top-4 left-3 w-3 h-3 bg-[#B3261E] rounded-full border-2 border-white z-10 shadow-xs" />
+              )}
+              
+              <div className="relative shrink-0">
+                <img
+                  src={order.clientAvatar}
+                  alt={order.clientName}
+                  className="w-14 h-14 rounded-full object-cover"
+                />
               </div>
 
-              {/* Middle Row: Topic Summary */}
-              <div className="bg-[#FAF8F5] px-3 py-2 rounded-[12px] border border-[#ECE6DC]">
-                <p className="text-[11px] text-[#49463D] line-clamp-1">
-                  <span className="font-semibold text-[#1D1B16]">议题：</span>
-                  {order.complaintTopic}
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-1.5">
+                  <h3 className="font-bold text-[16px] text-[#1D1B16] truncate tracking-tight">
+                    {order.clientName}
+                  </h3>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {getStatusBadge(order.status)}
+                    <span className="text-[11px] text-[#A09C94] font-medium">{order.bookingDate.slice(5)}</span>
+                  </div>
+                </div>
+                
+                <p className="text-[13px] text-[#7A756C] truncate pr-4 font-medium">
+                  {order.status === 'pending_confirm' ? '[系统] 待确认接单，请及时处理' : 
+                   order.status === 'scheduled' ? '[系统] 咨询室即将开启，请准备入室' : 
+                   order.status === 'completed' && !order.hasSummary ? '[系统] 咨询已结束，AI 结案小结待确认' :
+                   order.status === 'completed' && order.hasSummary ? '好的，谢谢老师。' :
+                   order.complaintTopic || '发来了一条消息...'}
                 </p>
               </div>
-
-              {/* Bottom Actions */}
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#E6E0D6]/50">
-                {onOpenChat && order.status !== 'refunded' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenChat(order);
-                    }}
-                    className="p-1.5 rounded-full bg-[#FAF8F5] border border-[#ECE6DC] text-[#1D1B16] hover:bg-[#E8E2D5] transition active:scale-95"
-                    title="私信沟通"
-                  >
-                    <MessageSquare className="w-4 h-4 text-[#2E521C]" />
-                  </button>
-                )}
-
-                {order.status === 'pending_confirm' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onConfirmOrder(order.id);
-                    }}
-                    className="px-4 py-1.5 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] shadow-2xs transition active:scale-95"
-                  >
-                    确认接单
-                  </button>
-                )}
-
-                {order.status === 'scheduled' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEnterRoom(order);
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] shadow-2xs transition active:scale-95"
-                  >
-                    <Video className="w-3.5 h-3.5 text-emerald-200" />
-                    <span>进入咨询室</span>
-                  </button>
-                )}
-
-                {order.status === 'completed' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onWriteSummary(order);
-                    }}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition active:scale-95 ${
-                      order.hasSummary
-                        ? 'bg-[#FAF8F5] text-[#49463D] border border-[#E6E0D6] hover:bg-[#E8E2D5]'
-                        : 'bg-[#2E521C] text-white hover:bg-[#234114]'
-                    }`}
-                  >
-                    <Sparkles className={`w-3.5 h-3.5 ${order.hasSummary ? 'text-[#7A756C]' : 'text-emerald-200'}`} />
-                    <span>{order.hasSummary ? '修改小结' : '撰写AI小结'}</span>
-                  </button>
-                )}
-              </div>
-
             </div>
           ))
+        ) : (
+          <div className="text-center py-12 bg-white border border-[#E6E0D6] rounded-[28px] shadow-sm">
+            <div className="w-14 h-14 bg-[#FAF8F5] rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-6 h-6 text-[#A09C94]" />
+            </div>
+            <p className="text-[#1D1B16] text-[15px] font-bold tracking-tight">当前无对应状态的服务流</p>
+            <p className="text-[13px] text-[#7A756C] mt-1 font-medium">切换其他状态或休息一下吧</p>
+          </div>
         )}
       </div>
-
     </div>
   );
 };

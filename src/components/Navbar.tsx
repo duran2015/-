@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <img
               src={consultant.avatar}
               alt={consultant.name}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-[#2E521C]/20 shadow-2xs"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-[#6750A4]/20 shadow-2xs"
             />
             <span
               className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#FAF8F5] bg-emerald-500`}
@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <h1 className="font-bold text-base text-[#1D1B16] tracking-tight truncate">
                 {consultant.name}
               </h1>
-              <span className="text-[10px] font-semibold bg-[#E8E2D5] text-[#2E521C] px-2 py-0.5 rounded-full shrink-0">
+              <span className="text-[10px] font-semibold bg-[#EADDFF] text-[#21005D] px-2 py-0.5 rounded-full shrink-0">
                 心理咨询师
               </span>
             </div>
@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={onToggleListening}
             className={`flex items-center gap-1.5 px-3 h-9 rounded-full text-xs font-semibold transition active:scale-95 ${
               consultant.isListeningActive
-                ? 'bg-[#2E521C] text-white shadow-2xs'
+                ? 'bg-[#6750A4] text-white shadow-2xs'
                 : 'bg-[#E8E2D5] text-[#49463D] hover:bg-[#DDD7C9]'
             }`}
             title="点击切换接单状态"

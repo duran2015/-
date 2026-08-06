@@ -24,8 +24,8 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
     switch (level) {
       case 'low':
         return (
-          <span className="bg-[#E8E2D5] text-[#2E521C] border border-[#CBE6C3] text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-[#2E521C]" />
+          <span className="bg-[#EADDFF] text-[#21005D] border border-[#D0BCFF] text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-[#6750A4]" />
             <span>评估：低风险</span>
           </span>
         );
@@ -86,7 +86,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
 
               <div className="flex items-center gap-3 text-[11px] text-[#7A756C] mt-2 pt-2 border-t border-[#ECE6DC]">
                 <span className="flex items-center gap-1 font-mono">
-                  <Phone className="w-3 h-3 text-[#2E521C]" />
+                  <Phone className="w-3 h-3 text-[#6750A4]" />
                   {client.phone}
                 </span>
                 <span>建档时间：{client.intakeDate}</span>
@@ -99,7 +99,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
             {client.tags.map((tag, idx) => (
               <span
                 key={idx}
-                className="text-[10px] bg-[#FAF8F5] text-[#2E521C] border border-[#ECE6DC] px-2.5 py-0.5 rounded-full font-medium"
+                className="text-[10px] bg-[#FAF8F5] text-[#6750A4] border border-[#ECE6DC] px-2.5 py-0.5 rounded-full font-medium"
               >
                 #{tag}
               </span>
@@ -113,7 +113,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
             onClick={() => setActiveSubTab('intake')}
             className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition active:scale-95 ${
               activeSubTab === 'intake'
-                ? 'bg-[#2E521C] text-white shadow-2xs'
+                ? 'bg-[#6750A4] text-white shadow-2xs'
                 : 'text-[#49463D] hover:bg-[#E8E2D5]'
             }`}
           >
@@ -123,7 +123,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
             onClick={() => setActiveSubTab('history')}
             className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition active:scale-95 ${
               activeSubTab === 'history'
-                ? 'bg-[#2E521C] text-white shadow-2xs'
+                ? 'bg-[#6750A4] text-white shadow-2xs'
                 : 'text-[#49463D] hover:bg-[#E8E2D5]'
             }`}
           >
@@ -133,7 +133,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
             onClick={() => setActiveSubTab('checkins')}
             className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition active:scale-95 ${
               activeSubTab === 'checkins'
-                ? 'bg-[#2E521C] text-white shadow-2xs'
+                ? 'bg-[#6750A4] text-white shadow-2xs'
                 : 'text-[#49463D] hover:bg-[#E8E2D5]'
             }`}
           >
@@ -151,7 +151,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
               {/* Psychological Test Scores */}
               <div className="bg-white p-3.5 rounded-[18px] border border-[#E6E0D6] space-y-2">
                 <div className="font-bold text-xs text-[#1D1B16] flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-[#2E521C]">
+                  <span className="flex items-center gap-1.5 text-[#6750A4]">
                     <Activity className="w-4 h-4 text-[#A23F1E]" />
                     临床量表自评参考
                   </span>
@@ -163,9 +163,9 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                     <div className="bg-[#FAF8F5] p-2.5 rounded-[12px] border border-[#ECE6DC]">
                       <div className="text-[10px] text-[#7A756C]">PHQ-9 抑郁筛查</div>
                       <div className="text-sm font-bold text-[#1D1B16] font-mono mt-0.5">
-                        {client.phq9Score.score} <span className="text-[10px] font-normal text-[#2E521C]">/ 27分</span>
+                        {client.phq9Score.score} <span className="text-[10px] font-normal text-[#6750A4]">/ 27分</span>
                       </div>
-                      <div className="text-[10px] text-[#2E521C] font-medium mt-0.5">{client.phq9Score.level}</div>
+                      <div className="text-[10px] text-[#6750A4] font-medium mt-0.5">{client.phq9Score.level}</div>
                     </div>
                   )}
 
@@ -185,11 +185,11 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
               {relatedOrder && relatedOrder.intakeForm && (
                 <div className="bg-white p-3.5 rounded-[18px] border border-[#E6E0D6] space-y-2.5">
                   <div className="font-bold text-xs text-[#1D1B16] flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-[#2E521C]">
-                      <FileText className="w-4 h-4 text-[#2E521C]" />
+                    <span className="flex items-center gap-1.5 text-[#6750A4]">
+                      <FileText className="w-4 h-4 text-[#6750A4]" />
                       本次预约知情表与主诉
                     </span>
-                    <span className="text-[10px] bg-[#E8E2D5] text-[#2E521C] px-2 py-0.2 rounded-full font-mono">
+                    <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-2 py-0.2 rounded-full font-mono">
                       {relatedOrder.orderNo}
                     </span>
                   </div>
@@ -236,7 +236,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                     {client.emergencyContact.name} ({client.emergencyContact.relation})
                   </div>
                 </div>
-                <div className="text-right font-mono text-xs font-semibold text-[#2E521C]">
+                <div className="text-right font-mono text-xs font-semibold text-[#6750A4]">
                   {client.emergencyContact.phone}
                 </div>
               </div>
@@ -273,7 +273,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                 <div className="font-bold text-xs text-[#1D1B16] px-1">历史会谈小结记录</div>
                 {client.sessionLogs.length === 0 ? (
                   <div className="bg-white p-5 rounded-[18px] border border-[#E6E0D6] text-center text-[#7A756C]">
-                    <Clock className="w-6 h-6 text-[#2E521C] mx-auto mb-1 opacity-50" />
+                    <Clock className="w-6 h-6 text-[#6750A4] mx-auto mb-1 opacity-50" />
                     <span>暂无过往会谈记录（首诊来访）</span>
                   </div>
                 ) : (
@@ -283,7 +283,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                       className="bg-white p-3 rounded-[16px] border border-[#E6E0D6] space-y-1.5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-[#2E521C]">
+                        <span className="font-bold text-xs text-[#6750A4]">
                           第 {log.sessionNo} 次会谈
                         </span>
                         <span className="font-mono text-[11px] text-[#7A756C]">{log.date}</span>
@@ -360,7 +360,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                   onClose();
                   onEnterRoom(relatedOrder);
                 }}
-                className="px-5 py-2 rounded-full bg-[#2E521C] text-white text-xs font-semibold hover:bg-[#234114] shadow-2xs active:scale-95"
+                className="px-5 py-2 rounded-full bg-[#6750A4] text-white text-xs font-semibold hover:bg-[#594294] shadow-2xs active:scale-95"
               >
                 进入咨询室
               </button>
