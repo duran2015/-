@@ -1,0 +1,362 @@
+import type {
+  ArchivedSessionReview,
+  ConsultationWorkflowState,
+  Order,
+  SessionReviewDraft,
+  SessionSnapshot,
+  WorkflowMessage,
+  WorkflowTask,
+} from "./types";
+
+export type ReviewSubmissionResult = {
+  ok: boolean;
+  state: ConsultationWorkflowState;
+  errors: string[];
+};
+
+const emptyClinicalSummary = (): SessionReviewDraft["clinicalSummary"] => ({
+  mainConcern: "",
+  clientState: "",
+  interventions: [],
+  observations: "",
+  riskReview: "",
+  nextPlan: "",
+});
+
+const emptyClientSummary = (): SessionReviewDraft["clientSummary"] => ({
+  recap: "",
+  actionItems: [],
+  nextPlan: "",
+});
+
+const emptyCounselorReflection = (): SessionReviewDraft["counselorReflection"] => ({
+  allianceQuality: null,
+  goalProgress: null,
+  reflection: "",
+});
+
+export const emptyWorkflowState = (): ConsultationWorkflowState => ({
+  reviewDrafts: [],
+  tasks: [],
+  messages: [],
+  settlements: {},
+  snapshots: {},
+  archivedReviews: [],
+});
+
+const getSessionId = (orderId: string) => `session-${orderId}`;
+const getDraftId = (orderId: string) => `draft-${orderId}`;
+
+const actorIds = (order: Order) => ({
+  clientId: order.clientId || `client-${order.id}`,
+  counselorId: (order as Order & { counselorId?: string }).counselorId || "c1",
+});
+
+const buildReviewDraft = (
+  order: Order,
+  snapshot: SessionSnapshot,
+  timestamp: string,
+): SessionReviewDraft => {
+  const { clientId, counselorId } = actorIds(order);
+  return {
+    id: getDraftId(order.id),
+    sessionId: getSessionId(order.id),
+    orderId: order.id,
+    clientId,
+    counselorId,
+    status: "draft",
+    version: 1,
+    sourceSnapshot: {
+      transcriptSegmentIds: snapshot.transcript.map((item) => item.id),
+      insightIds: snapshot.insights.map((item) => item.id),
+      noteIds: snapshot.notes.map((item) => item.id),
+      intakeAvailable: Boolean(order.intakeForm || (order as Order & { preQuestionnaire?: unknown }).preQuestionnaire),
+      priorRecordIds: [],
+    },
+    clinicalSummary: emptyClinicalSummary(),
+    clientSummary: emptyClientSummary(),
+    counselorReflection: emptyCounselorReflection(),
+    updatedAt: timestamp,
+  };
+};
+
+const buildReviewTasks = (order: Order, draft: SessionReviewDraft, timestamp: string): WorkflowTask[] => [
+  {
+    id: `task-review-${order.id}`,
+    actorRole: "counselor",
+    actorId: draft.counselorId,
+    taskType: "complete_session_review",
+    status: "pending",
+    blockingSettlement: true,
+    orderId: order.id,
+    sessionId: draft.sessionId,
+    draftId: draft.id,
+    createdAt: timestamp,
+  },
+  {
+    id: `task-reflection-${order.id}`,
+    actorRole: "counselor",
+    actorId: draft.counselorId,
+    taskType: "counselor_reflection",
+    status: "pending",
+    blockingSettlement: true,
+    orderId: order.id,
+    sessionId: draft.sessionId,
+    draftId: draft.id,
+    createdAt: timestamp,
+  },
+];
+
+const buildCounselorMessage = (order: Order, draft: SessionReviewDraft, timestamp: string): WorkflowMessage => ({
+  id: `message-summary-${order.id}`,
+  orderId: order.id,
+  messageType: "summary_card",
+  audience: "counselor",
+  sessionId: draft.sessionId,
+  draftId: draft.id,
+  status: "pending_review",
+  title: "本次咨询总结待确认",
+  description: `${order.clientName} 的 AI 草稿已准备，请完成复核后提交。`,
+  actionLabel: "打开复盘",
+  createdAt: timestamp,
+  updatedAt: timestamp,
+});
+
+export function endSessionWorkflow(
+  state: ConsultationWorkflowState,
+  order: Order,
+  snapshot: SessionSnapshot,
+  timestamp: string,
+): ConsultationWorkflowState {
+  const existing = state.reviewDrafts.find((item) => item.orderId === order.id);
+  if (existing) return state;
+
+  const draft = buildReviewDraft(order, snapshot, timestamp);
+  return {
+    ...state,
+    reviewDrafts: [...state.reviewDrafts, draft],
+    tasks: [...state.tasks, ...buildReviewTasks(order, draft, timestamp)],
+    messages: [...state.messages, buildCounselorMessage(order, draft, timestamp)],
+    settlements: { ...state.settlements, [order.id]: "blocked_by_summary" },
+    snapshots: { ...state.snapshots, [draft.sessionId]: snapshot },
+  };
+}
+
+export function saveReviewDraft(
+  state: ConsultationWorkflowState,
+  draftId: string,
+  patch: Partial<SessionReviewDraft>,
+  timestamp: string,
+): ConsultationWorkflowState {
+  return {
+    ...state,
+    reviewDrafts: state.reviewDrafts.map((draft) =>
+      draft.id === draftId && draft.status !== "submitted"
+        ? {
+            ...draft,
+            ...patch,
+            status: "draft",
+            clinicalSummary: { ...draft.clinicalSummary, ...patch.clinicalSummary },
+            clientSummary: { ...draft.clientSummary, ...patch.clientSummary },
+            counselorReflection: { ...draft.counselorReflection, ...patch.counselorReflection },
+            version: draft.version + 1,
+            updatedAt: timestamp,
+          }
+        : draft,
+    ),
+  };
+}
+
+export function validateReviewDraft(draft: SessionReviewDraft): string[] {
+  const errors: string[] = [];
+  const clinical = draft.clinicalSummary;
+  const client = draft.clientSummary;
+  const reflection = draft.counselorReflection;
+  if (
+    !clinical.mainConcern.trim() ||
+    !clinical.clientState.trim() ||
+    clinical.interventions.length === 0 ||
+    !clinical.observations.trim() ||
+    !clinical.riskReview.trim() ||
+    !clinical.nextPlan.trim()
+  ) {
+    errors.push("请完善临床总结");
+  }
+  if (!client.recap.trim() || client.actionItems.length === 0 || !client.nextPlan.trim()) {
+    errors.push("请完善用户可见回顾");
+  }
+  if (!reflection.allianceQuality || !reflection.goalProgress || !reflection.reflection.trim()) {
+    errors.push("请完成会谈复盘自评");
+  }
+  return errors;
+}
+
+const buildClientMessage = (draft: SessionReviewDraft, timestamp: string): WorkflowMessage => ({
+  id: `message-client-summary-${draft.orderId}`,
+  orderId: draft.orderId,
+  messageType: "summary_card",
+  audience: "client",
+  sessionId: draft.sessionId,
+  draftId: draft.id,
+  status: "shared",
+  title: "本次咨询回顾",
+  description: draft.clientSummary.recap,
+  actionLabel: "查看回顾并评价",
+  clientSummary: draft.clientSummary,
+  createdAt: timestamp,
+  updatedAt: timestamp,
+});
+
+export function submitReviewDraft(
+  state: ConsultationWorkflowState,
+  draftId: string,
+  timestamp: string,
+): ReviewSubmissionResult {
+  const draft = state.reviewDrafts.find((item) => item.id === draftId);
+  if (!draft) return { ok: false, state, errors: ["未找到咨询复盘草稿"] };
+  if (draft.status === "submitted") return { ok: true, state, errors: [] };
+
+  const errors = validateReviewDraft(draft);
+  if (errors.length > 0) return { ok: false, state, errors };
+
+  const submittedDraft: ArchivedSessionReview = {
+    ...draft,
+    status: "submitted",
+    version: draft.version + 1,
+    submittedAt: timestamp,
+    updatedAt: timestamp,
+  };
+  const counselorMessageId = `message-summary-${draft.orderId}`;
+  const clientMessageId = `message-client-summary-${draft.orderId}`;
+  const nextMessages = state.messages.map((message) =>
+    message.id === counselorMessageId
+      ? {
+          ...message,
+          status: "submitted" as const,
+          title: "总结已提交",
+          description: "内部记录已归档，用户可见版已发送。",
+          actionLabel: "查看已归档总结",
+          updatedAt: timestamp,
+        }
+      : message,
+  );
+  if (!nextMessages.some((message) => message.id === clientMessageId)) {
+    nextMessages.push(buildClientMessage(submittedDraft, timestamp));
+  }
+
+  const clientTasks: WorkflowTask[] = [
+    {
+      id: `task-recap-${draft.orderId}`,
+      actorRole: "client",
+      actorId: draft.clientId,
+      taskType: "read_session_recap",
+      status: "pending",
+      blockingSettlement: false,
+      orderId: draft.orderId,
+      sessionId: draft.sessionId,
+      draftId: draft.id,
+      createdAt: timestamp,
+    },
+    {
+      id: `task-review-counselor-${draft.orderId}`,
+      actorRole: "client",
+      actorId: draft.clientId,
+      taskType: "review_counselor",
+      status: "pending",
+      blockingSettlement: false,
+      orderId: draft.orderId,
+      sessionId: draft.sessionId,
+      draftId: draft.id,
+      createdAt: timestamp,
+    },
+  ];
+
+  return {
+    ok: true,
+    errors: [],
+    state: {
+      ...state,
+      reviewDrafts: state.reviewDrafts.map((item) => (item.id === draft.id ? submittedDraft : item)),
+      archivedReviews: state.archivedReviews.some((item) => item.id === draft.id)
+        ? state.archivedReviews
+        : [...state.archivedReviews, submittedDraft],
+      tasks: [
+        ...state.tasks.map((task) =>
+          task.draftId === draft.id && task.actorRole === "counselor"
+            ? { ...task, status: "completed" as const }
+            : task,
+        ),
+        ...clientTasks.filter((task) => !state.tasks.some((item) => item.id === task.id)),
+      ],
+      messages: nextMessages,
+      settlements: { ...state.settlements, [draft.orderId]: "eligible_t1" },
+    },
+  };
+}
+
+const emptySnapshot: SessionSnapshot = {
+  durationSeconds: 0,
+  transcript: [],
+  notes: [],
+  insights: [],
+};
+
+export function seedWorkflowFromOrders(
+  orders: Order[],
+  timestamp: string,
+): ConsultationWorkflowState {
+  return orders.reduce((state, order) => {
+    const { clientId, counselorId } = actorIds(order);
+    if (order.status === "pending_confirm") {
+      return {
+        ...state,
+        tasks: [
+          ...state.tasks,
+          {
+            id: `task-confirm-${order.id}`,
+            actorRole: "counselor",
+            actorId: counselorId,
+            taskType: "confirm_booking",
+            status: "pending",
+            blockingSettlement: false,
+            orderId: order.id,
+            createdAt: timestamp,
+          },
+        ],
+      };
+    }
+    if (order.status === "scheduled") {
+      return {
+        ...state,
+        tasks: [
+          ...state.tasks,
+          {
+            id: `task-intake-${order.id}`,
+            actorRole: "client",
+            actorId: clientId,
+            taskType: "complete_intake",
+            status: order.intakeForm ? "completed" : "pending",
+            blockingSettlement: false,
+            orderId: order.id,
+            createdAt: timestamp,
+          },
+          {
+            id: `task-enter-${order.id}`,
+            actorRole: "counselor",
+            actorId: counselorId,
+            taskType: "enter_session",
+            status: "pending",
+            blockingSettlement: false,
+            orderId: order.id,
+            sessionId: getSessionId(order.id),
+            createdAt: timestamp,
+          },
+        ],
+      };
+    }
+    if (order.status === "completed" && !order.hasSummary) {
+      return endSessionWorkflow(state, order, emptySnapshot, timestamp);
+    }
+    return state;
+  }, emptyWorkflowState());
+}

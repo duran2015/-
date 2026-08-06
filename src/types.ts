@@ -226,6 +226,136 @@ export interface SessionSummary {
   createdAt: string;
 }
 
+export type ConsultationSessionStatus = "scheduled" | "waiting" | "in_progress" | "ended";
+export type SessionReviewStatus = "not_started" | "ai_generating" | "draft" | "submitted";
+export type SessionSettlementStatus = "not_applicable" | "blocked_by_summary" | "eligible_t1" | "settled";
+export type WorkflowTaskStatus = "pending" | "in_progress" | "completed" | "skipped";
+export type WorkflowTaskType =
+  | "confirm_booking"
+  | "complete_intake"
+  | "review_intake"
+  | "enter_session"
+  | "complete_session_review"
+  | "read_session_recap"
+  | "review_counselor"
+  | "counselor_reflection";
+
+export interface SessionTranscriptSegment {
+  id: string;
+  sessionId: string;
+  speakerRole: "client" | "counselor";
+  speakerName: string;
+  text: string;
+  startsAtSeconds: number;
+  endsAtSeconds: number;
+  confidence: number;
+  highlightTerms: string[];
+}
+
+export interface SessionInsight {
+  id: string;
+  sessionId: string;
+  category: "topic" | "emotion" | "intervention" | "risk" | "plan";
+  title: string;
+  detail: string;
+  sourceType: "transcript" | "intake" | "note" | "history";
+  sourceIds: string[];
+  confidence: number;
+}
+
+export interface SessionNoteSnapshot {
+  id: string;
+  text: string;
+}
+
+export interface SessionSnapshot {
+  durationSeconds: number;
+  transcript: SessionTranscriptSegment[];
+  notes: SessionNoteSnapshot[];
+  insights: SessionInsight[];
+}
+
+export interface SessionReviewDraft {
+  id: string;
+  sessionId: string;
+  orderId: string;
+  clientId: string;
+  counselorId: string;
+  status: SessionReviewStatus;
+  version: number;
+  sourceSnapshot: {
+    transcriptSegmentIds: string[];
+    insightIds: string[];
+    noteIds: string[];
+    intakeAvailable: boolean;
+    priorRecordIds: string[];
+  };
+  clinicalSummary: {
+    mainConcern: string;
+    clientState: string;
+    interventions: string[];
+    observations: string;
+    riskReview: string;
+    nextPlan: string;
+  };
+  clientSummary: {
+    recap: string;
+    actionItems: string[];
+    nextPlan: string;
+  };
+  counselorReflection: {
+    allianceQuality: "needs_attention" | "stable" | "strong" | null;
+    goalProgress: "limited" | "partial" | "clear" | null;
+    reflection: string;
+  };
+  updatedAt: string;
+  submittedAt?: string;
+}
+
+export interface WorkflowTask {
+  id: string;
+  actorRole: "client" | "counselor";
+  actorId: string;
+  taskType: WorkflowTaskType;
+  status: WorkflowTaskStatus;
+  blockingSettlement: boolean;
+  orderId: string;
+  sessionId?: string;
+  draftId?: string;
+  dueAt?: string;
+  createdAt: string;
+}
+
+export interface WorkflowMessage {
+  id: string;
+  orderId: string;
+  messageType: "summary_card";
+  audience: "counselor" | "client";
+  sessionId: string;
+  draftId: string;
+  status: "pending_review" | "submitted" | "shared";
+  title: string;
+  description: string;
+  actionLabel: string;
+  clientSummary?: SessionReviewDraft["clientSummary"];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArchivedSessionReview extends SessionReviewDraft {
+  status: "submitted";
+  submittedAt: string;
+}
+
+export interface ConsultationWorkflowState {
+  reviewDrafts: SessionReviewDraft[];
+  tasks: WorkflowTask[];
+  messages: WorkflowMessage[];
+  settlements: Record<string, SessionSettlementStatus>;
+  snapshots: Record<string, SessionSnapshot>;
+  archivedReviews: ArchivedSessionReview[];
+}
+
 export interface ViralVoucher {
   id: string;
   title: string;
