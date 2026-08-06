@@ -38,6 +38,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 }) => {
   const [activeStatus, setActiveStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'order_detail' | 'client_profile'>('list');
+  const [clientProfileSource, setClientProfileSource] = useState<'list' | 'order_detail' | 'external'>('list');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedClient, setSelectedClient] = useState<{
     profile: ClientProfile;
@@ -48,7 +49,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     if (initialSelectedOrder) {
       setSelectedOrder(initialSelectedOrder);
       if (initialViewMode === 'client_profile') {
-        handleOpenClientProfile(initialSelectedOrder);
+        handleOpenClientProfile(initialSelectedOrder, 'external');
       } else {
         setViewMode('order_detail');
       }
@@ -91,7 +92,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     }
   };
 
-  const handleOpenClientProfile = (order: Order) => {
+  const handleOpenClientProfile = (order: Order, source: 'list' | 'order_detail' | 'external' = 'list') => {
     const foundProfile = INITIAL_CLIENT_PROFILES[order.clientId] || {
       id: order.clientId || 'cli_default',
       name: order.clientName,
@@ -119,6 +120,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       profile: foundProfile,
       order: order
     });
+    setClientProfileSource(source);
     setViewMode('client_profile');
   };
 
@@ -136,7 +138,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           setViewMode('list');
           setSelectedOrder(null);
         }}
-        onOpenClientProfile={(ord) => handleOpenClientProfile(ord)}
+        onOpenClientProfile={(ord) => handleOpenClientProfile(ord, 'order_detail')}
         onConfirmOrder={onConfirmOrder}
         onEnterRoom={onEnterRoom}
         onWriteSummary={onWriteSummary}
@@ -152,12 +154,12 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         client={selectedClient.profile}
         relatedOrder={selectedClient.order}
         onBack={() => {
-          // If we came from order detail, go back to order detail if available, else list
-          if (selectedOrder) {
+          if (clientProfileSource === 'order_detail' && selectedOrder) {
             setViewMode('order_detail');
           } else {
             setViewMode('list');
             setSelectedClient(null);
+            setSelectedOrder(null);
           }
         }}
         onEnterRoom={onEnterRoom}
