@@ -43,7 +43,7 @@ const reviewTask: WorkflowTask = {
   actorId: "c1",
   taskType: "review_intake",
   status: "pending",
-  blockingSettlement: false,
+  blockingSettlement: true,
   orderId: order.id,
   createdAt: "2026-08-06T10:00:00.000Z",
 };
@@ -79,6 +79,7 @@ test("workbench renders one compact current-task row without the journey timelin
   assert.match(markup, /用户已填写咨询前资料/);
   assert.match(markup, /aria-label="预约时间：2026-08-06 16:00 - 16:50"/);
   assert.match(markup, />查看<\/button>/);
+  assert.doesNotMatch(markup, /完成后进入 T\+1 结算/);
   assert.equal(markup.match(/<article/g)?.length, 1);
   assert.equal(markup.match(/<button/g)?.length, 1);
   assert.doesNotMatch(markup, /<ol/);

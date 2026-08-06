@@ -102,7 +102,7 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
                     <span className="shrink-0 text-[12px] font-medium text-[#7A756C]">{descriptor.statusText}</span>
                   </div>
                   <div className="mt-0.5 truncate text-[12px] text-[#7A756C]">{descriptor.desc}</div>
-                  {currentTask.blockingSettlement && (
+                  {currentTask.taskType === 'complete_session_review' && currentTask.blockingSettlement && (
                     <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#8A5100]">
                       <LockKeyhole size={11} />完成后进入 T+1 结算
                     </div>
