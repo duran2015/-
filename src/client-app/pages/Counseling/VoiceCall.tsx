@@ -216,6 +216,13 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
     setMeetingState("waiting");
   };
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   if (isCallMinimized && meetingState !== "lobby" && meetingState !== "ended") {
     return (
       <motion.button
@@ -345,13 +352,6 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
       </div>
     </div>
   );
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
 
   return (
     <motion.div data-meeting-room initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[99999] flex h-[100dvh] flex-col overflow-hidden bg-[#1D1B16] text-white" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh' }}>
