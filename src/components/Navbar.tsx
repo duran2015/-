@@ -1,19 +1,17 @@
 import React from 'react';
-import { Bell, Sparkles, PhoneCall, Video } from 'lucide-react';
+import { Bell, PhoneCall, Video } from 'lucide-react';
 import { ConsultantProfile } from '../types';
 
 interface NavbarProps {
   consultant: ConsultantProfile;
   onToggleListening: () => void;
   onOpenLiveSession: () => void;
-  onOpenAiQuoteModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   consultant,
   onToggleListening,
   onOpenLiveSession,
-  onOpenAiQuoteModal,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#ECE6DC] px-4 py-3 transition-all">
@@ -50,15 +48,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right Actions */}
         <div className="flex items-center gap-2 shrink-0">
           
-          {/* Quick AI Poster Button */}
-          <button
-            onClick={onOpenAiQuoteModal}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#FAF2ED] text-[#A23F1E] hover:bg-[#F3E3DA] active:scale-95 transition"
-            title="生成 AI 金句海报"
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-
           {/* Quick Listening Toggle Chip */}
           <button
             onClick={onToggleListening}
@@ -90,6 +79,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-
 
 

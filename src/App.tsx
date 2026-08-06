@@ -12,7 +12,6 @@ import { ProfileTab } from './components/Profile/ProfileTab';
 import { VoiceCall } from './client-app/pages/Counseling/VoiceCall';
 import { AISummaryModal } from './components/AISummaryModal';
 
-import { AIQuoteModal } from './components/AIQuoteModal';
 import { ChatDrawer } from './components/IM/ChatDrawer';
 
 import { INITIAL_CONSULTANT, INITIAL_SERVICE_PRODUCTS, INITIAL_SETTLEMENTS, INITIAL_VIRAL_VOUCHERS } from './data/mockData';
@@ -51,7 +50,6 @@ export default function App() {
   const [selectedOrderForSummary, setSelectedOrderForSummary] = useState<Order | null>(null);
   const [selectedOrderForFile, setSelectedOrderForFile] = useState<Order | null>(null);
   const [showOrderInfo, setShowOrderInfo] = useState<Order | null>(null);
-  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState<boolean>(false);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [activeOrderDetail, setActiveOrderDetail] = useState<Order | null>(null);
   const [showIncomeView, setShowIncomeView] = useState(false);
@@ -132,7 +130,6 @@ export default function App() {
               const target = nextScheduledOrder || orders[0];
               setActiveLiveOrder(target);
             }}
-            onOpenAiQuoteModal={() => setIsQuoteModalOpen(true)}
           />
         )}
 
@@ -273,7 +270,6 @@ export default function App() {
               consultant={consultant}
               vouchers={vouchers}
               onAddVoucher={handleAddVoucher}
-              onOpenAiQuoteModal={() => setIsQuoteModalOpen(true)}
               onSubPageChange={setIsSubPage}
             />
           )}
@@ -325,15 +321,7 @@ export default function App() {
         />
       )}
 
-      {/* MODAL 3: AI Social Quote / Moments Poster Generator */}
-      {isQuoteModalOpen && (
-        <AIQuoteModal
-          consultant={consultant}
-          onClose={() => setIsQuoteModalOpen(false)}
-        />
-      )}
-
-      {/* MODAL 4: Client File Quick View Drawer */}
+      {/* MODAL 3: Client File Quick View Drawer */}
       {selectedOrderForFile && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
           <div className="bg-[#F9F7F2] border border-[#E5E0D5] rounded-t-[32px] sm:rounded-[32px] max-w-md w-full p-6 shadow-xl relative max-h-[85vh] overflow-y-auto">

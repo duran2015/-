@@ -15,7 +15,6 @@ interface GrowthTabProps {
   consultant: ConsultantProfile;
   vouchers: ViralVoucher[];
   onAddVoucher: (voucher: ViralVoucher) => void;
-  onOpenAiQuoteModal?: () => void;
   onSubPageChange?: (isSubPage: boolean) => void;
 }
 
