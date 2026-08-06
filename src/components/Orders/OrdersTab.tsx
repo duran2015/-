@@ -21,6 +21,7 @@ interface OrdersTabProps {
   initialSelectedOrder?: Order | null;
   initialViewMode?: 'order_detail' | 'client_profile';
   onClearInitialOrder?: () => void;
+  onExitExternalView?: () => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -35,10 +36,12 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   initialSelectedOrder,
   initialViewMode,
   onClearInitialOrder,
+  onExitExternalView,
 }) => {
   const [activeStatus, setActiveStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'order_detail' | 'client_profile'>('list');
   const [clientProfileSource, setClientProfileSource] = useState<'list' | 'order_detail' | 'external'>('list');
+  const [orderDetailSource, setOrderDetailSource] = useState<'list' | 'external'>('list');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedClient, setSelectedClient] = useState<{
     profile: ClientProfile;
@@ -51,6 +54,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       if (initialViewMode === 'client_profile') {
         handleOpenClientProfile(initialSelectedOrder, 'external');
       } else {
+        setOrderDetailSource('external');
         setViewMode('order_detail');
       }
       onClearInitialOrder?.();
@@ -126,6 +130,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
   const handleOpenOrderDetail = (order: Order) => {
     setSelectedOrder(order);
+    setOrderDetailSource('list');
     setViewMode('order_detail');
   };
 
@@ -135,8 +140,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       <OrderDetailView
         order={selectedOrder}
         onBack={() => {
-          setViewMode('list');
-          setSelectedOrder(null);
+          if (orderDetailSource === 'external') {
+            setViewMode('list');
+            setSelectedOrder(null);
+            onExitExternalView?.();
+          } else {
+            setViewMode('list');
+            setSelectedOrder(null);
+          }
         }}
         onOpenClientProfile={(ord) => handleOpenClientProfile(ord, 'order_detail')}
         onConfirmOrder={onConfirmOrder}
@@ -156,6 +167,11 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         onBack={() => {
           if (clientProfileSource === 'order_detail' && selectedOrder) {
             setViewMode('order_detail');
+          } else if (clientProfileSource === 'external') {
+            setViewMode('list');
+            setSelectedClient(null);
+            setSelectedOrder(null);
+            onExitExternalView?.();
           } else {
             setViewMode('list');
             setSelectedClient(null);

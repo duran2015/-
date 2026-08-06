@@ -59,6 +59,7 @@ export default function App() {
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [activeOrderDetail, setActiveOrderDetail] = useState<Order | null>(null);
   const [activeOrderViewMode, setActiveOrderViewMode] = useState<'order_detail' | 'client_profile'>('order_detail');
+  const [activeOrderReturnTab, setActiveOrderReturnTab] = useState<MainTabType | null>(null);
   const [showIncomeView, setShowIncomeView] = useState(false);
 
   // Dev Toggle
@@ -112,6 +113,7 @@ export default function App() {
   };
 
   const handleProcessOrder = (order: Order, viewMode: 'order_detail' | 'client_profile' = 'order_detail') => {
+    setActiveOrderReturnTab(activeTab);
     setActiveOrderDetail(order);
     setActiveOrderViewMode(viewMode);
     setActiveTab('messages');
@@ -263,6 +265,12 @@ export default function App() {
               initialSelectedOrder={activeOrderDetail}
               initialViewMode={activeOrderViewMode}
               onClearInitialOrder={() => setActiveOrderDetail(null)}
+              onExitExternalView={() => {
+                if (activeOrderReturnTab) {
+                  setActiveTab(activeOrderReturnTab);
+                  setActiveOrderReturnTab(null);
+                }
+              }}
             />
           )}
 
