@@ -26,8 +26,11 @@ import {
 } from "lucide-react";
 import { useAppStore } from "../../store";
 import { mockCounselors, mockUser } from "../../data";
+import {
+  getVoiceCallPresentation,
+  type MeetingState,
+} from "../../../voiceCallPresentation";
 
-type MeetingState = "lobby" | "waiting" | "in-call" | "ended";
 type MediaPermissionState = { camera: boolean; microphone: boolean };
 
 interface VoiceCallProps {
@@ -73,6 +76,7 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
   const roomNumber = `KL-${String(order?.id || "849201").replace(/\D/g, "").slice(-6).padStart(6, "0")}`;
 
   const [meetingState, setMeetingState] = useState<MeetingState>("waiting");
+  const roomPresentation = getVoiceCallPresentation(meetingState, isVideo);
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(!isVideo);
   const [speaker, setSpeaker] = useState(true);
@@ -321,40 +325,6 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
     </div>
   );
 
-  const VideoConsultationView = () => (
-    <div className="relative h-full w-full bg-[#1D1B16]">
-      {/* Main Remote Video */}
-      <div className="absolute inset-0">
-        <img src={otherAvatar} alt={otherName} className="h-full w-full object-cover opacity-90" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60 pointer-events-none" />
-        <div className="absolute bottom-32 left-4 flex items-center rounded-xl bg-black/40 px-3 py-1.5 text-[12px] text-white backdrop-blur-md border border-white/10">
-          <span className="mr-2 h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></span> {otherName}
-        </div>
-      </div>
-      
-      {/* Local Mini Video (Draggable) */}
-      <motion.div 
-        drag 
-        dragConstraints={{ left: 10, right: 300, top: 80, bottom: 500 }} 
-        className="absolute right-4 top-24 h-44 w-32 overflow-hidden rounded-[20px] border-2 border-white/20 bg-gray-900 shadow-2xl z-20 cursor-move"
-      >
-        {cameraOff ? (
-           <div className="flex h-full flex-col items-center justify-center bg-gray-900/90 backdrop-blur-sm">
-             <img src={selfAvatar} className="h-14 w-14 rounded-full opacity-40 object-cover mb-2" />
-             <VideoOff size={16} className="text-white/40" />
-           </div>
-        ) : (
-           <>
-             <img src={selfAvatar} alt={selfName} className="h-full w-full object-cover" />
-             <div className="absolute bottom-2 right-2 rounded-lg bg-black/50 p-1.5 text-white backdrop-blur-md">
-               {muted ? <MicOff size={12} className="text-orange-400" /> : <Mic size={12} />}
-             </div>
-           </>
-        )}
-      </motion.div>
-    </div>
-  );
-
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -385,7 +355,7 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
         
         {/* AV View Area */}
         <div className="flex-1 relative flex flex-col transition-all duration-300">
-          {meetingState === "waiting" ? (
+          {roomPresentation.layout === "participant-cards" ? (
             <div className="flex h-full w-full flex-col items-center justify-center px-6">
                <div className="w-full max-w-sm grid grid-rows-2 gap-4 h-[60%]">
                  <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[32px] border border-[#EADDFF]/20 bg-[#6750A4]/20 backdrop-blur-md shadow-2xl">
@@ -393,16 +363,17 @@ export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
                    <div className="text-[16px] font-black">{selfName}</div>
                    <div className="mt-1.5 flex items-center text-[12px] font-bold text-[#EADDFF]"><span className="mr-2 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]" />{selfRole} · 已进入</div>
                  </div>
-                 <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[32px] border border-dashed border-white/20 bg-white/5 backdrop-blur-md">
-                   <img src={otherAvatar} alt={otherName} className="mb-4 h-24 w-24 rounded-[28px] object-cover opacity-40 grayscale" />
-                   <div className="text-[16px] font-black text-white/60">{otherName}</div>
-                   <div className="mt-1.5 text-[12px] font-bold text-white/40">{otherRole} · 待加入</div>
-                   <button onClick={() => setNotice(`已提醒${otherName}加入会议`)} className="mt-5 flex items-center rounded-full bg-white/10 px-5 py-2.5 text-[12px] font-bold text-white/80 active:scale-95 transition-transform"><BellRing size={16} className="mr-2" />提醒对方</button>
+                 <div className={`relative flex flex-col items-center justify-center overflow-hidden rounded-[32px] border backdrop-blur-md transition-colors ${roomPresentation.otherParticipantJoined ? "border-[#EADDFF]/20 bg-[#6750A4]/20 shadow-2xl" : "border-dashed border-white/20 bg-white/5"}`}>
+                   <img src={otherAvatar} alt={otherName} className={`mb-4 h-24 w-24 rounded-[28px] object-cover transition-all ${roomPresentation.otherParticipantJoined ? "shadow-lg" : "opacity-40 grayscale"}`} />
+                   <div className={`text-[16px] font-black ${roomPresentation.otherParticipantJoined ? "text-white" : "text-white/60"}`}>{otherName}</div>
+                   <div className={`mt-1.5 flex items-center text-[12px] font-bold ${roomPresentation.otherParticipantJoined ? "text-[#EADDFF]" : "text-white/40"}`}>
+                     {roomPresentation.otherParticipantJoined && <span className="mr-2 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]" />}
+                     {otherRole} · {roomPresentation.otherParticipantJoined ? "已加入" : "待加入"}
+                   </div>
+                   {!roomPresentation.otherParticipantJoined && <button onClick={() => setNotice(`已提醒${otherName}加入会议`)} className="mt-5 flex items-center rounded-full bg-white/10 px-5 py-2.5 text-[12px] font-bold text-white/80 active:scale-95 transition-transform"><BellRing size={16} className="mr-2" />提醒对方</button>}
                  </div>
                </div>
             </div>
-          ) : isVideo ? (
-            <VideoConsultationView />
           ) : (
             <AudioConsultationView />
           )}
