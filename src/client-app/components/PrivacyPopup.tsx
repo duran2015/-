@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Shield, CheckCircle2, Circle, ChevronLeft } from "lucide-react";
 import { useAppStore } from "../store";
@@ -7,14 +7,13 @@ export function PrivacyPopup() {
   const { hasAgreedPrivacy, agreePrivacy } = useAppStore();
   const [checked, setChecked] = useState(false);
   const [showDocument, setShowDocument] = useState<null | "user" | "privacy">(null);
+  const documentTitle = showDocument === "user"
+    ? "用户协议"
+    : showDocument === "privacy"
+      ? "隐私政策"
+      : "";
 
   if (hasAgreedPrivacy) return null;
-
-  const documentTitle = useMemo(() => {
-    if (showDocument === "user") return "用户协议";
-    if (showDocument === "privacy") return "隐私政策";
-    return "";
-  }, [showDocument]);
 
   return (
     <AnimatePresence>

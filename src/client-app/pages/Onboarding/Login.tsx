@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ClipboardEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useState, useRef, useEffect, type ClipboardEvent, type KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAppStore } from "../../store";
 import { Loader2, CheckCircle2, Circle, ArrowLeft, Apple, AlertCircle, Briefcase, User } from "lucide-react";
@@ -294,11 +294,16 @@ export function Login() {
                   </button>
                 </div>
 
-                <button
-                  onClick={() => setAgreed(!agreed)}
+                <div
                   className={`flex items-start space-x-2 text-xs transition-colors w-full ${error ? "animate-pulse" : ""}`}
                 >
-                  <div className="mt-0.5 shrink-0">
+                  <button
+                    type="button"
+                    aria-label="同意服务协议与隐私政策"
+                    aria-pressed={agreed}
+                    onClick={() => setAgreed(!agreed)}
+                    className="mt-0.5 shrink-0"
+                  >
                     {agreed ? (
                       <CheckCircle2 size={16} className="text-primary" />
                     ) : (
@@ -307,17 +312,14 @@ export function Login() {
                         className={error ? "text-red-500" : "text-gray-300"}
                       />
                     )}
-                  </div>
+                  </button>
                   <span
                     className={`text-left leading-relaxed ${error ? "text-red-500 font-medium" : "text-gray-500"}`}
                   >
                     我已阅读并同意
                     <button
                       type="button"
-                      onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        pushView("legal-document");
-                      }}
+                      onClick={() => pushView("legal-document")}
                       className="text-primary px-0.5"
                     >
                       《可鹿用户服务协议》
@@ -325,17 +327,14 @@ export function Login() {
                     与
                     <button
                       type="button"
-                      onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        pushView("legal-document");
-                      }}
+                      onClick={() => pushView("legal-document")}
                       className="text-primary px-0.5"
                     >
                       《隐私政策》
                     </button>
                     ， 未注册手机号通过验证后将自动注册
                   </span>
-                </button>
+                </div>
               </div>
             </motion.div>
           ) : step === "bind-phone" ? (

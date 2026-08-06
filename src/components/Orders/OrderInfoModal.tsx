@@ -67,7 +67,7 @@ export const OrderInfoModal: React.FC<OrderInfoModalProps> = ({ order, onClose }
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[#7A756C]">服务项目</span>
-              <span className="text-sm font-medium text-[#1D1B16]">{order.type}</span>
+              <span className="text-sm font-medium text-[#1D1B16]">{order.serviceTypeName}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[#7A756C]">预约时间</span>

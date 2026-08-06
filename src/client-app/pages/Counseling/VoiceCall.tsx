@@ -30,6 +30,12 @@ import { mockCounselors, mockUser } from "../../data";
 type MeetingState = "lobby" | "waiting" | "in-call" | "ended";
 type MediaPermissionState = { camera: boolean; microphone: boolean };
 
+interface VoiceCallProps {
+  propOrder?: unknown;
+  propMode?: "counselor" | "user";
+  onClose?: () => void;
+}
+
 const detectClientPlatform = () => {
   if (typeof navigator === "undefined") return "当前设备";
   const ua = navigator.userAgent.toLowerCase();
@@ -39,7 +45,7 @@ const detectClientPlatform = () => {
   return "当前设备";
 };
 
-export function VoiceCall({ propOrder, propMode, onClose }: { propOrder?: any, propMode?: "counselor" | "user", onClose?: () => void }) {
+export function VoiceCall({ propOrder, propMode, onClose }: VoiceCallProps) {
   const {
     popView,
     pushView,

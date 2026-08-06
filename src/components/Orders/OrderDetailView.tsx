@@ -68,7 +68,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         cardType: 'new_booking',
         cardState: order.status === 'pending_confirm' ? 'pending' : 'resolved',
         cardData: { 
-          serviceType: order.type,
+          serviceType: order.serviceTypeName,
           bookingTime: `${order.bookingDate} ${order.bookingTimeSlot}`,
           price: `¥${(order.price || 0).toFixed(2)}`
         },

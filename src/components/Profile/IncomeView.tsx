@@ -323,7 +323,7 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose }) =
                   <div key={record.id} className="bg-[#FAF8F5] p-3.5 rounded-[18px] border border-[#ECE6DC] space-y-2.5">
                     <div className="flex items-center justify-between text-xs pb-2 border-b border-[#ECE6DC]">
                       <span className="font-mono text-[11px] font-bold text-[#1D1B16]">{record.withdrawNo}</span>
-                      {record.status === 'success' ? (
+                      {record.status === 'completed' ? (
                         <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">打款成功</span>
                       ) : (
                         <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-semibold border border-amber-200">待财务审核</span>

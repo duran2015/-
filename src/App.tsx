@@ -246,9 +246,6 @@ export default function App() {
               orders={orders}
               onConfirmOrder={handleConfirmOrder}
               onEnterRoom={(order) => setActiveLiveOrder(order)}
-              onWriteSummary={handleWriteSummary}
-              onSendReminder={handleSendReminder}
-              onOpenChat={(order) => setActiveChatOrder(order)}
               onSubPageChange={setIsSubPage}
               onOpenOrderInfo={(order) => setShowOrderInfo(order)}
             />
@@ -290,6 +287,7 @@ export default function App() {
               onToggleProductPublish={handleToggleProductPublish}
               onUpdateConsultant={handleUpdateConsultant}
               onSubPageChange={setIsSubPage}
+              onOpenHistoryOrders={() => setActiveTab('messages')}
               onOpenIncomeView={() => setShowIncomeView(true)}
             />
           )}
@@ -416,4 +414,3 @@ export default function App() {
     </div>
   );
 }
-

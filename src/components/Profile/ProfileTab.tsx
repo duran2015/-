@@ -32,7 +32,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   onOpenIncomeView
 }) => {
   // Navigation section: 'menu' is default home view; selecting an item opens a dedicated page view
-  const [activeSection, setActiveSection] = useState<'menu' | 'qualifications'>('menu');
+  const [activeSection, setActiveSection] = useState<'menu' | 'products' | 'qualifications'>('menu');
 
   React.useEffect(() => {
     if (onSubPageChange) {
@@ -231,9 +231,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             
             {/* New: Orders Management Item */}
             <button
-              onClick={() => {
-                alert('系统跳转：历史订单管理页（待开发）');
-              }}
+              onClick={onOpenHistoryOrders}
               className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
             >
               <div className="flex items-center gap-3.5">

@@ -3,13 +3,39 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import {
+  FixedWindowRateLimiter,
+  validateQuoteBody,
+  validateSessionSummaryBody,
+} from "./server/aiGuard";
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
 
-app.use(express.json());
+app.use(express.json({ limit: "32kb" }));
+
+app.use(((error, _req, res, next) => {
+  const requestError = error as Error & { status?: number; type?: string };
+  if (requestError.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request body too large" });
+  }
+  if (requestError instanceof SyntaxError && requestError.status === 400) {
+    return res.status(400).json({ error: "Malformed JSON" });
+  }
+  return next(error);
+}) as express.ErrorRequestHandler);
+
+const aiRateLimiter = new FixedWindowRateLimiter(10, 60_000);
+app.use("/api/ai", (req, res, next) => {
+  const result = aiRateLimiter.check(req.ip || req.socket.remoteAddress || "unknown");
+  if (!result.allowed) {
+    res.setHeader("Retry-After", String(result.retryAfterSeconds));
+    return res.status(429).json({ error: "Too many AI requests" });
+  }
+  return next();
+});
 
 // Lazy Gemini client helper
 let aiClient: GoogleGenAI | null = null;
@@ -32,7 +58,12 @@ app.get("/api/health", (req, res) => {
 // API: AI Session Summary Assistant
 app.post("/api/ai/session-summary", async (req, res) => {
   try {
-    const { clientName, rawNotes, sessionTopic, sessionNumber } = req.body;
+    const validation = validateSessionSummaryBody(req.body);
+    if (validation.ok === false) {
+      return res.status(400).json({ error: "Invalid request", details: validation.errors });
+    }
+
+    const { clientName, rawNotes, sessionTopic, sessionNumber } = validation.value;
     const ai = getGeminiClient();
 
     if (ai) {
@@ -67,7 +98,7 @@ app.post("/api/ai/session-summary", async (req, res) => {
       success: true,
       summary: {
         clientMood: "会谈前半段伴有明显躯体化紧绷（肩颈发紧），伴随对答节奏加快；后半段通过呼吸练习，情绪降温至 4/10 稳定水平。",
-        mainComplaint: `来访者 ${clientName} 主要围绕【${sessionTopic || "职场焦虑与人际沟通"}】展开，表达了近期在工作决策中的不确定感与对负面评价的过度担忧。`,
+        mainComplaint: `来访者 ${clientName || "来访者"} 主要围绕【${sessionTopic || "职场焦虑与人际沟通"}】展开，表达了近期在工作决策中的不确定感与对负面评价的过度担忧。`,
         interventions: [
           "应用人本主义共情技术，无条件积极关注并确认其情绪合理性",
           "引导做 4-7-8 腹式呼吸躯体放松，观察躯体紧绷部位",
@@ -80,14 +111,19 @@ app.post("/api/ai/session-summary", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Error generating session summary:", error);
-    res.status(500).json({ error: "Failed to generate summary", details: error.message });
+    res.status(500).json({ error: "Failed to generate summary" });
   }
 });
 
 // API: AI Social Viral Quote Generator
 app.post("/api/ai/generate-quote", async (req, res) => {
   try {
-    const { topic, consultantName } = req.body;
+    const validation = validateQuoteBody(req.body);
+    if (validation.ok === false) {
+      return res.status(400).json({ error: "Invalid request", details: validation.errors });
+    }
+
+    const { topic, consultantName } = validation.value;
     const ai = getGeminiClient();
 
     if (ai) {
@@ -138,7 +174,7 @@ app.post("/api/ai/generate-quote", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Error generating quote:", error);
-    res.status(500).json({ error: "Failed to generate quote", details: error.message });
+    res.status(500).json({ error: "Failed to generate quote" });
   }
 });
 

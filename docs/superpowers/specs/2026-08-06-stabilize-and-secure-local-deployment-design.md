@@ -11,7 +11,7 @@ The implementation will:
 - delete the committed one-time scripts `fix-client-app.cjs` and `patch*.cjs`;
 - make `npm run lint` type-check the maintained TypeScript source successfully;
 - fix the nested interactive controls on the client login agreement row while preserving agreement toggling and legal-document navigation;
-- pin `react-router-dom` and its transitive `react-router` dependency to `7.11.0`, which remains compatible with the declarative routing APIs used by this project and falls outside the current advisory's affected range;
+- remove `react-router-dom` after current audit data showed no clean v6/v7 release, replacing its three-route usage with a tested pathname resolver;
 - add in-process rate limiting and structured input validation to `/api/ai/session-summary` and `/api/ai/generate-quote`;
 - stop exposing internal exception messages in API responses; and
 - update README dependency versions when they differ from `package.json`.
@@ -62,7 +62,7 @@ The `VoiceCall` component's props signature will be corrected so `<VoiceCall key
 
 ## Dependency Handling
 
-`react-router-dom` will be pinned exactly to `7.11.0`; the lockfile will be regenerated with npm. No forced bulk dependency upgrade will be used. The final dependency decision is accepted only if `npm audit` reports zero known vulnerabilities and the existing routes still render.
+The app only distinguishes `/client`, `/counselor`, and a counselor fallback, so a small tested pathname resolver will replace `react-router-dom`. The lockfile will be regenerated with npm. The dependency decision is accepted only if `npm audit` reports zero known vulnerabilities and the existing routes still render.
 
 ## Testing
 

@@ -18,8 +18,8 @@
 
 ## 🛠 技术栈
 
-- **前端框架**：React 18 + Vite
-- **路由管理**：React Router v6
+- **前端框架**：React 19 + Vite
+- **入口路由**：浏览器 Pathname 分发（`/client`、`/counselor`）
 - **状态管理**：Zustand
 - **样式方案**：Tailwind CSS
 - **动画库**：Framer Motion (motion/react)
@@ -36,6 +36,10 @@ npm run dev
 ```
 
 本地服务器启动后，默认运行在 `http://localhost:3001`。
+
+## 🧱 Builder 数据与后端参考
+
+当前界面包含大量 Mock 数据。后续 Builder 接入真实数据、接口和库表时，请参考 [`docs/builder-backend-reference.md`](docs/builder-backend-reference.md)。该文档区分了当前已实现接口与建议后端能力，并给出了 Mock 替换顺序。
 
 ## 📋 目录架构简介
 

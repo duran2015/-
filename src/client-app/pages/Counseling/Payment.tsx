@@ -110,11 +110,7 @@ export function Payment() {
           </button>
         )}
         <h1 className="text-[17px] font-bold flex-1 text-center pr-10 text-gray-900">
-          {status === "success"
-            ? "支付成功"
-            : status === "failed"
-              ? "订单异常"
-              : "确认订单"}
+          {status === "success" ? "支付成功" : "确认订单"}
         </h1>
       </div>
 
