@@ -49,7 +49,10 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
   onConfirmOrder,
   onEnterRoom,
   onWriteSummary,
+  onSendReminder,
   onViewClientFile,
+  onOpenChat,
+  onProcessOrder,
 }) => {
   const workflowTasks = useAppStore((state) => state.consultationWorkflow.tasks);
   const journeys = useMemo(
