@@ -18,6 +18,8 @@ interface ProfileTabProps {
 
 export const ProfileTab: React.FC<ProfileTabProps> = ({
   consultant,
+  products,
+  onToggleProductPublish,
   onUpdateConsultant,
   onOpenHistoryOrders,
   onOpenIncomeView
