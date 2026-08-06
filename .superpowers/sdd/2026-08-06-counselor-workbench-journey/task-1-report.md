@@ -33,7 +33,7 @@
 
 ## Commit
 
-待创建。
+`5d11978 simplify counselor summary workflow`
 
 ## Self-review
 
