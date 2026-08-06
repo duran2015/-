@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, X } from 'lucide-react';
+import { Calendar, ArrowLeft } from 'lucide-react';
 import { Order, OrderStatus } from '../../types';
 
 interface OrderInfoModalProps {
@@ -25,13 +25,16 @@ export const OrderInfoModal: React.FC<OrderInfoModalProps> = ({ order, onClose }
     <div className="fixed inset-0 z-50 bg-[#FAF8F5] overflow-y-auto animate-in fade-in duration-200">
       {/* Top Navigation */}
       <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-[#ECE6DC] sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           <button 
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-stone-100 transition active:scale-95"
+            className="p-2 -ml-2 rounded-full hover:bg-stone-100 transition active:scale-95 flex items-center gap-1 text-[#49463D]"
           >
-            <X className="w-5 h-5 text-[#1D1B16]" />
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-semibold">返回</span>
           </button>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2">
           <h1 className="text-base font-bold text-[#1D1B16]">订单详情</h1>
         </div>
       </div>

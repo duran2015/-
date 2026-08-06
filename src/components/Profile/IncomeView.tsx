@@ -3,39 +3,42 @@ import {
   ArrowLeft, Wallet, Clock, CheckCircle2, XCircle, CreditCard, Building2, 
   Info, History, FileText, ChevronRight, X, Plus, Building, Phone, User, Check, LockKeyhole, UnlockKeyhole
 } from 'lucide-react';
-import { ConsultantProfile, BankAccount, WithdrawalRecord, BillRecord, BillRecordStatus } from '../../types';
+import { ConsultantProfile, BankAccount, WithdrawalRecord, BillRecord, BillRecordStatus, Order } from '../../types';
 import { INITIAL_BANK_ACCOUNTS, INITIAL_WITHDRAWAL_RECORDS, INITIAL_BILL_RECORDS } from '../../data/mockData';
 import { useAppStore } from '../../client-app/store';
 
 interface IncomeViewProps {
   consultant: ConsultantProfile;
+  isMockEmpty?: boolean;
   onClose: () => void;
   onOpenSessionReview?: (draftId: string) => void;
+  onOpenOrderInfo?: (order: Order) => void;
 }
 
-export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onOpenSessionReview }) => {
+export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, isMockEmpty, onClose, onOpenSessionReview, onOpenOrderInfo }) => {
   const workflow = useAppStore((state) => state.consultationWorkflow);
   const orders = useAppStore((state) => state.orders);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(INITIAL_BANK_ACCOUNTS);
-  const [withdrawalRecords, setWithdrawalRecords] = useState<WithdrawalRecord[]>(INITIAL_WITHDRAWAL_RECORDS);
-  const [billRecords, setBillRecords] = useState<BillRecord[]>(INITIAL_BILL_RECORDS);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(isMockEmpty ? [] : INITIAL_BANK_ACCOUNTS);
+  const [withdrawalRecords, setWithdrawalRecords] = useState<WithdrawalRecord[]>(isMockEmpty ? [] : INITIAL_WITHDRAWAL_RECORDS);
+  const [billRecords, setBillRecords] = useState<BillRecord[]>(isMockEmpty ? [] : INITIAL_BILL_RECORDS);
   const [withdrawableBalance, setWithdrawableBalance] = useState<number>(consultant.earnings.withdrawable);
 
-  const [settlementSubTab, setSettlementSubTab] = useState<'bills' | 'withdrawals' | 'accounts'>('bills');
-  const [billStatusFilter, setBillStatusFilter] = useState<'all' | 'settled' | 'pending_settlement' | 'withdrawn' | 'refunded'>('all');
+  const [settlementSubTab, setSettlementSubTab] = useState<'bills' | 'withdrawals'>('bills');
+  const [billStatusFilter, setBillStatusFilter] = useState<'all' | 'settled' | 'pending_settlement' | 'refunded'>('all');
 
+  const [showAccountsView, setShowAccountsView] = useState<boolean>(false);
   const [showAddAccountModal, setShowAddAccountModal] = useState<boolean>(false);
   const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState<boolean>(false);
+  const [activeWithdrawalDetail, setActiveWithdrawalDetail] = useState<WithdrawalRecord | null>(null);
 
   const [withdrawAmountInput, setWithdrawAmountInput] = useState<string>('1000');
   const [selectedAccountId, setSelectedAccountId] = useState<string>(INITIAL_BANK_ACCOUNTS[0]?.id || '');
 
-  const [newAccType, setNewAccType] = useState<'bank_card' | 'wechat' | 'alipay'>('bank_card');
   const [newBankName, setNewBankName] = useState<string>('');
+  const [newBranchName, setNewBranchName] = useState<string>('');
   const [newCardNumber, setNewCardNumber] = useState<string>('');
-  const [newHolder, setNewHolder] = useState<string>(consultant.name);
-  const [newPhone, setNewPhone] = useState<string>('13800000000');
+  const [newAccountHolder, setNewAccountHolder] = useState<string>(consultant.name);
 
   const handleApplyWithdraw = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +65,7 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
         cardNumber: targetAccount.cardNumber,
         accountHolder: targetAccount.accountHolder
       },
-      status: 'pending_audit',
+      status: 'applied',
       applyTime: formattedTime,
       financeNote: '已提交财务团队审核，预计 1 个工作日内完成划转打款'
     };
@@ -83,19 +86,20 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
 
     const newAcc: BankAccount = {
       id: `bank_${Date.now()}`,
-      accountType: newAccType,
-      bankName: newBankName,
+      accountType: 'bank_card',
+      bankName: newBranchName ? `${newBankName} (${newBranchName})` : newBankName,
       cardNumber: newCardNumber,
-      accountHolder: newHolder || consultant.name,
-      phone: newPhone,
+      accountHolder: newAccountHolder,
+      phone: '',
       isDefault: bankAccounts.length === 0
     };
 
     setBankAccounts([...bankAccounts, newAcc]);
-    setSelectedAccountId(newAcc.id);
-    setShowAddAccountModal(false);
     setNewBankName('');
+    setNewBranchName('');
     setNewCardNumber('');
+    setNewAccountHolder(consultant.name);
+    setShowAddAccountModal(false);
     alert('收款账号添加成功！');
   };
 
@@ -132,18 +136,53 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
             <span>待结算</span>
           </span>
         );
-      case 'withdrawn':
-        return (
-          <span className="bg-sky-50 text-sky-800 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-sky-200 inline-flex items-center gap-1">
-            <Wallet className="w-3 h-3 text-sky-600" />
-            <span>已打款</span>
-          </span>
-        );
       case 'refunded':
         return (
           <span className="bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-stone-200 inline-flex items-center gap-1">
             <XCircle className="w-3 h-3 text-stone-500" />
             <span>已退款</span>
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getWithdrawalStatusBadge = (status: WithdrawalRecord['status']) => {
+    switch (status) {
+      case 'applied':
+        return (
+          <span className="bg-sky-50 text-sky-800 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-sky-200 inline-flex items-center gap-1">
+            <Clock className="w-3 h-3 text-sky-600" />
+            <span>用户申请</span>
+          </span>
+        );
+      case 'reviewing':
+        return (
+          <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-amber-200 inline-flex items-center gap-1">
+            <Clock className="w-3 h-3 text-amber-600" />
+            <span>平台审核</span>
+          </span>
+        );
+      case 'paying':
+        return (
+          <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-blue-200 inline-flex items-center gap-1">
+            <Wallet className="w-3 h-3 text-blue-600" />
+            <span>财务打款</span>
+          </span>
+        );
+      case 'success':
+        return (
+          <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-200 inline-flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            <span>打款成功</span>
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-stone-200 inline-flex items-center gap-1">
+            <XCircle className="w-3 h-3 text-stone-500" />
+            <span>打款失败</span>
           </span>
         );
       default:
@@ -174,96 +213,49 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-none p-4 space-y-4">
-        {/* Balance Overview Hero Box */}
-        <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-5 shadow-2xs space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-[#6750A4]/5 rounded-full blur-2xl pointer-events-none" />
+        {/* Simplified MVP Balance Hero Box */}
+        <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-6 shadow-2xs text-center relative overflow-hidden flex flex-col items-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#6750A4]/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="relative z-10 w-full flex flex-col items-center">
+            <div className="text-xs text-[#7A756C] mb-2 flex items-center gap-1">
+              当前可提现余额 (元)
+              <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-1.5 py-0.5 rounded-full font-semibold">T+1</span>
+            </div>
+            
+            <div className="text-4xl font-bold font-mono text-[#1D1B16] mb-6 tracking-tight">
+              ¥{withdrawableBalance.toFixed(2)}
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b border-[#ECE6DC] relative z-10">
-            <div>
-              <div className="text-xs text-[#7A756C] flex items-center gap-1">
-                <span>当前可提现余额</span>
-                <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-1.5 py-0.2 rounded-full font-semibold">T+1 随时提</span>
+            <button
+              onClick={() => setShowWithdrawModal(true)}
+              className="w-full max-w-[240px] py-3.5 rounded-full bg-[#6750A4] text-white text-sm font-bold shadow-xs active:scale-95 flex items-center justify-center gap-2 mb-5 transition-transform"
+            >
+              <Wallet className="w-4 h-4" />
+              <span>发起提现申请</span>
+            </button>
+
+            <button
+              onClick={() => setShowAccountsView(true)}
+              className="w-full bg-[#FAF8F5] border border-[#ECE6DC] p-3 rounded-[20px] flex items-center justify-between active:scale-[0.99] transition-transform"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#E6E0D6] flex items-center justify-center shadow-xs shrink-0">
+                  <Building2 className="w-4 h-4 text-[#6750A4]" />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-bold text-[#1D1B16]">收款账户</div>
+                  <div className="text-[10px] text-[#7A756C] mt-0.5">
+                    {bankAccounts[0] ? `${bankAccounts[0].bankName} (尾号${bankAccounts[0].cardNumber.slice(-4)})` : '尚未绑定，点击添加'}
+                  </div>
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-[#6750A4] mt-1">
-                ¥{withdrawableBalance.toFixed(2)}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs text-[#7A756C]">待结算冻结金额</div>
-              <div className="text-lg font-bold font-mono text-[#1D1B16] mt-1">
-                ¥{pendingSettlementTotal.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-[#7A756C] mt-0.5">服务完成后自动打入余额</div>
-            </div>
-
-            <div>
-              <div className="text-xs text-[#7A756C]">累计已提现收益</div>
-              <div className="text-lg font-bold font-mono text-[#49463D] mt-1">
-                ¥{consultant.earnings.totalEarned.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-[#7A756C] mt-0.5">财务代扣代缴个人所得税</div>
-            </div>
-          </div>
-
-          {/* Quick Actions Bar */}
-          <div className="flex items-center justify-between gap-2 flex-wrap relative z-10 pt-1">
-            <div className="text-xs text-[#7A756C] flex items-center gap-2">
-              <Building2 className="w-3.5 h-3.5 text-[#6750A4]" />
-              <span>提现至: <strong className="text-[#1D1B16] font-semibold">{bankAccounts[0]?.bankName || '尚未绑定银行卡'}</strong></span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSettlementSubTab('accounts')}
-                className="px-3.5 py-1.5 rounded-full bg-[#FAF8F5] border border-[#E6E0D6] text-[#1D1B16] text-xs font-semibold hover:bg-[#E8E2D5] transition active:scale-95 flex items-center gap-1"
-              >
-                <CreditCard className="w-3.5 h-3.5 text-[#7A756C]" />
-                <span>提现账号管理</span>
-              </button>
-
-              <button
-                onClick={() => setShowWithdrawModal(true)}
-                className="px-5 py-1.5 rounded-full bg-[#6750A4] text-white text-xs font-semibold hover:bg-[#594294] transition shadow-2xs active:scale-95 flex items-center gap-1.5"
-              >
-                <Wallet className="w-4 h-4 text-emerald-200" />
-                <span>发起提现申请</span>
-              </button>
-            </div>
+              <ChevronRight className="w-4 h-4 text-[#7A756C]" />
+            </button>
           </div>
         </div>
 
-        {workflowSettlements.length > 0 && (
-          <div className="rounded-[24px] border border-[#E6E0D6] bg-white p-4 shadow-2xs">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-[#1D1B16]">咨询结算联动</h3>
-                <p className="mt-0.5 text-[10px] text-[#7A756C]">会谈总结状态决定订单是否进入 T+1 结算</p>
-              </div>
-              <span className="rounded-full bg-[#F3EDF7] px-2.5 py-1 text-[10px] font-bold text-[#6750A4]">{workflowSettlements.length} 笔</span>
-            </div>
-            <div className="space-y-2">
-              {workflowSettlements.map(({ order, status, draftId }) => order && (
-                <button
-                  key={order.id}
-                  onClick={() => draftId && onOpenSessionReview?.(draftId)}
-                  className="flex w-full items-center gap-3 rounded-[18px] border border-[#ECE6DC] bg-[#FAF8F5] p-3 text-left active:bg-[#F3EDF7]"
-                >
-                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-[14px] ${status === 'blocked_by_summary' ? 'bg-[#FFF0D9] text-[#8A5100]' : 'bg-[#E6F5EA] text-[#25683B]'}`}>
-                    {status === 'blocked_by_summary' ? <LockKeyhole size={18} /> : <UnlockKeyhole size={18} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[12px] font-bold text-[#1D1B16]">{order.clientName} · ¥{order.price.toFixed(2)}</div>
-                    <div className={`mt-0.5 text-[10px] font-bold ${status === 'blocked_by_summary' ? 'text-[#8A5100]' : 'text-[#25683B]'}`}>
-                      {status === 'blocked_by_summary' ? '总结待提交 · 暂缓结算' : '总结已提交 · T+1 可结算'}
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-[#79747E]" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Sub Navigation Bar */}
         <div className="bg-[#FAF8F5] border border-[#ECE6DC] p-1.5 rounded-[20px] flex items-center gap-1 shadow-2xs text-xs">
@@ -274,7 +266,7 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>收入账单明细 ({billRecords.length})</span>
+            <span>入账明细 ({billRecords.length})</span>
           </button>
           <button
             onClick={() => setSettlementSubTab('withdrawals')}
@@ -284,15 +276,6 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
           >
             <History className="w-4 h-4" />
             <span>提现记录 ({withdrawalRecords.length})</span>
-          </button>
-          <button
-            onClick={() => setSettlementSubTab('accounts')}
-            className={`flex-1 py-2 px-3 rounded-[14px] font-semibold transition active:scale-95 flex items-center justify-center gap-1.5 ${
-              settlementSubTab === 'accounts' ? 'bg-[#6750A4] text-white shadow-2xs' : 'text-[#49463D] hover:bg-[#E8E2D5]'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>收款卡 ({bankAccounts.length})</span>
           </button>
         </div>
 
@@ -305,7 +288,6 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
                   { id: 'all', label: '全部' },
                   { id: 'settled', label: '已入账' },
                   { id: 'pending_settlement', label: '待结算' },
-                  { id: 'withdrawn', label: '已打款' },
                   { id: 'refunded', label: '已退款' },
                 ].map((filter) => (
                   <button
@@ -324,10 +306,25 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
 
             <div className="space-y-2.5 pt-1">
               {filteredBillRecords.length === 0 ? (
-                <div className="text-center py-8 text-xs text-[#7A756C] bg-[#FAF8F5] rounded-[18px] border border-[#ECE6DC]">暂无记录</div>
+                <div className="text-center py-10 flex flex-col items-center bg-[#FAF8F5] rounded-[18px] border border-[#ECE6DC]">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm border border-[#E6E0D6]">
+                    <FileText className="w-5 h-5 text-[#A09C94]" />
+                  </div>
+                  <p className="text-[13px] font-bold text-[#1D1B16] mb-0.5">暂无账单记录</p>
+                  <p className="text-[11px] text-[#7A756C]">当有咨询订单完成并结算后，这里会产生账单</p>
+                </div>
               ) : (
                 filteredBillRecords.map((bill) => (
-                  <div key={bill.id} className="bg-[#FAF8F5] p-3.5 rounded-[18px] border border-[#ECE6DC] hover:border-[#D0BCFF] transition space-y-2.5">
+                  <div 
+                    key={bill.id} 
+                    onClick={() => {
+                      if (onOpenOrderInfo && bill.orderId) {
+                        const order = orders.find(o => o.id === bill.orderId);
+                        if (order) onOpenOrderInfo(order);
+                      }
+                    }}
+                    className="bg-[#FAF8F5] p-3.5 rounded-[18px] border border-[#ECE6DC] hover:border-[#D0BCFF] transition space-y-2.5 cursor-pointer active:scale-[0.99]"
+                  >
                     <div className="flex items-center justify-between text-xs pb-2 border-b border-[#ECE6DC]">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[11px] font-bold text-[#1D1B16]">{bill.billNo}</span>
@@ -361,17 +358,23 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
           <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-4 shadow-2xs space-y-3">
             <div className="space-y-2.5">
               {withdrawalRecords.length === 0 ? (
-                <div className="text-center py-8 text-xs text-[#7A756C] bg-[#FAF8F5] rounded-[18px] border border-[#ECE6DC]">暂无提现记录</div>
+                <div className="text-center py-10 flex flex-col items-center bg-[#FAF8F5] rounded-[18px] border border-[#ECE6DC]">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm border border-[#E6E0D6]">
+                    <History className="w-5 h-5 text-[#A09C94]" />
+                  </div>
+                  <p className="text-[13px] font-bold text-[#1D1B16] mb-0.5">暂无提现记录</p>
+                  <p className="text-[11px] text-[#7A756C]">您还没有发起过提现申请</p>
+                </div>
               ) : (
                 withdrawalRecords.map((record) => (
-                  <div key={record.id} className="bg-[#FAF8F5] p-3.5 rounded-[18px] border border-[#ECE6DC] space-y-2.5">
+                  <div 
+                    key={record.id} 
+                    onClick={() => setActiveWithdrawalDetail(record)}
+                    className="bg-[#FAF8F5] p-3.5 rounded-[18px] border border-[#ECE6DC] space-y-2.5 cursor-pointer hover:border-[#D0BCFF] transition active:scale-[0.99]"
+                  >
                     <div className="flex items-center justify-between text-xs pb-2 border-b border-[#ECE6DC]">
                       <span className="font-mono text-[11px] font-bold text-[#1D1B16]">{record.withdrawNo}</span>
-                      {record.status === 'completed' ? (
-                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">打款成功</span>
-                      ) : (
-                        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-semibold border border-amber-200">待财务审核</span>
-                      )}
+                      {getWithdrawalStatusBadge(record.status)}
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
@@ -387,43 +390,12 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
           </div>
         )}
 
-        {/* SUB TAB 3: ACCOUNTS */}
-        {settlementSubTab === 'accounts' && (
-          <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-4 shadow-2xs space-y-3">
-            <button
-              onClick={() => setShowAddAccountModal(true)}
-              className="w-full py-3 rounded-[16px] border-2 border-dashed border-[#ECE6DC] text-[#7A756C] hover:border-[#6750A4] hover:text-[#6750A4] hover:bg-[#F5F2EC] transition flex flex-col items-center justify-center gap-1 active:scale-[0.98]"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="text-xs font-bold">添加新的收款账号</span>
-            </button>
-            <div className="space-y-2.5">
-              {bankAccounts.map((acc) => (
-                <div key={acc.id} className="bg-[#FAF8F5] p-4 rounded-[18px] border border-[#ECE6DC] relative">
-                  {acc.isDefault && <span className="absolute top-4 right-4 bg-[#6750A4] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">默认收款</span>}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-white border border-[#E6E0D6] flex items-center justify-center">
-                      <Building className="w-5 h-5 text-[#6750A4]" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-[#1D1B16]">{acc.bankName}</div>
-                      <div className="text-xs text-[#7A756C] font-mono tracking-widest mt-0.5">**** **** **** {acc.cardNumber.slice(-4)}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-[11px] text-[#49463D] bg-white p-2 rounded-[12px] border border-[#ECE6DC]">
-                    <div className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {acc.accountHolder}</div>
-                    <div className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {acc.phone.slice(0,3)}****{acc.phone.slice(-4)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
 
       {/* Add Bank Account Modal */}
       {showAddAccountModal && (
-        <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
           <div className="bg-[#FAF8F5] border border-[#E6E0D6] rounded-t-[28px] sm:rounded-[28px] max-w-md w-full p-5 shadow-2xl relative">
             <button onClick={() => setShowAddAccountModal(false)} className="absolute top-4 right-4 p-1.5 rounded-full text-[#7A756C] hover:bg-[#E8E2D5]">
               <X className="w-5 h-5" />
@@ -431,19 +403,20 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
             <h3 className="font-bold text-base text-[#1D1B16] mb-4">添加收款账号</h3>
             <form onSubmit={handleAddBankAccount} className="space-y-4 text-xs">
               <div>
-                <label className="block text-[#1D1B16] font-semibold mb-1">账号类型</label>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setNewAccType('bank_card')} className={`flex-1 py-2 rounded-full border ${newAccType === 'bank_card' ? 'bg-[#6750A4] text-white border-[#6750A4]' : 'bg-white border-[#ECE6DC] text-[#7A756C]'}`}>银行储蓄卡</button>
-                  <button type="button" onClick={() => setNewAccType('alipay')} className={`flex-1 py-2 rounded-full border ${newAccType === 'alipay' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white border-[#ECE6DC] text-[#7A756C]'}`}>支付宝</button>
-                </div>
+                <label className="block text-[#1D1B16] font-semibold mb-1">开户银行名称</label>
+                <input required value={newBankName} onChange={(e) => setNewBankName(e.target.value)} className="w-full bg-white border border-[#E6E0D6] rounded-full px-3.5 py-2 text-[#1D1B16]" placeholder="例如：招商银行" />
               </div>
               <div>
-                <label className="block text-[#1D1B16] font-semibold mb-1">{newAccType === 'bank_card' ? '开户银行名称' : '平台名称'}</label>
-                <input required value={newBankName} onChange={(e) => setNewBankName(e.target.value)} className="w-full bg-white border border-[#E6E0D6] rounded-full px-3.5 py-2 text-[#1D1B16]" placeholder="例如：招商银行 / 支付宝" />
+                <label className="block text-[#1D1B16] font-semibold mb-1">开户支行</label>
+                <input required value={newBranchName} onChange={(e) => setNewBranchName(e.target.value)} className="w-full bg-white border border-[#E6E0D6] rounded-full px-3.5 py-2 text-[#1D1B16]" placeholder="例如：上海静安支行" />
               </div>
               <div>
-                <label className="block text-[#1D1B16] font-semibold mb-1">收款账号 / 卡号</label>
-                <input required value={newCardNumber} onChange={(e) => setNewCardNumber(e.target.value)} className="w-full bg-white border border-[#E6E0D6] rounded-full px-3.5 py-2 text-[#1D1B16] font-mono" placeholder="输入卡号或支付宝账号" />
+                <label className="block text-[#1D1B16] font-semibold mb-1">收款卡号</label>
+                <input required value={newCardNumber} onChange={(e) => setNewCardNumber(e.target.value)} className="w-full bg-white border border-[#E6E0D6] rounded-full px-3.5 py-2 text-[#1D1B16] font-mono" placeholder="输入银行卡号" />
+              </div>
+              <div>
+                <label className="block text-[#1D1B16] font-semibold mb-1">持卡人姓名</label>
+                <input required value={newAccountHolder} onChange={(e) => setNewAccountHolder(e.target.value)} className="w-full bg-white border border-[#E6E0D6] rounded-full px-3.5 py-2 text-[#1D1B16]" placeholder="输入持卡人姓名" />
               </div>
               <button type="submit" className="w-full py-3 rounded-full bg-[#6750A4] text-white text-sm font-bold shadow-xs active:scale-95">确认添加并绑定</button>
             </form>
@@ -496,13 +469,128 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onO
               <Info className="w-5 h-5 text-[#6750A4]" /><span>咨询师提现规则与结算约定</span>
             </div>
             <div className="space-y-3 bg-[#FAF8F5] p-4 rounded-[20px] border border-[#ECE6DC] leading-relaxed text-[#49463D]">
-              <div><strong className="text-[#1D1B16] block mb-0.5">1. 结算时效约定 (T+1)</strong><p>当咨询订单服务完成（或急诊倾听会话结束）后，系统将于次日（T+1）自动将该笔订单的实际应得收益划入【可提现余额】。</p></div>
-              <div><strong className="text-[#1D1B16] block mb-0.5">2. 提现额度与手续费</strong><p>单笔提现申请最低额度为 <span className="font-bold text-[#6750A4]">¥100.00</span>。提现不限次数，平台全额补贴提现渠道手续费。</p></div>
-              <div><strong className="text-[#1D1B16] block mb-0.5">3. 财务审核与最终打款责任</strong><p>提交提现申请后，将由平台财务团队统一人工审核并执行网银划转（1个工作日内完成到账）。若开户信息有误，资金将安全退回可提现余额。</p></div>
+              <div><strong className="text-[#1D1B16] block mb-0.5">1. 入账条件与时效约定</strong><p>当咨询师完成咨询服务，且成功提交相应的【咨询小结】及必填记录后，系统将于次日（T+1）自动将该笔订单的实际应得收益划入【可提现余额】。</p></div>
+              <div><strong className="text-[#1D1B16] block mb-0.5">2. 提现额度与手续费</strong><p>单笔提现申请最低额度为 <span className="font-bold text-[#6750A4]">¥100.00</span>。由于涉及分账和个人扣税，平台全额补贴提现渠道手续费。</p></div>
+              <div><strong className="text-[#1D1B16] block mb-0.5">3. 提现审核与打款周期</strong><p>提交提现申请后，将先由平台运营团队进行服务复核，审核通过后提交财务进行人工或第三方渠道打款。整体流程预计 <span className="font-bold text-[#A23F1E]">3-7 个工作日</span> 内完成到账。</p></div>
               <div><strong className="text-[#1D1B16] block mb-0.5">4. 实名一致性合规</strong><p>提现收款卡开户人姓名必须与咨询师 CPS 执业认证实名姓名（{consultant.name}）完全相符，严禁代领。</p></div>
             </div>
             <div className="flex justify-end pt-1">
               <button onClick={() => setShowRulesModal(false)} className="px-6 py-2 bg-[#6750A4] text-white rounded-full font-semibold hover:bg-[#594294] shadow-2xs">我已了解</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Detail Full Page View */}
+      {activeWithdrawalDetail && (
+        <div className="fixed inset-0 z-[70] bg-[#FAF8F5] overflow-y-auto animate-in fade-in flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#ECE6DC] sticky top-0 z-10 shrink-0 shadow-xs">
+            <button
+              onClick={() => setActiveWithdrawalDetail(null)}
+              className="p-2 -ml-2 rounded-full text-[#49463D] hover:bg-[#F5F2EC] transition flex items-center gap-1 active:scale-95"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-semibold">返回</span>
+            </button>
+            <div className="flex flex-col items-center">
+              <span className="text-base font-bold text-[#1D1B16]">提现详情</span>
+            </div>
+            <div className="w-9" />
+          </div>
+
+          <div className="p-4 space-y-4">
+            <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-6 shadow-2xs">
+              <div className="text-center pb-6 border-b border-[#ECE6DC] mb-6">
+                <div className="text-sm font-bold text-[#7A756C] mb-2">提现金额</div>
+                <div className="text-4xl font-mono font-bold text-[#1D1B16]">-¥{activeWithdrawalDetail.amount.toFixed(2)}</div>
+                <div className="mt-4 inline-flex">
+                  {getWithdrawalStatusBadge(activeWithdrawalDetail.status)}
+                </div>
+              </div>
+              <div className="space-y-5 text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-[#7A756C]">提现单号</span>
+                  <span className="font-mono text-[#1D1B16] font-medium text-right">{activeWithdrawalDetail.withdrawNo}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-[#7A756C]">申请时间</span>
+                  <span className="font-mono text-[#1D1B16] font-medium text-right">{activeWithdrawalDetail.applyTime}</span>
+                </div>
+                {activeWithdrawalDetail.completedTime && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-[#7A756C]">到账时间</span>
+                    <span className="font-mono text-[#1D1B16] font-medium text-right">{activeWithdrawalDetail.completedTime}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-start">
+                  <span className="text-[#7A756C]">收款账户</span>
+                  <div className="text-right">
+                    <div className="text-[#1D1B16] font-medium">{activeWithdrawalDetail.bankAccount.bankName}</div>
+                    <div className="font-mono text-[#7A756C] mt-0.5">**** {activeWithdrawalDetail.bankAccount.cardNumber.slice(-4)}</div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-[#7A756C]">手续费</span>
+                  <span className="text-[#1D1B16] font-medium text-right">¥0.00 (平台全额补贴)</span>
+                </div>
+                {activeWithdrawalDetail.financeNote && (
+                  <div className="mt-4 p-4 bg-[#FAF8F5] rounded-[16px] border border-[#ECE6DC]">
+                    <div className="text-[#7A756C] mb-1.5 text-xs font-bold">进度与备注</div>
+                    <div className="text-[#1D1B16] leading-relaxed text-xs">{activeWithdrawalDetail.financeNote}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accounts Management Full Page View */}
+      {showAccountsView && (
+        <div className="fixed inset-0 z-[70] bg-[#FAF8F5] overflow-y-auto animate-in fade-in flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#ECE6DC] sticky top-0 z-10 shrink-0 shadow-xs">
+            <button
+              onClick={() => setShowAccountsView(false)}
+              className="p-2 -ml-2 rounded-full text-[#49463D] hover:bg-[#F5F2EC] transition flex items-center gap-1 active:scale-95"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-semibold">返回</span>
+            </button>
+            <div className="flex flex-col items-center">
+              <span className="text-base font-bold text-[#1D1B16]">收款账户管理</span>
+            </div>
+            <div className="w-9" />
+          </div>
+
+          <div className="p-4 space-y-4">
+            <button
+              onClick={() => setShowAddAccountModal(true)}
+              className="w-full py-4 rounded-[20px] border-2 border-dashed border-[#ECE6DC] bg-white text-[#7A756C] hover:border-[#6750A4] hover:text-[#6750A4] hover:bg-[#F5F2EC] transition flex flex-col items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#FAF8F5] flex items-center justify-center border border-[#ECE6DC]">
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-bold">添加新的收款账号</span>
+            </button>
+            
+            <div className="space-y-3">
+              {bankAccounts.map((acc) => (
+                <div key={acc.id} className="bg-white p-5 rounded-[24px] border border-[#ECE6DC] shadow-2xs relative">
+                  {acc.isDefault && <span className="absolute top-5 right-5 bg-[#EADDFF] text-[#21005D] border border-[#D0BCFF] text-[10px] px-2 py-0.5 rounded-full font-bold">默认收款</span>}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-[#FAF8F5] border border-[#E6E0D6] flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-[#6750A4]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-base text-[#1D1B16]">{acc.bankName}</div>
+                      <div className="text-sm text-[#7A756C] font-mono tracking-widest mt-1">**** **** **** {acc.cardNumber.slice(-4)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-[#49463D] bg-[#FAF8F5] p-3 rounded-[16px] border border-[#ECE6DC]">
+                    <div className="flex items-center gap-1.5"><User className="w-4 h-4 text-[#7A756C]" /> 持卡人：{acc.accountHolder}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

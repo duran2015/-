@@ -22,6 +22,7 @@ interface OrdersTabProps {
   initialViewMode?: 'order_detail' | 'client_profile';
   onClearInitialOrder?: () => void;
   onExitExternalView?: () => void;
+  onNavigateToGrowth?: () => void;
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({
@@ -37,6 +38,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   initialViewMode,
   onClearInitialOrder,
   onExitExternalView,
+  onNavigateToGrowth,
 }) => {
   const [activeStatus, setActiveStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'order_detail' | 'client_profile'>('list');
@@ -141,9 +143,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
         order={selectedOrder}
         onBack={() => {
           if (orderDetailSource === 'external') {
-            setViewMode('list');
-            setSelectedOrder(null);
-            onExitExternalView?.();
+            // Restore previous tab state
+            if (onExitExternalView) {
+              onExitExternalView();
+            } else {
+              setViewMode('list');
+              setSelectedOrder(null);
+            }
           } else {
             setViewMode('list');
             setSelectedOrder(null);
@@ -253,12 +259,22 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
             </div>
           ))
         ) : (
-          <div className="text-center py-12 bg-white border border-[#E6E0D6] rounded-[28px] shadow-sm">
-            <div className="w-14 h-14 bg-[#FAF8F5] rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-6 h-6 text-[#A09C94]" />
+          <div className="text-center py-16 bg-white border border-[#E6E0D6] rounded-[28px] shadow-sm flex flex-col items-center">
+            <div className="w-20 h-20 bg-[#F4EFF4] rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageSquare className="w-8 h-8 text-[#6750A4]" />
             </div>
-            <p className="text-[#1D1B16] text-[15px] font-bold tracking-tight">当前无对应状态的服务流</p>
-            <p className="text-[13px] text-[#7A756C] mt-1 font-medium">切换其他状态或休息一下吧</p>
+            <h3 className="text-[#1D1B16] text-[16px] font-bold tracking-tight mb-2">暂无服务消息</h3>
+            <p className="text-[13px] text-[#7A756C] mt-1 font-medium max-w-[220px] mb-6 leading-relaxed">
+              您还没有收到任何客户的消息或预约。建议将您的主页分享给更多人！
+            </p>
+            {activeStatus === 'all' && (
+              <button 
+                onClick={() => onNavigateToGrowth?.()}
+                className="bg-[#6750A4] text-white px-6 py-2.5 rounded-full text-[14px] font-bold shadow-sm active:scale-95 transition hover:bg-[#594294]"
+              >
+                去分享主页
+              </button>
+            )}
           </div>
         )}
       </div>

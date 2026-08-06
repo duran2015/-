@@ -660,7 +660,7 @@ export const INITIAL_WITHDRAWAL_RECORDS: WithdrawalRecord[] = [
       cardNumber: '6222 0210 **** 8821',
       accountHolder: '林木青'
     },
-    status: 'completed',
+    status: 'success',
     applyTime: '2026-08-02 10:15',
     completedTime: '2026-08-02 16:30',
     financeNote: '已通过网银打款成功 (凭证号: PAY202608029912)'
@@ -674,7 +674,7 @@ export const INITIAL_WITHDRAWAL_RECORDS: WithdrawalRecord[] = [
       cardNumber: 'wx_linmuqing_psy',
       accountHolder: '林木青'
     },
-    status: 'completed',
+    status: 'success',
     applyTime: '2026-08-01 14:20',
     completedTime: '2026-08-01 17:00',
     financeNote: '微信商户后台代付完成'
@@ -688,7 +688,7 @@ export const INITIAL_WITHDRAWAL_RECORDS: WithdrawalRecord[] = [
       cardNumber: '6222 0210 **** 8821',
       accountHolder: '林木青'
     },
-    status: 'rejected',
+    status: 'failed',
     applyTime: '2026-07-28 09:10',
     completedTime: '2026-07-28 11:00',
     rejectReason: '提交卡号与银行预留姓名校验不一致，已解冻退回余额，请更新银行卡后再试'
@@ -789,7 +789,7 @@ export const INITIAL_BILL_RECORDS: BillRecord[] = [
     grossAmount: 500.00,
     platformFee: 60.00,
     netAmount: 440.00,
-    status: 'withdrawn',
+    status: 'settled',
     createdAt: '2026-07-23 09:00',
     settledAt: '2026-07-25 12:00'
   }

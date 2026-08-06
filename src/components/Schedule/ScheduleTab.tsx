@@ -2,27 +2,41 @@ import React, { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, Clock, CheckCircle2, ChevronRight, Settings,
   ChevronLeft, Plus, Search, Menu, MessageSquare, AlertCircle, X,
-  ChevronDown, Filter
+  ChevronDown, Filter, Sparkles
 } from 'lucide-react';
-import { Order } from '../../types';
+import { ConsultantProfile, ServiceProduct, Order } from '../../types';
 
 interface ScheduleTabProps {
-  orders: Order[];
-  onConfirmOrder: (orderId: string) => void;
-  onEnterRoom?: (order: Order) => void;
-  onSubPageChange?: (isSubPage: boolean) => void;
-  onOpenOrderInfo?: (order: Order) => void;
-}
+    orders?: Order[];
+    consultant?: ConsultantProfile;
+    products?: ServiceProduct[];
+    isMockEmpty?: boolean;
+    hasConfiguredSchedule?: boolean;
+    onConfirmOrder?: (orderId: string) => void;
+    onEnterRoom?: (order: Order) => void;
+    onSubPageChange?: (isSubPage: boolean) => void;
+    onOpenOrderInfo?: (order: Order) => void;
+    onNavigateToProfile?: () => void;
+    onNavigateToScheduleSettings?: () => void;
+    onNavigateToGrowth?: () => void;
+  }
 
-type SubTab = 'calendar' | 'pending' | 'confirmed' | 'settings';
+type SubTab = 'calendar' | 'pending' | 'confirmed';
 type BookedSubTab = 'all' | 'today' | 'future' | 'completed' | 'cancelled';
 
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   orders,
+  consultant,
+  products,
+  isMockEmpty,
+  hasConfiguredSchedule,
   onConfirmOrder,
   onEnterRoom,
   onSubPageChange,
-  onOpenOrderInfo
+  onOpenOrderInfo,
+  onNavigateToProfile,
+  onNavigateToScheduleSettings,
+  onNavigateToGrowth
 }) => {
   const [activeTab, setActiveTab] = useState<SubTab>('calendar');
   const [bookedTab, setBookedTab] = useState<BookedSubTab>('all');
@@ -39,10 +53,11 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const [showUnavailableModal, setShowUnavailableModal] = useState(false);
   const [showAddUnavailableModal, setShowAddUnavailableModal] = useState(false);
 
-  const pendingOrders = orders.filter(o => o.status === 'pending_confirm');
+  const safeOrders = orders || [];
+  const pendingOrders = safeOrders.filter(o => o.status === 'pending_confirm');
   // For MVP, just show all non-pending as booked/history based on tab
-  const confirmedOrders = orders.filter(o => o.status === 'scheduled');
-  const completedOrders = orders.filter(o => o.status === 'completed');
+  const confirmedOrders = safeOrders.filter(o => o.status === 'scheduled');
+  const completedOrders = safeOrders.filter(o => o.status === 'completed');
 
   useEffect(() => {
     if (onSubPageChange) {
@@ -99,7 +114,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           { id: 'calendar', label: '日历' },
           { id: 'pending', label: `待确认 (${pendingOrders.length})` },
           { id: 'confirmed', label: '已预约' },
-          { id: 'settings', label: '设置' },
         ].map(tab => (
           <button
             key={tab.id}
@@ -147,6 +161,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             >
               今天
             </button>
+            <button 
+              onClick={() => onNavigateToScheduleSettings?.()}
+              className="w-8 h-8 rounded-full bg-[#FAF8F5] flex items-center justify-center text-[#49463D] hover:bg-[#EAE5DB] transition"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
         </div>
         
@@ -161,8 +181,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               {monthDays.map((date, i) => {
                 const isSelected = date === selectedDate;
                 // Mock dots
-                const hasConfirmed = date === 5 || date === 12 || date === 18;
-                const hasPending = date === 5 || date === 8 || date === 22;
+                const hasConfirmed = !isMockEmpty && (date === 5 || date === 12 || date === 18);
+                const hasPending = !isMockEmpty && (date === 5 || date === 8 || date === 22);
 
                 return (
                   <div 
@@ -206,8 +226,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               const isSelected = offset === 0;
               
               // Mock dots
-              const hasConfirmed = displayDate === 5 || displayDate === 12 || displayDate === 18;
-              const hasPending = displayDate === 5 || displayDate === 8 || displayDate === 22;
+              const hasConfirmed = !isMockEmpty && (displayDate === 5 || displayDate === 12 || displayDate === 18);
+              const hasPending = !isMockEmpty && (displayDate === 5 || displayDate === 8 || displayDate === 22);
 
               return (
                 <div 
@@ -244,73 +264,140 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       </div>
 
       {/* Timeline */}
-      <div className="px-4 space-y-3 relative">
-        <div className="absolute left-[38px] top-4 bottom-0 w-px bg-[#ECE6DC] z-0" />
-        
-        {/* 1. 已确认 - Green */}
-        <div className="flex gap-4 relative z-10">
-          <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">09:00</div>
-          <div 
-            onClick={() => onOpenOrderInfo?.(confirmedOrders[0] || orders[0])}
-            className="flex-1 bg-[#C4EED0] rounded-[24px] p-4 shadow-sm border border-[#A3D9B5] cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-          >
-            <div className="flex justify-between items-start mb-1">
-              <span className="text-[11px] bg-[#003912] text-white px-2 py-0.5 rounded-md font-bold shadow-xs">已确认</span>
-              <span className="text-[12px] text-[#003912] font-mono font-bold">09:00-09:45</span>
-            </div>
-            <div className="font-bold text-[#003912] text-[16px] tracking-tight mt-2">张女士</div>
-            <div className="text-[13px] text-[#003912] mt-1 font-medium opacity-90">深度咨询 · 45分钟</div>
-          </div>
-        </div>
+      <div className="px-4 space-y-3 relative pb-20">
+        {hasConfiguredSchedule ? (
+          <>
+            <div className="absolute left-[38px] top-4 bottom-0 w-px bg-[#ECE6DC] z-0" />
+            
+            {isMockEmpty ? (
+              <>
+                {/* 3. 可预约 - Blue */}
+                <div className="flex gap-4 relative z-10">
+                  <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">09:00</div>
+                  <div className="flex-1 bg-[#D3E3FD] rounded-[24px] p-4 shadow-sm border border-[#A8C7FA] border-dashed cursor-pointer hover:shadow-md active:scale-[0.98] transition-all">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-[11px] bg-[#0842A0] text-white px-2 py-0.5 rounded-md font-bold shadow-xs">可预约</span>
+                      <span className="text-[12px] text-[#0842A0] font-mono font-bold">09:00-12:00</span>
+                    </div>
+                    <div className="font-bold text-[#001C3B] text-[15px] tracking-tight mt-2">系统生成可预约资源</div>
+                    <div className="text-[12px] text-[#001C3B] mt-1 opacity-80 font-medium">支持 15/30/45/60 分钟服务</div>
+                  </div>
+                </div>
 
-        {/* 2. 待确认 - Yellow */}
-        <div className="flex gap-4 relative z-10">
-          <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">10:00</div>
-          <div 
-            onClick={() => setShowConfirmModal(pendingOrders[0] || orders[0])}
-            className="flex-1 bg-[#FFF8E6] rounded-[24px] p-4 shadow-sm border border-[#F5E1A4] cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-          >
-            <div className="flex justify-between items-start mb-1">
-              <span className="text-[11px] bg-[#B38300] text-white px-2 py-0.5 rounded-md font-bold shadow-xs">待确认</span>
-              <span className="text-[12px] text-[#8A6500] font-mono font-bold">10:00-10:30</span>
-            </div>
-            <div className="font-bold text-[#8A6500] text-[16px] tracking-tight mt-2">李先生</div>
-            <div className="text-[13px] text-[#8A6500] mt-1 font-medium opacity-90">情绪支持 · 30分钟</div>
-          </div>
-        </div>
+                {/* 4. 不可用 - Gray */}
+                <div className="flex gap-4 relative z-10">
+                  <div className="w-12 text-right text-[14px] font-bold text-[#A09C94] pt-3 shrink-0 font-mono">12:00</div>
+                  <div className="flex-1 bg-[#F5F5F5] rounded-[24px] p-4 border border-[#ECE6DC]">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-[11px] bg-[#E6E0D6] text-[#7A756C] px-2 py-0.5 rounded-md font-bold">休息</span>
+                      <span className="text-[12px] text-[#A09C94] font-mono font-bold">12:00-14:00</span>
+                    </div>
+                    <div className="font-bold text-[#A09C94] text-[15px] tracking-tight mt-2">不可预约</div>
+                  </div>
+                </div>
 
-        {/* 3. 可预约 - Blue */}
-        <div className="flex gap-4 relative z-10">
-          <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">10:45</div>
-          <div 
-            onClick={() => setShowResourceModal(true)}
-            className="flex-1 bg-[#D3E3FD] rounded-[24px] p-4 shadow-sm border border-[#A8C7FA] border-dashed cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-          >
-            <div className="flex justify-between items-start mb-1">
-              <span className="text-[11px] bg-[#0842A0] text-white px-2 py-0.5 rounded-md font-bold shadow-xs">可预约</span>
-              <span className="text-[12px] text-[#0842A0] font-mono font-bold">10:45-11:30</span>
-            </div>
-            <div className="font-bold text-[#001C3B] text-[15px] tracking-tight mt-2">系统生成可预约资源</div>
-            <div className="text-[12px] text-[#001C3B] mt-1 opacity-80 font-medium">支持 15/30/45 分钟服务</div>
-          </div>
-        </div>
+                <div className="text-center py-8 mt-6 bg-white rounded-[24px] border border-[#ECE6DC] shadow-sm flex flex-col items-center relative z-10">
+                  <div className="w-12 h-12 bg-[#FAF8F5] rounded-full flex items-center justify-center mx-auto mb-2 border border-[#E6E0D6]">
+                    <Sparkles className="w-5 h-5 text-[#6750A4]" />
+                  </div>
+                  <h4 className="text-[14px] font-bold text-[#1D1B16] mb-1">排班已生效</h4>
+                  <p className="text-[12px] text-[#7A756C] mb-4">暂无客户预约，快去分享主页获客吧</p>
+                  <button 
+                    onClick={() => onNavigateToGrowth?.()} 
+                    className="bg-[#6750A4] text-white px-5 py-2 rounded-full text-[13px] font-bold shadow-sm active:scale-95 transition hover:bg-[#594294]"
+                  >
+                    去分享主页
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* 1. 已确认 - Green */}
+                <div className="flex gap-4 relative z-10">
+                  <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">14:00</div>
+                  <div className="flex-1 bg-[#C4EED0] rounded-[24px] p-4 shadow-sm border border-[#A1DEB3] cursor-pointer hover:shadow-md active:scale-[0.98] transition-all relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full blur-xl -mr-8 -mt-8" />
+                    <div className="flex justify-between items-start mb-2 relative z-10">
+                      <span className="text-[11px] bg-[#003912] text-white px-2 py-0.5 rounded-md font-bold shadow-xs flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> 已确认
+                      </span>
+                      <span className="text-[12px] text-[#003912] font-mono font-bold">14:00-14:45</span>
+                    </div>
+                    <div className="font-bold text-[#001C3B] text-[16px] tracking-tight flex items-center gap-2 relative z-10">
+                      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" className="w-6 h-6 rounded-full bg-white/50 border border-[#003912]/20" />
+                      陈先生 (45分钟)
+                    </div>
+                    <div className="text-[12px] text-[#003912] mt-1.5 opacity-80 font-medium relative z-10 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#003912] animate-pulse" />
+                      即将开始，可进入咨询室
+                    </div>
+                  </div>
+                </div>
 
-        {/* 4. 不可用 - Gray */}
-        <div className="flex gap-4 relative z-10">
-          <div className="w-12 text-right text-[14px] font-bold text-[#7A756C] pt-3 shrink-0 font-mono">12:00</div>
-          <div 
-            onClick={() => setShowUnavailableModal(true)}
-            className="flex-1 bg-[#F5F5F5] rounded-[24px] p-4 shadow-sm border border-[#E6E0D6] cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
-          >
-            <div className="flex justify-between items-start mb-1">
-              <span className="text-[11px] bg-[#A09C94] text-white px-2 py-0.5 rounded-md font-bold shadow-xs">不可用</span>
-              <span className="text-[12px] text-[#7A756C] font-mono font-bold">12:00-14:00</span>
-            </div>
-            <div className="font-bold text-[#49463D] text-[15px] tracking-tight mt-2">休息 / 私人时间</div>
-            <div className="text-[12px] text-[#7A756C] mt-1 opacity-80 font-medium">不在可服务时间内</div>
-          </div>
-        </div>
+                {/* 2. 待确认 - Yellow */}
+                <div className="flex gap-4 relative z-10">
+                  <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">15:00</div>
+                  <div className="flex-1 bg-[#FFDF99] rounded-[24px] p-4 shadow-sm border border-[#F2C97D] cursor-pointer hover:shadow-md active:scale-[0.98] transition-all">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[11px] bg-[#7A2E0E] text-white px-2 py-0.5 rounded-md font-bold shadow-xs flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> 待确认
+                      </span>
+                      <span className="text-[12px] text-[#7A2E0E] font-mono font-bold">15:00-15:30</span>
+                    </div>
+                    <div className="font-bold text-[#491C08] text-[16px] tracking-tight flex items-center gap-2">
+                      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Luna" alt="avatar" className="w-6 h-6 rounded-full bg-white/50 border border-[#7A2E0E]/20" />
+                      李女士 (30分钟)
+                    </div>
+                    <div className="text-[12px] text-[#7A2E0E] mt-1.5 opacity-80 font-medium">
+                      待确认接单，超时将自动取消
+                    </div>
+                  </div>
+                </div>
 
+                {/* 3. 可预约 - Blue */}
+                <div className="flex gap-4 relative z-10">
+                  <div className="w-12 text-right text-[14px] font-bold text-[#1D1B16] pt-3 shrink-0 font-mono">16:00</div>
+                  <div className="flex-1 bg-[#D3E3FD] rounded-[24px] p-4 shadow-sm border border-[#A8C7FA] border-dashed cursor-pointer hover:shadow-md active:scale-[0.98] transition-all">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-[11px] bg-[#0842A0] text-white px-2 py-0.5 rounded-md font-bold shadow-xs">可预约</span>
+                      <span className="text-[12px] text-[#0842A0] font-mono font-bold">16:00-18:00</span>
+                    </div>
+                    <div className="font-bold text-[#001C3B] text-[15px] tracking-tight mt-2">系统生成可预约资源</div>
+                    <div className="text-[12px] text-[#001C3B] mt-1 opacity-80 font-medium">支持 15/30/45/60 分钟服务</div>
+                  </div>
+                </div>
+
+                {/* 4. 不可用 - Gray */}
+                <div className="flex gap-4 relative z-10">
+                  <div className="w-12 text-right text-[14px] font-bold text-[#A09C94] pt-3 shrink-0 font-mono">18:00</div>
+                  <div className="flex-1 bg-[#F5F5F5] rounded-[24px] p-4 border border-[#ECE6DC]">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-[11px] bg-[#E6E0D6] text-[#7A756C] px-2 py-0.5 rounded-md font-bold">休息</span>
+                      <span className="text-[12px] text-[#A09C94] font-mono font-bold">18:00-20:00</span>
+                    </div>
+                    <div className="font-bold text-[#A09C94] text-[15px] tracking-tight mt-2">不可预约</div>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-16 bg-white border border-[#E6E0D6] rounded-[28px] shadow-sm flex flex-col items-center mt-4">
+            <div className="w-16 h-16 bg-[#F4EFF4] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#EADDFF]">
+              <CalendarIcon className="w-8 h-8 text-[#6750A4]" />
+            </div>
+            <h3 className="text-[#1D1B16] text-[16px] font-bold tracking-tight mb-2">您还未配置排班</h3>
+            <p className="text-[13px] text-[#7A756C] mt-1 font-medium max-w-[220px] mb-6 leading-relaxed">
+              设置可服务时间后，系统将自动生成预约资源供客户选择。
+            </p>
+            <button 
+              onClick={() => onNavigateToScheduleSettings?.()}
+              className="bg-[#6750A4] text-white px-6 py-2.5 rounded-full text-[14px] font-bold shadow-sm active:scale-95 transition hover:bg-[#594294]"
+            >
+              去配置排班
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -452,101 +539,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     );
   };
 
-  const renderSettings = () => (
-    <div className="animate-in fade-in duration-200 bg-[#FAF8F5] min-h-full pb-24 p-4 space-y-5">
-      <div className="bg-[#EADDFF]/40 border border-[#D0BCFF] rounded-[24px] p-4 shadow-sm">
-        <h3 className="font-bold text-[14px] text-[#1D1B16] flex items-center gap-2">
-          <Settings className="w-4 h-4 text-[#6750A4]" /> 预约引擎配置
-        </h3>
-        <p className="text-[12px] text-[#49463D] mt-1 leading-relaxed">
-          系统将根据你的“可服务时间”+“服务商品”+“预约规则”，自动计算并生成用户端的可预约时间。
-        </p>
-      </div>
-
-      {/* 1. 可服务时间 */}
-      <div className="bg-white border border-[#ECE6DC] rounded-[24px] p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-[16px] text-[#1D1B16]">1. 可服务时间</h3>
-          <button className="text-[13px] text-[#6750A4] font-bold">编辑</button>
-        </div>
-        <p className="text-[12px] text-[#7A756C] mb-4">设置你每周愿意接单的时间范围（资源池）。</p>
-        <div className="space-y-3">
-          <div className="flex gap-4">
-            <div className="w-10 text-[14px] font-bold text-[#1D1B16] pt-1">周一</div>
-            <div className="flex-1 space-y-2">
-              <div className="bg-[#FAF8F5] px-3 py-2 rounded-lg text-[13px] text-[#49463D] font-mono border border-[#ECE6DC] shadow-sm">09:00 - 12:00</div>
-              <div className="bg-[#FAF8F5] px-3 py-2 rounded-lg text-[13px] text-[#49463D] font-mono border border-[#ECE6DC] shadow-sm">14:00 - 17:00</div>
-            </div>
-          </div>
-          <div className="flex gap-4 pt-2 border-t border-[#FAF8F5]">
-            <div className="w-10 text-[14px] font-bold text-[#1D1B16] pt-1">周三</div>
-            <div className="flex-1 space-y-2">
-              <div className="bg-[#FAF8F5] px-3 py-2 rounded-lg text-[13px] text-[#49463D] font-mono border border-[#ECE6DC] shadow-sm">19:00 - 22:00</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. 服务设置 */}
-      <div className="bg-white border border-[#ECE6DC] rounded-[24px] p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-[16px] text-[#1D1B16]">2. 服务设置</h3>
-          <button className="text-[13px] text-[#6750A4] font-bold">管理</button>
-        </div>
-        <p className="text-[12px] text-[#7A756C] mb-4">配置对外售卖的咨询服务及价格。</p>
-        <div className="space-y-2">
-          {[
-            { name: '快速倾听', time: '15分钟', price: '¥99' },
-            { name: '情绪支持', time: '30分钟', price: '¥199' },
-            { name: '深度咨询', time: '45分钟', price: '¥399' },
-            { name: '长期陪伴', time: '60分钟', price: '¥599' },
-          ].map((svc, i) => (
-            <div key={i} className="flex justify-between items-center bg-[#FAF8F5] p-3 rounded-xl border border-[#ECE6DC]">
-              <div>
-                <div className="font-bold text-[14px] text-[#1D1B16]">{svc.name} <span className="text-[12px] font-normal text-[#7A756C] ml-1">{svc.time}</span></div>
-              </div>
-              <div className="font-bold font-mono text-[#B3261E]">{svc.price}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 3. 预约规则 */}
-      <div className="bg-white border border-[#ECE6DC] rounded-[24px] p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-[16px] text-[#1D1B16]">3. 预约规则</h3>
-          <button className="text-[13px] text-[#6750A4] font-bold">编辑</button>
-        </div>
-        <p className="text-[12px] text-[#7A756C] mb-4">定义系统如何切割时间池与处理碎片时间。</p>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-[14px] text-[#49463D] font-bold">最小预约粒度</span>
-            <span className="font-bold text-[14px] text-[#6750A4] bg-[#EADDFF] px-2 py-1 rounded-md">30分钟</span>
-          </div>
-          <div className="h-px bg-[#ECE6DC]" />
-          <div className="flex justify-between items-center">
-            <span className="text-[14px] text-[#49463D] font-bold">碎片时间策略</span>
-            <span className="font-bold text-[13px] text-[#1D1B16]">标准模式 (长服务优先)</span>
-          </div>
-          <div className="h-px bg-[#ECE6DC]" />
-          <div className="flex justify-between items-center">
-            <span className="text-[14px] text-[#49463D] font-bold">咨询间隔</span>
-            <span className="font-bold text-[13px] text-[#1D1B16]">15分钟</span>
-          </div>
-          <div className="h-px bg-[#ECE6DC]" />
-          <div className="flex justify-between items-center">
-            <span className="text-[14px] text-[#49463D] font-bold">提前预约时间</span>
-            <span className="font-bold text-[13px] text-[#1D1B16]">提前2小时</span>
-          </div>
-          <div className="h-px bg-[#ECE6DC]" />
-          <div className="flex justify-between items-center">
-            <span className="text-[14px] text-[#49463D] font-bold">取消规则</span>
-            <span className="font-bold text-[13px] text-[#1D1B16]">提前12小时</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="relative min-h-full bg-[#FAF8F5]">
@@ -564,7 +556,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       {activeTab === 'calendar' && renderCalendar()}
       {activeTab === 'pending' && renderPending()}
       {activeTab === 'confirmed' && renderConfirmed()}
-      {activeTab === 'settings' && renderSettings()}
       {/* Bottom FAB */}
       <button 
         onClick={() => setShowAddUnavailableModal(true)}
@@ -636,8 +627,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 </div>
               ))}
             </div>
-            <button onClick={() => { setShowResourceModal(false); setActiveTab('settings'); }} className="w-full py-3 rounded-full bg-[#6750A4] text-white text-[15px] font-bold active:scale-95 transition shadow-sm">
-              修改可服务规则
+            <button onClick={() => { setShowResourceModal(false); }} className="w-full py-3 rounded-full bg-[#6750A4] text-white text-[15px] font-bold active:scale-95 transition shadow-sm">
+              确定
             </button>
           </div>
         </div>

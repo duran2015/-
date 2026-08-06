@@ -11,6 +11,7 @@ import { GrowthTab } from './components/Growth/GrowthTab';
 import { ProfileTab } from './components/Profile/ProfileTab';
 import { VoiceCall } from './client-app/pages/Counseling/VoiceCall';
 import { SessionReviewWorkspace } from './components/SessionReview/SessionReviewWorkspace';
+import { OnboardingFlow } from './components/Onboarding/OnboardingFlow';
 
 import { ChatDrawer } from './components/IM/ChatDrawer';
 
@@ -46,10 +47,25 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<MainTabType>('workbench');
   const [isSubPage, setIsSubPage] = useState<boolean>(false);
+  const [mockState, setMockState] = useState<'demo' | 'empty' | 'unonboarded'>('demo');
+
+  const isOnboarded = mockState !== 'unonboarded';
+  const isMockEmpty = mockState === 'empty';
+
+  const [hasConfiguredSchedule, setHasConfiguredSchedule] = useState(false);
+  const [initialProfileSection, setInitialProfileSection] = useState<'menu' | 'schedule_settings'>('menu');
+
+  React.useEffect(() => {
+    if (mockState === 'empty') setHasConfiguredSchedule(false);
+    else if (mockState === 'demo') setHasConfiguredSchedule(true);
+  }, [mockState]);
 
   // Reset isSubPage when tab changes
   React.useEffect(() => {
     setIsSubPage(false);
+    if (activeTab !== 'profile') {
+      setInitialProfileSection('menu');
+    }
   }, [activeTab]);
 
   // Modals & Drawers
@@ -62,10 +78,24 @@ export default function App() {
   const [activeOrderReturnTab, setActiveOrderReturnTab] = useState<MainTabType | null>(null);
   const [showIncomeView, setShowIncomeView] = useState(false);
 
-  // Dev Toggle
-  const [isMockEmpty, setIsMockEmpty] = useState<boolean>(false);
-
   const displayedOrders = isMockEmpty ? [] : orders;
+  const displayedProducts = isMockEmpty ? [] : products;
+  const displayedConsultant = isMockEmpty ? {
+    ...consultant,
+    income: 0,
+    walletBalance: 0,
+    completionRate: 40,
+    servicesCount: 0,
+    totalHours: 0,
+    totalClients: 0,
+    rating: 5.0,
+    earnings: {
+      withdrawable: 0,
+      monthlySettled: 0,
+      totalEarned: 0,
+      commissionRate: 12
+    }
+  } : consultant;
 
   // Helper counts
   const pendingSummaryCount = displayedOrders.filter((o) => o.status === 'completed' && !o.hasSummary).length;
@@ -116,23 +146,57 @@ export default function App() {
     setActiveOrderReturnTab(activeTab);
     setActiveOrderDetail(order);
     setActiveOrderViewMode(viewMode);
-    setActiveTab('messages');
+    setActiveTab('messages'); // Forces OrdersTab to mount and process the activeOrderDetail
   };
+
+  const handleExitExternalView = () => {
+    if (activeOrderReturnTab) {
+      setActiveTab(activeOrderReturnTab);
+    } else {
+      setActiveTab('workbench');
+    }
+    setActiveOrderDetail(null);
+    setActiveOrderReturnTab(null);
+  };
+
+  if (!isOnboarded) {
+    return (
+      <div className="relative mx-auto h-[100dvh] w-full max-w-md overflow-hidden bg-[#FAF8F5]">
+        <OnboardingFlow onComplete={() => setMockState('empty')} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#EAE5DB] text-[#1D1B16] font-sans flex flex-col items-center justify-start p-0 sm:p-2 md:p-4">
       
+      {/* Dev Toggle for State */}
+      <div className="fixed top-4 right-4 z-[100] flex gap-1">
+        <button 
+          onClick={() => setMockState(mockState === 'demo' ? 'empty' : 'demo')} 
+          className="bg-black/50 hover:bg-black/70 text-white text-[10px] px-2 py-1 rounded shadow-md transition"
+        >
+          Dev: {mockState === 'demo' ? '切换为新用户' : '切换为老用户(Demo)'}
+        </button>
+        <button 
+          onClick={() => setMockState('unonboarded')} 
+          className="bg-black/50 hover:bg-black/70 text-white text-[10px] px-2 py-1 rounded shadow-md transition"
+        >
+          重置入驻
+        </button>
+      </div>
+
       {/* Main Container Wrapper */}
       <div className="w-full max-w-md bg-[#FAF8F5] min-h-screen sm:min-h-[840px] sm:rounded-[28px] sm:border sm:border-[#ECE6DC] shadow-xl overflow-hidden flex flex-col relative">
         
         {/* Top App Navbar - Only shown on Workbench (首页) tab per user design */}
         {activeTab === 'workbench' && (
           <Navbar
-            consultant={consultant}
+            consultant={displayedConsultant}
             onToggleListening={handleToggleListening}
             onOpenLiveSession={() => {
-              const target = nextScheduledOrder || orders[0];
-              setActiveLiveOrder(target);
+              const target = nextScheduledOrder || displayedOrders[0];
+              if (target) setActiveLiveOrder(target);
             }}
           />
         )}
@@ -158,29 +222,29 @@ export default function App() {
                     <div>
                       <div className="text-[12px] opacity-80 mb-1 font-medium">今日预约</div>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold font-mono tracking-tight">3</span>
+                        <span className="text-3xl font-bold font-mono tracking-tight">{isMockEmpty ? '0' : '3'}</span>
                         <span className="text-[13px] font-medium">人</span>
                       </div>
-                      <div className="text-[11px] bg-[#D0BCFF] px-2 py-0.5 rounded-md mt-1 inline-block font-medium">待确认</div>
+                      <div className="text-[11px] bg-[#D0BCFF] px-2 py-0.5 rounded-md mt-1 inline-block font-medium">{isMockEmpty ? '暂无' : '待确认'}</div>
                     </div>
                     <div>
                       <div className="text-[12px] opacity-80 mb-1 font-medium">今晨无</div>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold font-mono tracking-tight">1</span>
+                        <span className="text-3xl font-bold font-mono tracking-tight">{isMockEmpty ? '0' : '1'}</span>
                         <span className="text-[13px] font-medium">个</span>
                       </div>
-                      <div className="text-[11px] opacity-80 mt-1.5 font-medium">已结束</div>
+                      <div className="text-[11px] opacity-80 mt-1.5 font-medium">{isMockEmpty ? '-' : '已结束'}</div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-[12px] opacity-80 mb-1 font-medium">今日收入 (元)</div>
                     <div className="flex items-baseline justify-end gap-1">
-                      <span className="text-3xl font-bold font-mono tracking-tight">¥600</span>
+                      <span className="text-3xl font-bold font-mono tracking-tight">{isMockEmpty ? '¥0' : '¥600'}</span>
                     </div>
                     <div className="text-[11px] font-bold text-[#6750A4] mt-1.5 flex items-center justify-end gap-1">
                       <span className="bg-[#FEF7FF] px-2 py-0.5 rounded-md flex items-center gap-1">
-                        较昨日 +12.5% 
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        {isMockEmpty ? '无昨日数据' : '较昨日 +12.5%'}
+                        {!isMockEmpty && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>}
                       </span>
                     </div>
                   </div>
@@ -199,7 +263,7 @@ export default function App() {
               />
 
               {/* Income Trend Chart */}
-              <TodaySchedule />
+              {!isMockEmpty && <TodaySchedule />}
 
               {/* Quick Actions */}
               <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-6 shadow-sm">
@@ -240,21 +304,27 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB 2: SCHEDULE (预约) */}
+          {/* TAB 2: SCHEDULE (排班) */}
           {activeTab === 'schedule' && (
             <ScheduleTab
-              orders={orders}
-              onConfirmOrder={handleConfirmOrder}
-              onEnterRoom={(order) => setActiveLiveOrder(order)}
+              consultant={displayedConsultant}
+              products={displayedProducts}
+              isMockEmpty={isMockEmpty}
+              hasConfiguredSchedule={hasConfiguredSchedule}
               onSubPageChange={setIsSubPage}
-              onOpenOrderInfo={(order) => setShowOrderInfo(order)}
+              onNavigateToProfile={() => setActiveTab('profile')}
+              onNavigateToScheduleSettings={() => {
+                setInitialProfileSection('schedule_settings');
+                setActiveTab('profile');
+              }}
+              onNavigateToGrowth={() => setActiveTab('growth')}
             />
           )}
 
           {/* TAB 3: MESSAGES (消息流) */}
           {activeTab === 'messages' && (
             <OrdersTab
-              orders={orders}
+              orders={displayedOrders}
               onConfirmOrder={handleConfirmOrder}
               onEnterRoom={(order) => setActiveLiveOrder(order)}
               onWriteSummary={handleWriteSummary}
@@ -265,48 +335,62 @@ export default function App() {
               initialSelectedOrder={activeOrderDetail}
               initialViewMode={activeOrderViewMode}
               onClearInitialOrder={() => setActiveOrderDetail(null)}
-              onExitExternalView={() => {
-                if (activeOrderReturnTab) {
-                  setActiveTab(activeOrderReturnTab);
-                  setActiveOrderReturnTab(null);
-                }
-              }}
+              onExitExternalView={handleExitExternalView}
+              onNavigateToGrowth={() => setActiveTab('growth')}
             />
           )}
 
           {/* TAB 4: GROWTH (增长) */}
           {activeTab === 'growth' && (
             <GrowthTab
-              consultant={consultant}
+              consultant={displayedConsultant}
               vouchers={vouchers}
               onAddVoucher={handleAddVoucher}
               onSubPageChange={setIsSubPage}
+              onNavigateToProfile={() => setActiveTab('profile')}
             />
           )}
 
           {/* TAB 5: PROFILE (我的) */}
           {activeTab === 'profile' && (
             <ProfileTab
-              consultant={consultant}
-              products={products}
+              consultant={displayedConsultant}
+              products={displayedProducts}
               settlements={settlements}
+              initialSection={initialProfileSection}
               onToggleProductPublish={handleToggleProductPublish}
               onUpdateConsultant={handleUpdateConsultant}
               onSubPageChange={setIsSubPage}
-              onOpenHistoryOrders={() => setActiveTab('messages')}
+              onProcessOrder={handleProcessOrder}
+              onOpenOrderInfo={(order) => setShowOrderInfo(order)}
               onOpenIncomeView={() => setShowIncomeView(true)}
+              onScheduleConfigured={() => setHasConfiguredSchedule(true)}
             />
           )}
 
         </main>
 
         {/* Mobile Bottom Navigation */}
-        {!isSubPage && (
+        {!isSubPage && !showIncomeView && (
           <TabNavigation
             activeTab={activeTab}
             onChangeTab={setActiveTab}
             pendingSummaryCount={pendingSummaryCount}
             pendingOrderCount={pendingOrderCount}
+          />
+        )}
+
+        {/* Income View Overlay (Inside max-w-md relative container) */}
+        {showIncomeView && (
+          <IncomeView
+            consultant={displayedConsultant}
+            isMockEmpty={isMockEmpty}
+            onClose={() => setShowIncomeView(false)}
+            onOpenSessionReview={(draftId) => {
+              setShowIncomeView(false);
+              setActiveSessionReviewId(draftId);
+            }}
+            onOpenOrderInfo={(order) => setShowOrderInfo(order)}
           />
         )}
 
@@ -345,18 +429,6 @@ export default function App() {
         />
       )}
 
-
-      {/* Income View Overlay */}
-      {showIncomeView && (
-        <IncomeView
-          consultant={consultant}
-          onClose={() => setShowIncomeView(false)}
-          onOpenSessionReview={(draftId) => {
-            setShowIncomeView(false);
-            setActiveSessionReviewId(draftId);
-          }}
-        />
-      )}
       {showOrderInfo && (
         <OrderInfoModal 
           order={showOrderInfo} 

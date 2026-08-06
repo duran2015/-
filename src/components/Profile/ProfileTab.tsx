@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  UserCheck, ShieldCheck, Clock, Award, Wallet, Calendar, Package, 
+  UserCheck, ShieldCheck, Clock, Award, Wallet, Calendar, Package, Briefcase,
   ChevronRight, ArrowLeft, ArrowUpRight, Plus, Edit3, CheckCircle2, DollarSign, 
   ToggleLeft, ToggleRight, X, Sparkles, Building, FileCheck, ArrowRight,
   Sun, SunMedium, Moon, Copy, Check, Grid, Sliders, CalendarDays, FileText,
@@ -8,31 +8,73 @@ import {
   XCircle, ExternalLink, BookOpen, Globe, GraduationCap, Save, HeartHandshake, Compass,
   ShoppingBag, TrendingUp, Users, Share2
 } from 'lucide-react';
-import { ConsultantProfile, ServiceProduct, SettlementRecord } from '../../types';
+import { ConsultantProfile, ServiceProduct, SettlementRecord, Order, ConsultantBookingRule } from '../../types';
+
+import { ScheduleSettingsView, MOCK_RULE } from './ScheduleSettingsView';
+import { HistoryOrdersView } from './HistoryOrdersView';
+import { CertificationsView } from './CertificationsView';
+
+const MOCK_PLATFORM_RULES = [
+  {
+    id: 'rule-1',
+    title: '心理咨询师入驻协议',
+    date: '2023-10-01',
+    content: '欢迎入驻本平台。作为专业心理咨询师，您需要遵守以下规定：\n\n1. 资质真实：您必须提供真实、有效的心理咨询师资质证明。\n2. 伦理规范：严格遵守心理咨询职业伦理，保守来访者隐私，不得跨越职业边界。\n3. 服务质量：按时出席预约的咨询，提供专业、负责任的服务。\n4. 违约处理：如遇特殊情况需要取消咨询，请严格按照“无责取消规则”提前操作，否则将承担相应的违约责任。'
+  },
+  {
+    id: 'rule-2',
+    title: '咨询服务费用结算规则',
+    date: '2023-11-15',
+    content: '为保障咨询师的合法权益，平台制定以下费用结算规则：\n\n1. 结算周期：订单完成且提交咨询小结后，费用将于 T+1 工作日结算至您的平台钱包。\n2. 提现申请：您可随时对钱包中的可用余额发起提现申请。\n3. 提现审核：平台将在 1-3 个工作日内对提现申请进行审核。\n4. 财务打款：审核通过后，财务将在 3-7 个工作日内将款项打入您绑定的收款账户中。\n5. 手续费：提现过程中产生的银行或第三方支付渠道手续费，按实际发生额扣除。'
+  },
+  {
+    id: 'rule-3',
+    title: '平台隐私保护政策',
+    date: '2024-01-05',
+    content: '本平台高度重视咨询师与来访者的隐私保护：\n\n1. 数据加密：所有音视频咨询过程及文字消息均采用端到端加密技术，平台不留存任何原始咨询录音或录像。\n2. 匿名化处理：来访者的个人信息在展示给咨询师时，系统将进行必要的脱敏处理。\n3. 档案安全：咨询师记录的咨询档案和 AI 生成的小结，仅对当前咨询师及来访者本人可见，未经授权绝不向第三方提供。\n4. 账号安全：请妥善保管您的登录凭证，若发现账号异常请立即联系平台客服。'
+  }
+];
 
 interface ProfileTabProps {
   consultant: ConsultantProfile;
   products: ServiceProduct[];
   settlements: SettlementRecord[];
+  initialSection?: 'menu' | 'schedule_settings';
+  isMockEmpty?: boolean;
   onToggleProductPublish: (productId: string) => void;
   onUpdateConsultant?: (updated: ConsultantProfile) => void;
   onSubPageChange?: (isSubPage: boolean) => void;
-  onOpenHistoryOrders: () => void;
+  onProcessOrder: (order: Order, viewMode?: 'order_detail' | 'client_profile') => void;
+  onOpenOrderInfo: (order: Order) => void;
   onOpenIncomeView: () => void;
+  onScheduleConfigured?: () => void;
 }
 
 export const ProfileTab: React.FC<ProfileTabProps> = ({
   consultant,
   products,
   settlements,
+  initialSection = 'menu',
+  isMockEmpty,
   onToggleProductPublish,
   onUpdateConsultant,
   onSubPageChange,
-  onOpenHistoryOrders,
-  onOpenIncomeView
+  onProcessOrder,
+  onOpenOrderInfo,
+  onOpenIncomeView,
+  onScheduleConfigured
 }) => {
   // Navigation section: 'menu' is default home view; selecting an item opens a dedicated page view
-  const [activeSection, setActiveSection] = useState<'menu' | 'products' | 'qualifications'>('menu');
+  const [activeSection, setActiveSection] = useState<'menu' | 'profile_edit' | 'products' | 'qualifications' | 'schedule_settings' | 'platform_rules' | 'history_orders'>(initialSection);
+  const [selectedRule, setSelectedRule] = useState<{title: string, date: string, content: string} | null>(null);
+
+  // Sync initialSection changes from parent
+  React.useEffect(() => {
+    setActiveSection(initialSection);
+  }, [initialSection]);
+
+  // Shared booking rule state for scheduling and products filtering
+  const [bookingRule, setBookingRule] = useState<ConsultantBookingRule>(MOCK_RULE);
 
   React.useEffect(() => {
     if (onSubPageChange) {
@@ -109,6 +151,13 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const [newLangInput, setNewLangInput] = useState('');
   const [newOrientInput, setNewOrientInput] = useState('');
 
+  // Default tags for suggestions
+  const DEFAULT_SPECIALTIES = ['情绪管理', '人际关系', '个人成长', '职业发展', '婚姻家庭', '心理创伤', '睡眠问题', '躯体化症状'];
+  const DEFAULT_AUDIENCES = ['青少年 (12-18岁)', '大学生', '职场人士', '情侣/夫妻', '孕产妇', 'LGBTQ+', '老年人'];
+  const DEFAULT_SERVICES = ['50分钟个体心理咨询 (视频/语音)', '15分钟极简舒压倾听', '90分钟家庭/伴侣咨询', '心理测评及解读'];
+  const DEFAULT_LANGUAGES = ['普通话', '英语', '粤语', '日语', '手语'];
+  const DEFAULT_ORIENTATIONS = ['精神分析/心理动力学', '人本主义', '认知行为 (CBT)', '系统家庭治疗', '焦点解决 (SFBT)', '正念与接纳承诺 (ACT)', '表达性艺术治疗'];
+
   // Helper function to add items
   const handleAddItem = (
     value: string, 
@@ -132,6 +181,16 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     setList: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
     setList(list.filter((_, i) => i !== index));
+  };
+
+  const handleAddTag = (
+    tag: string,
+    list: string[],
+    setList: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    if (!list.includes(tag)) {
+      setList([...list, tag]);
+    }
   };
 
   // Save changes handler
@@ -176,8 +235,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         <div className="space-y-4">
           
           {/* M3 Elevated Profile Summary Card */}
-          <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-5 shadow-2xs space-y-4 relative overflow-hidden">
+          <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-5 shadow-2xs space-y-4 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-48 h-48 bg-[#E8E2D5]/30 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
+            <button 
+              onClick={() => {
+                setQualificationsViewMode('edit');
+                setActiveSection('profile_edit');
+              }}
+              className="absolute top-4 right-4 p-2 bg-[#FAF8F5] hover:bg-[#E8E2D5] rounded-full text-[#6750A4] transition z-20"
+              title="编辑个人资料"
+            >
+              <Edit3 className="w-4 h-4" />
+            </button>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
               
@@ -186,24 +255,24 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                   <img
                     src={consultant.avatar}
                     alt={consultant.name}
-                    className="w-14 h-14 rounded-full object-cover ring-2 ring-[#6750A4]/20 shadow-2xs"
+                    className="w-16 h-16 rounded-full object-cover ring-2 ring-[#6750A4]/20 shadow-2xs"
                   />
-                  <span className="absolute bottom-0 right-0 bg-[#6750A4] text-white p-0.5 rounded-full border-2 border-white" title="CPS 认证">
-                    <ShieldCheck className="w-3 h-3" />
+                  <span className="absolute bottom-0 right-0 bg-[#6750A4] text-white p-1 rounded-full border-2 border-white" title="实名认证">
+                    <ShieldCheck className="w-3.5 h-3.5" />
                   </span>
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base font-bold text-[#1D1B16]">{consultant.name}</h2>
-                    <span className="bg-[#EADDFF] text-[#21005D] text-[10px] px-2.5 py-0.5 rounded-full font-semibold border border-[#D0BCFF] flex items-center gap-1">
+                    <h2 className="text-[18px] font-bold text-[#1D1B16]">{consultant.name}</h2>
+                    <span className="bg-[#EADDFF] text-[#21005D] text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-[#D0BCFF] flex items-center gap-1">
                       <Award className="w-3 h-3 text-[#21005D]" />
                       CPS 认证在籍
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#49463D]">{consultant.title}</p>
-                  <div className="text-[11px] text-[#7A756C] font-mono">执业证书: {consultant.licenseNo}</div>
+                  <p className="text-[13px] text-[#49463D]">{consultant.title}</p>
+                  <div className="text-[12px] text-[#7A756C] font-mono">执业证书: {consultant.licenseNo}</div>
                 </div>
               </div>
 
@@ -226,17 +295,21 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             </div>
           </div>
 
-          {/* Independent Page Hub Entry List */}
+          {/* Independent Page Hub Entry List - Orders & Income */}
           <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-2 shadow-2xs space-y-1">
+            <div className="px-4 pt-2 pb-1 text-[13px] font-bold text-[#7A756C] flex items-center gap-1.5">
+              <Receipt className="w-4 h-4 text-[#6750A4]" />
+              <span>订单与收入</span>
+            </div>
             
             {/* New: Orders Management Item */}
             <button
-              onClick={onOpenHistoryOrders}
+              onClick={() => setActiveSection('history_orders')}
               className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
-                  <ShoppingBag className="w-5 h-5" />
+                <div className="w-11 h-11 rounded-full bg-[#FAF8F5] text-[#49463D] flex items-center justify-center shrink-0 border border-[#ECE6DC]">
+                  <ShoppingBag className="w-5 h-5 text-[#6750A4]" />
                 </div>
                 <div className="text-left">
                   <div className="font-bold text-sm text-[#1D1B16] flex items-center gap-2">
@@ -256,8 +329,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-full bg-[#EADDFF] text-[#21005D] flex items-center justify-center shrink-0 border border-[#D0BCFF]">
-                  <Wallet className="w-5 h-5" />
+                <div className="w-11 h-11 rounded-full bg-[#FAF8F5] text-[#49463D] flex items-center justify-center shrink-0 border border-[#ECE6DC]">
+                  <Wallet className="w-5 h-5 text-[#6750A4]" />
                 </div>
                 <div className="text-left">
                   <div className="font-bold text-sm text-[#1D1B16] flex items-center gap-2">
@@ -271,33 +344,99 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               </div>
               <ChevronRight className="w-5 h-5 text-[#7A756C] group-hover:text-[#1D1B16] group-hover:translate-x-0.5 transition shrink-0" />
             </button>
+          </div>
 
-            <div className="h-px bg-[#ECE6DC] mx-4" />
-
-
-
+          {/* New Module: 业务与规则设置 */}
+          <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-2 shadow-2xs space-y-1">
+            <div className="px-4 pt-2 pb-1 text-[13px] font-bold text-[#7A756C] flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-[#6750A4]" />
+              <span>业务与规则设置</span>
+            </div>
+            
             {/* 4. 资质档案 Item */}
             <button
               onClick={() => setActiveSection('qualifications')}
               className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-full bg-[#EADDFF] text-[#21005D] flex items-center justify-center shrink-0 border border-[#D0BCFF]">
-                  <ShieldCheck className="w-5 h-5" />
+                <div className="w-11 h-11 rounded-full bg-[#FAF8F5] text-[#49463D] flex items-center justify-center shrink-0 border border-[#ECE6DC]">
+                  <ShieldCheck className="w-5 h-5 text-[#6750A4]" />
                 </div>
                 <div className="text-left">
                   <div className="font-bold text-sm text-[#1D1B16] flex items-center gap-2">
-                    <span>资质档案</span>
+                    <span>资质认证</span>
                     <span className="text-[10px] bg-[#EADDFF] text-[#21005D] px-2 py-0.2 rounded-full font-semibold border border-[#D0BCFF]">
                       CPS 认证在籍
                     </span>
                   </div>
-                  <p className="text-xs text-[#7A756C] mt-0.5">行业权威注册资质、伦理规范声明与一对一督导受训记录</p>
+                  <p className="text-xs text-[#7A756C] mt-0.5">查看及管理个人从业资质认证状态</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-[#7A756C] group-hover:text-[#1D1B16] group-hover:translate-x-0.5 transition shrink-0" />
             </button>
 
+            <div className="h-px bg-[#ECE6DC] mx-4" />
+            
+            {/* 1. 商品设置 Item */}
+            <button
+              onClick={() => setActiveSection('products')}
+              className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-full bg-[#FAF8F5] text-[#49463D] flex items-center justify-center shrink-0 border border-[#ECE6DC]">
+                  <Briefcase className="w-5 h-5 text-[#6750A4]" />
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-sm text-[#1D1B16] flex items-center gap-2">
+                    <span>我的服务</span>
+                  </div>
+                  <p className="text-xs text-[#7A756C] mt-0.5">管理您的咨询服务类型、价格及上架状态</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#7A756C] group-hover:text-[#1D1B16] group-hover:translate-x-0.5 transition shrink-0" />
+            </button>
+
+            <div className="h-px bg-[#ECE6DC] mx-4" />
+
+            {/* 2. 排班设置 Item */}
+            <button
+              onClick={() => setActiveSection('schedule_settings')}
+              className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-full bg-[#FAF8F5] text-[#49463D] flex items-center justify-center shrink-0 border border-[#ECE6DC]">
+                  <CalendarDays className="w-5 h-5 text-[#6750A4]" />
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-sm text-[#1D1B16] flex items-center gap-2">
+                    <span>排班设置</span>
+                  </div>
+                  <p className="text-xs text-[#7A756C] mt-0.5">配置可服务时间、我的服务与预约规则</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#7A756C] group-hover:text-[#1D1B16] group-hover:translate-x-0.5 transition shrink-0" />
+            </button>
+
+            <div className="h-px bg-[#ECE6DC] mx-4" />
+
+            {/* 3. 平台规则 Item */}
+            <button
+              onClick={() => setActiveSection('platform_rules')}
+              className="w-full p-4 rounded-[20px] hover:bg-[#FAF8F5] transition flex items-center justify-between group active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-full bg-[#FAF8F5] text-[#49463D] flex items-center justify-center shrink-0 border border-[#ECE6DC]">
+                  <FileText className="w-5 h-5 text-[#6750A4]" />
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-sm text-[#1D1B16] flex items-center gap-2">
+                    <span>平台规则</span>
+                  </div>
+                  <p className="text-xs text-[#7A756C] mt-0.5">查看平台入驻协议、隐私政策与服务条款</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-[#7A756C] group-hover:text-[#1D1B16] group-hover:translate-x-0.5 transition shrink-0" />
+            </button>
           </div>
 
         </div>
@@ -319,57 +458,77 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               <span>返回列表</span>
             </button>
             <span className="text-[#ECE6DC]">/</span>
-            <span className="text-xs font-bold text-[#1D1B16]">服务商品架</span>
+            <span className="text-xs font-bold text-[#1D1B16]">我的服务</span>
           </div>
 
           <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-5 shadow-2xs space-y-4">
             <div className="pb-2 border-b border-[#ECE6DC]">
               <h3 className="font-bold text-sm text-[#1D1B16]">咨询服务商品状态管理</h3>
-              <p className="text-xs text-[#7A756C] mt-0.5">可自定义调整单次个体咨询及即时倾听的上架与休诊状态。服务商品为平台标准定价，不可修改。</p>
+              <p className="text-xs text-[#7A756C] mt-0.5">根据您的排班设置（最小预约时长：{bookingRule.minDuration}分钟），系统将自动为您过滤不符合规则的短时长服务。</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {products.map((prod) => (
-                <div key={prod.id} className="bg-[#FAF8F5] border border-[#ECE6DC] rounded-[20px] p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-[#1D1B16]">{prod.name}</h4>
+            {products.filter(prod => prod.durationMinutes >= bookingRule.minDuration).length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {products.filter(prod => prod.durationMinutes >= bookingRule.minDuration).map((prod) => (
+                  <div key={prod.id} className="bg-[#FAF8F5] border border-[#ECE6DC] rounded-[20px] p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-[#1D1B16]">{prod.name}</h4>
+                        </div>
+                        <p className="text-xs text-[#49463D] mt-1 leading-relaxed">{prod.description}</p>
                       </div>
-                      <p className="text-xs text-[#49463D] mt-1 leading-relaxed">{prod.description}</p>
+
+                      <button
+                        onClick={() => onToggleProductPublish(prod.id)}
+                        className="text-[#6750A4] hover:opacity-80 transition active:scale-95 shrink-0"
+                        title="上架/下架开关"
+                      >
+                        {prod.isPublished ? (
+                          <ToggleRight className="w-8 h-8 text-[#6750A4]" />
+                        ) : (
+                          <ToggleLeft className="w-8 h-8 text-[#7A756C]" />
+                        )}
+                      </button>
                     </div>
 
-                    <button
-                      onClick={() => onToggleProductPublish(prod.id)}
-                      className="text-[#6750A4] hover:opacity-80 transition active:scale-95 shrink-0"
-                      title="上架/下架开关"
-                    >
-                      {prod.isPublished ? (
-                        <ToggleRight className="w-8 h-8 text-[#6750A4]" />
-                      ) : (
-                        <ToggleLeft className="w-8 h-8 text-[#7A756C]" />
-                      )}
-                    </button>
+                    <div className="flex items-center justify-between pt-2 border-t border-[#ECE6DC] text-xs">
+                      <div className="text-[#7A756C]">
+                        服务时长: <strong className="text-[#1D1B16] font-mono">{prod.durationMinutes || 50} 分钟</strong>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-bold font-mono text-[#6750A4]">¥{prod.price}</span>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-[#ECE6DC] text-xs">
-                    <div className="text-[#7A756C]">
-                      服务时长: <strong className="text-[#1D1B16] font-mono">{prod.durationMinutes || 50} 分钟</strong>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold font-mono text-[#6750A4]">¥{prod.price}</span>
-                    </div>
-                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-10 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[20px] flex flex-col items-center">
+                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm border border-[#E6E0D6]">
+                  <Package className="w-6 h-6 text-[#6750A4]" />
                 </div>
-              ))}
-            </div>
+                <h4 className="text-[15px] font-bold text-[#1D1B16] mb-1">暂无可用服务</h4>
+                <p className="text-[12px] text-[#7A756C] max-w-[200px] mb-4">
+                  您还没有配置任何咨询服务，或者所有服务均不符合当前的最小预约时长规则。
+                </p>
+                <button className="bg-[#6750A4] text-white px-5 py-2 rounded-full text-[13px] font-bold shadow-sm active:scale-95 transition hover:bg-[#594294]">
+                  添加咨询服务
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* DEDICATED PAGE 4: Qualifications & Profile Settings */}
+      {/* DEDICATED PAGE 4: Certifications */}
       {activeSection === 'qualifications' && (
+        <CertificationsView onBack={() => setActiveSection('menu')} />
+      )}
+
+      {/* DEDICATED PAGE: Profile Edit (previously in qualifications) */}
+      {activeSection === 'profile_edit' && (
         <div className="space-y-4 animate-in fade-in duration-200">
           
           {/* Top Header & View/Edit Switcher */}
@@ -380,10 +539,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 className="p-1.5 -ml-1.5 rounded-full text-[#6750A4] hover:bg-[#E8E2D5] transition active:scale-95 flex items-center gap-1 font-semibold text-xs"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>返回列表</span>
+                <span>返回主页</span>
               </button>
               <span className="text-[#ECE6DC]">/</span>
-              <span className="text-xs font-bold text-[#1D1B16]">资质档案与介绍</span>
+              <span className="text-xs font-bold text-[#1D1B16]">个人主页与档案</span>
             </div>
 
             {/* Mode Switcher Buttons */}
@@ -775,6 +934,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newQualInput}
                       onChange={(e) => setNewQualInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newQualInput, setNewQualInput, formQualifications, setFormQualifications);
+                        }
+                      }}
                       placeholder="如：中国心理学会注册心理师 (CPS-R-xxxx-xxxx)"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -811,6 +976,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newEduInput}
                       onChange={(e) => setNewEduInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newEduInput, setNewEduInput, formEducation, setFormEducation);
+                        }
+                      }}
                       placeholder="如：华东师范大学 临床与咨询心理学硕士"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -847,6 +1018,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newTrainInput}
                       onChange={(e) => setNewTrainInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newTrainInput, setNewTrainInput, formTraining, setFormTraining);
+                        }
+                      }}
                       placeholder="如：中美心理动力学3年连续培训项目"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -916,6 +1093,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newSpecialtyInput}
                       onChange={(e) => setNewSpecialtyInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newSpecialtyInput, setNewSpecialtyInput, formSpecialties, setFormSpecialties);
+                        }
+                      }}
                       placeholder="如：职场焦虑与倦怠"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -926,6 +1109,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                     >
                       添加
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {DEFAULT_SPECIALTIES.filter(t => !formSpecialties.includes(t)).map(tag => (
+                      <button 
+                        key={tag} 
+                        type="button" 
+                        onClick={() => handleAddTag(tag, formSpecialties, setFormSpecialties)}
+                        className="px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#7A756C] border border-[#ECE6DC] text-[10px] hover:bg-[#EADDFF] hover:text-[#6750A4] hover:border-[#6750A4]/30 transition"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -952,6 +1147,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newAudienceInput}
                       onChange={(e) => setNewAudienceInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newAudienceInput, setNewAudienceInput, formTargetAudience, setFormTargetAudience);
+                        }
+                      }}
                       placeholder="如：成人 (18-50岁) / 高敏人群"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -962,6 +1163,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                     >
                       添加
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {DEFAULT_AUDIENCES.filter(t => !formTargetAudience.includes(t)).map(tag => (
+                      <button 
+                        key={tag} 
+                        type="button" 
+                        onClick={() => handleAddTag(tag, formTargetAudience, setFormTargetAudience)}
+                        className="px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#7A756C] border border-[#ECE6DC] text-[10px] hover:bg-[#EADDFF] hover:text-[#6750A4] hover:border-[#6750A4]/30 transition"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -988,6 +1201,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newServiceInput}
                       onChange={(e) => setNewServiceInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newServiceInput, setNewServiceInput, formProficientServices, setFormProficientServices);
+                        }
+                      }}
                       placeholder="如：50分钟个体心理咨询 / 15分钟倾听"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -998,6 +1217,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                     >
                       添加
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {DEFAULT_SERVICES.filter(t => !formProficientServices.includes(t)).map(tag => (
+                      <button 
+                        key={tag} 
+                        type="button" 
+                        onClick={() => handleAddTag(tag, formProficientServices, setFormProficientServices)}
+                        className="px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#7A756C] border border-[#ECE6DC] text-[10px] hover:bg-[#EADDFF] hover:text-[#6750A4] hover:border-[#6750A4]/30 transition"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1024,6 +1255,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newLangInput}
                       onChange={(e) => setNewLangInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newLangInput, setNewLangInput, formLanguages, setFormLanguages);
+                        }
+                      }}
                       placeholder="如：普通话 (标准) / 英语"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -1034,6 +1271,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                     >
                       添加
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {DEFAULT_LANGUAGES.filter(t => !formLanguages.includes(t)).map(tag => (
+                      <button 
+                        key={tag} 
+                        type="button" 
+                        onClick={() => handleAddTag(tag, formLanguages, setFormLanguages)}
+                        className="px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#7A756C] border border-[#ECE6DC] text-[10px] hover:bg-[#EADDFF] hover:text-[#6750A4] hover:border-[#6750A4]/30 transition"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1060,6 +1309,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                       type="text"
                       value={newOrientInput}
                       onChange={(e) => setNewOrientInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddItem(newOrientInput, setNewOrientInput, formOrientations, setFormOrientations);
+                        }
+                      }}
                       placeholder="如：人本主义 / CBT / 精神分析"
                       className="flex-1 bg-[#FAF8F5] border border-[#E6E0D6] rounded-[12px] px-3 py-1.5 text-xs text-[#1D1B16] focus:outline-none focus:ring-1 focus:ring-[#6750A4]"
                     />
@@ -1070,6 +1325,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                     >
                       添加
                     </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {DEFAULT_ORIENTATIONS.filter(t => !formOrientations.includes(t)).map(tag => (
+                      <button 
+                        key={tag} 
+                        type="button" 
+                        onClick={() => handleAddTag(tag, formOrientations, setFormOrientations)}
+                        className="px-2 py-0.5 rounded-full bg-[#FAF8F5] text-[#7A756C] border border-[#ECE6DC] text-[10px] hover:bg-[#EADDFF] hover:text-[#6750A4] hover:border-[#6750A4]/30 transition"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1112,6 +1379,85 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       )}
 
 
+      {/* DEDICATED PAGE 5: Schedule Settings */}
+      {activeSection === 'schedule_settings' && (
+        <ScheduleSettingsView 
+          onBack={() => setActiveSection('menu')} 
+          rule={bookingRule}
+          onRuleChange={setBookingRule}
+          products={products}
+          isMockEmpty={isMockEmpty}
+          onScheduleConfigured={onScheduleConfigured}
+        />
+      )}
+
+      {/* DEDICATED PAGE 6: Platform Rules */}
+      {/* PLATFORM RULES SUB PAGE */}
+      {activeSection === 'platform_rules' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (selectedRule) {
+                  setSelectedRule(null);
+                } else {
+                  setActiveSection('menu');
+                }
+              }}
+              className="p-1.5 -ml-1.5 rounded-full text-[#6750A4] hover:bg-[#E8E2D5] transition active:scale-95 flex items-center gap-1 font-semibold text-xs"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{selectedRule ? '返回规则列表' : '返回'}</span>
+            </button>
+            <span className="text-[#ECE6DC]">/</span>
+            <span className="text-xs font-bold text-[#1D1B16] truncate max-w-[200px]">
+              {selectedRule ? selectedRule.title : '平台规则'}
+            </span>
+          </div>
+
+          {!selectedRule ? (
+            <div className="bg-white border border-[#E6E0D6] rounded-[24px] overflow-hidden shadow-2xs">
+              <div className="p-5 pb-3 border-b border-[#ECE6DC]">
+                <h3 className="font-bold text-[15px] text-[#1D1B16] flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#6750A4]" /> 平台运营与服务条款
+                </h3>
+                <p className="text-xs text-[#7A756C] mt-1.5">以下规则由平台运营统一发布，点击可查看完整条款详情。</p>
+              </div>
+              <div className="divide-y divide-[#ECE6DC]">
+                {MOCK_PLATFORM_RULES.map((rule) => (
+                  <button 
+                    key={rule.id}
+                    onClick={() => setSelectedRule(rule)}
+                    className="w-full text-left p-5 hover:bg-[#FAF8F5] transition flex items-center justify-between group"
+                  >
+                    <div>
+                      <div className="font-bold text-[14px] text-[#1D1B16] group-hover:text-[#6750A4] transition">{rule.title}</div>
+                      <div className="text-xs text-[#7A756C] mt-1">发布日期: {rule.date}</div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-[#7A756C] group-hover:translate-x-0.5 transition" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white border border-[#E6E0D6] rounded-[24px] p-6 shadow-2xs min-h-[60vh]">
+              <h2 className="font-bold text-[18px] text-[#1D1B16] mb-2">{selectedRule.title}</h2>
+              <div className="text-xs text-[#7A756C] mb-6 pb-4 border-b border-[#ECE6DC]">最后更新: {selectedRule.date}</div>
+              <div className="text-[14px] text-[#49463D] leading-loose whitespace-pre-wrap">
+                {selectedRule.content}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* HISTORY ORDERS VIEW */}
+      {activeSection === 'history_orders' && (
+        <HistoryOrdersView
+          onBack={() => setActiveSection('menu')}
+          onOpenOrderInfo={onOpenOrderInfo}
+        />
+      )}
     </div>
   );
 };

@@ -183,7 +183,7 @@ export interface BankAccount {
   isDefault: boolean;
 }
 
-export type WithdrawalStatus = 'pending_audit' | 'processing' | 'completed' | 'rejected';
+export type WithdrawalStatus = 'applied' | 'reviewing' | 'paying' | 'success' | 'failed';
 
 export interface WithdrawalRecord {
   id: string;
@@ -201,7 +201,7 @@ export interface WithdrawalRecord {
   financeNote?: string;
 }
 
-export type BillRecordStatus = 'pending_settlement' | 'settled' | 'withdrawn' | 'refunded';
+export type BillRecordStatus = 'pending_settlement' | 'settled' | 'refunded';
 
 export interface BillRecord {
   id: string;
@@ -635,6 +635,36 @@ export interface ConsultationRecord {
     text: string;
     completed: boolean;
   }[];
+}
+
+// ----------------------------------------------------
+// Consultant Scheduling & Booking Engine Models
+// ----------------------------------------------------
+
+export interface ConsultantAvailability {
+  id: string;
+  weekday: number; // 1-7 (1=Monday)
+  startTime: string; // "09:00"
+  endTime: string;   // "12:00"
+  status: 'active' | 'inactive';
+}
+
+export interface ConsultantService {
+  id: string;
+  name: string;      // e.g., "深度咨询", "情绪支持"
+  type: 'video' | 'audio';
+  duration: 15 | 30 | 45 | 60; // Minutes
+  price: number;
+  description: string;
+  status: 'active' | 'inactive';
+}
+
+export interface ConsultantBookingRule {
+  minDuration: 15 | 30 | 45 | 60; // Minimum bookable duration
+  bufferTime: number; // Buffer time between sessions (minutes)
+  advanceTime: number; // Minimum advance booking time (hours)
+  cancelRule: number; // Cancellation window without penalty (hours)
+  fragmentMode: 'flexible' | 'standard' | 'deep'; // Handling fragmented time slots
 }
 
 // ----------------------------------------------------

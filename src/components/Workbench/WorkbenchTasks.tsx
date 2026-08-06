@@ -85,6 +85,10 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
           const handleCurrentTask = () => {
             if (currentTask.taskType === 'review_intake') {
               onProcessOrder?.(order, 'client_profile');
+            } else if (currentTask.taskType === 'enter_session') {
+              onEnterRoom(order);
+            } else if (currentTask.taskType === 'complete_session_review') {
+              onWriteSummary(order);
             } else {
               onProcessOrder?.(order, 'order_detail');
             }
@@ -128,7 +132,17 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
             </article>
           );
         })}
-        {journeys.length === 0 && <div className="py-6 text-center text-sm text-[#7A756C]">所有业务待办已完成</div>}
+        {journeys.length === 0 && (
+          <div className="py-8 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-[#F4EFF4] rounded-full flex items-center justify-center mb-3">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6750A4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+            </div>
+            <h4 className="text-[15px] font-bold text-[#1D1B16] mb-1">暂无业务待办</h4>
+            <p className="text-[12px] text-[#7A756C] max-w-[200px] mb-4">
+              您的工作台目前很清闲。建议先去完善个人资料或配置排班。
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

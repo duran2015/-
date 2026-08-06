@@ -317,7 +317,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#FAF8F5] relative animate-in fade-in duration-200">
+    <div className="absolute inset-0 flex flex-col bg-[#FAF8F5] animate-in fade-in duration-200 z-20">
       
       {/* Top Header */}
       <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-[#ECE6DC] shadow-sm z-10 shrink-0 sticky top-0">
