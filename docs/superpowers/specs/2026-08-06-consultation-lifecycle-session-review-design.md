@@ -39,7 +39,7 @@
 
 ### 4.3 双层内容权限
 
-- 内部层：转录证据、AI 洞察、风险复核、咨询师笔记和临床总结，仅咨询师可见。
+- 内部层：转录证据、AI 洞察、风险复核、咨询师笔记和临床总结，仅咨询师本人及明确授权督导可见，用户永不可见。
 - 用户层：经咨询师确认的咨询回顾、行动建议和下次计划，通过用户 IM 卡片发送。
 
 ### 4.4 AI 只生成可追溯草稿
@@ -123,7 +123,7 @@ Builder 为每个 `orderId`（会谈结束后关联同一 `sessionId`）返回�
 | 3 | `enter_session` | 开始咨询 |
 | 4 | `complete_session_review` | 确认总结 |
 
-每个阶段包含 `phase_order`、`task_id`（跳过时可为 `null`）和 `status: completed | skipped | current | locked`；旅程还返回唯一的 `current_task_id`。未完成旅程必须恰有一个 `current` 节点，之前的节点只能是 `completed` 或 `skipped`，之后的节点必须为 `locked`。未填写前序资料时第二阶段为 `skipped`，第三阶段仍可成为唯一 `current`。全部完成后 `current_task_id` 为 `null`。服务端负责此确定性投影，客户端只渲染状态和唯一当前操作。
+每个阶段包含 `phase_order`、`task_id`（跳过时可为 `null`）和 `status: completed | skipped | current | locked`；旅程还返回唯一的 `current_task_id`。未完成旅程必须恰有一个 `current` 节点，之前的节点只能是 `completed` 或 `skipped`，之后的节点必须为 `locked`。未填写前序资料时第二阶段为 `skipped`，第三阶段仍可成为唯一 `current`。全部完成后 `current_task_id` 为 `null`。当前 Mock 可由前端纯函数从订单和 `WorkflowTask[]` 投影；真实后端/Builder 则必须返回该确定性旅程，客户端只渲染状态和唯一当前操作，`workflow_tasks` 仅作为服务端关联明细。
 
 ## 7. Mock 数据模型
 
@@ -313,7 +313,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 
 ### 10.3 工作台待办
 
-工作台从 `WorkflowTask[]` 派生，不再仅靠 `completed && !hasSummary` 临时计算。复盘任务显示来访者、会话时间、草稿完成度、结算锁定状态和继续填写入口。
+当前 Mock 可由前端纯函数从 `WorkflowTask[]` 投影工作台，不再仅靠 `completed && !hasSummary` 临时计算。真实后端/Builder 必须将固定 `phase_order`、唯一 `current_task_id` 和阶段状态作为工作台唯一数据源返回；客户端只渲染该 journey，`WorkflowTask` 仅作为服务端关联明细。复盘任务显示来访者、会话时间、草稿完成度、结算锁定状态和继续填写入口。
 
 ## 11. Mock 状态管理
 
@@ -350,7 +350,7 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 ## 13. 隐私与权限
 
 - 咨询师只能访问与自己存在有效服务关系的会话。
-- 转录、私密笔记、临床总结和风险复核只能由咨询师及获授权督导读取。
+- 转录、私密笔记、临床总结和风险复核只能由咨询师本人及明确授权督导读取，用户永不可见。
 - 用户只读取自己会话的 `clientSummary`。
 - AI 草稿和正式提交都保留来源、编辑人、提交人和版本审计。
 - IM `summary_card` 根据 `audience` 生成内容，不能由前端隐藏字段来替代后端字段级授权。
@@ -371,13 +371,12 @@ IM 卡片只保存引用和展示摘要，不复制完整临床内容。
 ### 14.2 新增或细化接口
 
 - `POST /sessions/:id/end`
-- `POST /sessions/:id/review-drafts/ensure`
-- `GET /sessions/:id/review-draft`
-- `PUT /sessions/:id/review-draft`
-- `POST /sessions/:id/review-draft/submit`
-- `GET /workflow-tasks?actorRole=&status=`
+- `GET /sessions/:id/review`
+- `PUT /sessions/:id/review/draft`
+- `POST /sessions/:id/review/submit`
+- `GET /workflow/tasks?actor=me&status=pending`
 - `GET /counselor/journeys?status=`
-- `POST /workflow-tasks/:id/skip`
+- `POST /workflow/tasks/:id/complete`
 - `GET /threads/:id/messages`
 - `POST /orders/:id/reviews`
 - `GET /orders/:id/settlement-status`
