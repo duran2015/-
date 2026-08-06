@@ -304,6 +304,7 @@ const emptySnapshot: SessionSnapshot = {
 export function seedWorkflowFromOrders(
   orders: Order[],
   timestamp: string,
+  snapshotFactory: (order: Order) => SessionSnapshot = () => emptySnapshot,
 ): ConsultationWorkflowState {
   return orders.reduce((state, order) => {
     const { clientId, counselorId } = actorIds(order);
@@ -355,7 +356,7 @@ export function seedWorkflowFromOrders(
       };
     }
     if (order.status === "completed" && !order.hasSummary) {
-      return endSessionWorkflow(state, order, emptySnapshot, timestamp);
+      return endSessionWorkflow(state, order, snapshotFactory(order), timestamp);
     }
     return state;
   }, emptyWorkflowState());

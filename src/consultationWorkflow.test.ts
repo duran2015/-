@@ -8,6 +8,7 @@ import {
   seedWorkflowFromOrders,
   submitReviewDraft,
 } from "./consultationWorkflow";
+import { buildMockSessionSnapshot } from "./consultationWorkflowMock";
 import type { Order, SessionReviewDraft, SessionSnapshot } from "./types";
 
 const now = "2026-08-06T10:00:00.000Z";
@@ -162,4 +163,23 @@ test("order states seed the matching actor tasks", () => {
   assert.equal(types.includes("enter_session"), true);
   assert.equal(types.includes("complete_session_review"), true);
   assert.equal(types.includes("counselor_reflection"), true);
+});
+
+test("mock session evidence is traceable and ready for a review draft", () => {
+  const snapshot = buildMockSessionSnapshot(fixtureOrder);
+  const evidenceIds = new Set([
+    ...snapshot.transcript.map((item) => item.id),
+    ...snapshot.notes.map((item) => item.id),
+  ]);
+
+  assert.equal(snapshot.durationSeconds, 50 * 60);
+  assert.equal(snapshot.transcript.length >= 6, true);
+  assert.equal(snapshot.notes.length >= 2, true);
+  assert.equal(snapshot.insights.length >= 4, true);
+  assert.equal(
+    snapshot.insights.every((insight) =>
+      insight.sourceIds.every((sourceId) => evidenceIds.has(sourceId)),
+    ),
+    true,
+  );
 });

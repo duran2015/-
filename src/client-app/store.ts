@@ -3,6 +3,36 @@ import { AppView, AppTab, UserProfile, BlackboardState } from "./types";
 import { mockUser, mockOrders, mockAssessmentRecords } from "./data";
 
 import { INITIAL_ORDERS } from "../data/mockData";
+import {
+  endSessionWorkflow,
+  saveReviewDraft as saveWorkflowReviewDraft,
+  seedWorkflowFromOrders,
+  submitReviewDraft as submitWorkflowReviewDraft,
+} from "../consultationWorkflow";
+import { buildMockReviewPatch, buildMockSessionSnapshot } from "../consultationWorkflowMock";
+import type {
+  ConsultationWorkflowState,
+  Order,
+  SessionReviewDraft,
+  SessionSnapshot,
+} from "../types";
+
+const workflowTimestamp = () => new Date().toISOString();
+
+const buildInitialWorkflow = () => {
+  const timestamp = workflowTimestamp();
+  const seeded = seedWorkflowFromOrders(INITIAL_ORDERS, timestamp, buildMockSessionSnapshot);
+  return seeded.reviewDrafts.reduce(
+    (state, draft) =>
+      saveWorkflowReviewDraft(
+        state,
+        draft.id,
+        buildMockReviewPatch(INITIAL_ORDERS.find((order) => order.id === draft.orderId)!),
+        timestamp,
+      ),
+    seeded,
+  );
+};
 
 const defaultUser: UserProfile = {
   ...mockUser,
@@ -58,6 +88,7 @@ const buildLoggedOutState = () => ({
   isSessionCounselorDetail: false,
   counselorStatus: "active" as const,
   activeOrderTab: "all" as const,
+  consultationWorkflow: buildInitialWorkflow(),
 });
 
 const clearAuthStorage = () => {
@@ -122,6 +153,12 @@ export interface AppState {
   setActiveOrderTab: (tab: "all" | "pending" | "completed" | "cancelled" | "settlement") => void;
   bookingSummary: any | null;
   setBookingSummary: (summary: any | null) => void;
+  consultationWorkflow: ConsultationWorkflowState;
+  ensureSessionReview: (order: Order, snapshot?: SessionSnapshot) => string;
+  endConsultationSession: (order: Order, snapshot?: SessionSnapshot) => string;
+  saveSessionReview: (draftId: string, patch: Partial<SessionReviewDraft>) => void;
+  submitSessionReview: (draftId: string, patch?: Partial<SessionReviewDraft>) => { ok: boolean; errors: string[] };
+  completeWorkflowTask: (taskId: string) => void;
   hasAgreedPrivacy: boolean;
   agreePrivacy: () => void;
   logout: () => void;
@@ -154,6 +191,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   assessmentState: defaultAssessmentState,
   aiSettings: defaultAISettings,
   hasAgreedPrivacy: localStorage.getItem("hasAgreedPrivacy") === "true",
+  consultationWorkflow: buildInitialWorkflow(),
 
   agreePrivacy: () => {
     localStorage.setItem("hasAgreedPrivacy", "true");
@@ -218,6 +256,64 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCounselorStatus: (status: "active" | "paused") => set({ counselorStatus: status }),
   setActiveOrderTab: (tab: "all" | "pending" | "completed" | "cancelled" | "settlement") => set({ activeOrderTab: tab }),
   setBookingSummary: (summary: any | null) => set({ bookingSummary: summary }),
+  ensureSessionReview: (order, snapshot) => {
+    const existing = get().consultationWorkflow.reviewDrafts.find((draft) => draft.orderId === order.id);
+    if (existing) return existing.id;
+    const timestamp = workflowTimestamp();
+    const ended = endSessionWorkflow(
+      get().consultationWorkflow,
+      order,
+      snapshot || buildMockSessionSnapshot(order),
+      timestamp,
+    );
+    const draftId = `draft-${order.id}`;
+    const nextWorkflow = saveWorkflowReviewDraft(
+      ended,
+      draftId,
+      buildMockReviewPatch(order),
+      timestamp,
+    );
+    set({ consultationWorkflow: nextWorkflow });
+    return draftId;
+  },
+  endConsultationSession: (order, snapshot) => {
+    const draftId = get().ensureSessionReview(order, snapshot);
+    get().updateOrder(order.id, { status: "completed" });
+    return draftId;
+  },
+  saveSessionReview: (draftId, patch) => {
+    set((state) => ({
+      consultationWorkflow: saveWorkflowReviewDraft(
+        state.consultationWorkflow,
+        draftId,
+        patch,
+        workflowTimestamp(),
+      ),
+    }));
+  },
+  submitSessionReview: (draftId, patch) => {
+    let workflow = get().consultationWorkflow;
+    if (patch) {
+      workflow = saveWorkflowReviewDraft(workflow, draftId, patch, workflowTimestamp());
+    }
+    const result = submitWorkflowReviewDraft(workflow, draftId, workflowTimestamp());
+    set({ consultationWorkflow: result.state });
+    if (result.ok) {
+      const orderId = result.state.reviewDrafts.find((draft) => draft.id === draftId)?.orderId;
+      if (orderId) get().updateOrder(orderId, { status: "completed", hasSummary: true });
+    }
+    return { ok: result.ok, errors: result.errors };
+  },
+  completeWorkflowTask: (taskId) => {
+    set((state) => ({
+      consultationWorkflow: {
+        ...state.consultationWorkflow,
+        tasks: state.consultationWorkflow.tasks.map((task) =>
+          task.id === taskId ? { ...task, status: "completed" as const } : task,
+        ),
+      },
+    }));
+  },
   logout: () => {
     clearAuthStorage();
     set(buildLoggedOutState());
