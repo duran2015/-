@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Paperclip, Image as ImageIcon, Smile, FileText, CheckCircle2 } from 'lucide-react';
+import { X, Send, Image as ImageIcon, Smile, FileText, CheckCircle2, Sparkles, ChevronRight, LockKeyhole } from 'lucide-react';
 import { Order } from '../../types';
+import { useAppStore } from '../../client-app/store';
 
 interface Message {
   id: string;
@@ -17,13 +18,19 @@ interface ChatDrawerProps {
   onClose: () => void;
   onViewClientProfile?: (order: Order) => void;
   onOpenOrderInfo?: (order: Order) => void;
+  onOpenSessionReview?: (draftId: string) => void;
 }
 
-export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, onViewClientProfile, onOpenOrderInfo }) => {
+export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, onViewClientProfile, onOpenOrderInfo, onOpenSessionReview }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [showQuestionnaireMenu, setShowQuestionnaireMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const workflowMessage = useAppStore((state) =>
+    state.consultationWorkflow.messages.find(
+      (message) => message.orderId === order.id && message.audience === 'counselor',
+    ),
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -185,6 +192,30 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({ order, isOpen, onClose, 
               )}
             </div>
           ))}
+          {workflowMessage && (
+            <div className="flex flex-col items-end">
+              <button
+                onClick={() => onOpenSessionReview?.(workflowMessage.draftId)}
+                className="w-[86%] overflow-hidden rounded-[22px] border border-[#D0BCFF] bg-white text-left shadow-sm active:scale-[0.99] transition"
+              >
+                <div className="bg-[#EADDFF] p-4 text-[#21005D]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-[14px] bg-white/60"><Sparkles size={19} /></div>
+                    <span className={`rounded-full px-2 py-1 text-[9px] font-black ${workflowMessage.status === 'pending_review' ? 'bg-[#FFF4E4] text-[#8A5100]' : 'bg-[#C4EED0] text-[#163723]'}`}>
+                      {workflowMessage.status === 'pending_review' ? '待确认' : '已归档'}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-[15px] font-black">{workflowMessage.title}</h3>
+                  <p className="mt-1 text-[11px] leading-5 opacity-80">{workflowMessage.description}</p>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 text-[11px] font-black text-[#6750A4]">
+                  <span className="flex items-center gap-1.5">{workflowMessage.status === 'pending_review' && <LockKeyhole size={13} />}{workflowMessage.actionLabel}</span>
+                  <ChevronRight size={16} />
+                </div>
+              </button>
+              <div className="mt-1 px-1 text-[9px] text-[#A8A398]">系统业务卡片 · 与待办、结算同步</div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 

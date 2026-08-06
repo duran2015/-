@@ -21,7 +21,7 @@ import { IncomeView } from './components/Profile/IncomeView';
 import { X, ChevronRight } from 'lucide-react';
 
 export default function App() {
-  const { orders, updateOrder, ensureSessionReview, endConsultationSession } = useAppStore();
+  const { orders, ensureSessionReview, endConsultationSession, confirmConsultationBooking } = useAppStore();
   const setOrders = (updater: any) => {
     // Adapter for legacy setOrders
     if (typeof updater === 'function') {
@@ -72,7 +72,7 @@ export default function App() {
   };
 
   const handleConfirmOrder = (orderId: string) => {
-    updateOrder(orderId, { status: 'scheduled' });
+    confirmConsultationBooking(orderId);
     alert('已成功确认接单，已为您安排入班提醒！');
   };
 
@@ -374,6 +374,10 @@ export default function App() {
           onClose={() => setActiveChatOrder(null)}
           onViewClientProfile={(order) => setSelectedOrderForFile(order)}
           onOpenOrderInfo={(order) => setShowOrderInfo(order)}
+          onOpenSessionReview={(draftId) => {
+            setActiveChatOrder(null);
+            setActiveSessionReviewId(draftId);
+          }}
         />
       )}
 
@@ -383,6 +387,10 @@ export default function App() {
         <IncomeView
           consultant={consultant}
           onClose={() => setShowIncomeView(false)}
+          onOpenSessionReview={(draftId) => {
+            setShowIncomeView(false);
+            setActiveSessionReviewId(draftId);
+          }}
         />
       )}
       {showOrderInfo && (

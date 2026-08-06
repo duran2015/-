@@ -135,7 +135,14 @@ export function endSessionWorkflow(
   return {
     ...state,
     reviewDrafts: [...state.reviewDrafts, draft],
-    tasks: [...state.tasks, ...buildReviewTasks(order, draft, timestamp)],
+    tasks: [
+      ...state.tasks.map((task) =>
+        task.orderId === order.id && task.taskType === "enter_session"
+          ? { ...task, status: "completed" as const }
+          : task,
+      ),
+      ...buildReviewTasks(order, draft, timestamp),
+    ],
     messages: [...state.messages, buildCounselorMessage(order, draft, timestamp)],
     settlements: { ...state.settlements, [order.id]: "blocked_by_summary" },
     snapshots: { ...state.snapshots, [draft.sessionId]: snapshot },
@@ -301,13 +308,75 @@ const emptySnapshot: SessionSnapshot = {
   insights: [],
 };
 
+const buildScheduledTasks = (order: Order, timestamp: string): WorkflowTask[] => {
+  const { clientId, counselorId } = actorIds(order);
+  return [
+    {
+      id: `task-intake-${order.id}`,
+      actorRole: "client",
+      actorId: clientId,
+      taskType: "complete_intake",
+      status: order.intakeForm ? "completed" : "pending",
+      blockingSettlement: false,
+      orderId: order.id,
+      createdAt: timestamp,
+    },
+    {
+      id: `task-enter-${order.id}`,
+      actorRole: "counselor",
+      actorId: counselorId,
+      taskType: "enter_session",
+      status: "pending",
+      blockingSettlement: false,
+      orderId: order.id,
+      sessionId: getSessionId(order.id),
+      createdAt: timestamp,
+    },
+    ...(order.intakeForm
+      ? [
+          {
+            id: `task-review-intake-${order.id}`,
+            actorRole: "counselor" as const,
+            actorId: counselorId,
+            taskType: "review_intake" as const,
+            status: "pending" as const,
+            blockingSettlement: false,
+            orderId: order.id,
+            createdAt: timestamp,
+          },
+        ]
+      : []),
+  ];
+};
+
+export function confirmBookingWorkflow(
+  state: ConsultationWorkflowState,
+  order: Order,
+  timestamp: string,
+): ConsultationWorkflowState {
+  const scheduledTasks = buildScheduledTasks(order, timestamp).filter(
+    (task) => !state.tasks.some((existing) => existing.id === task.id),
+  );
+  return {
+    ...state,
+    tasks: [
+      ...state.tasks.map((task) =>
+        task.orderId === order.id && task.taskType === "confirm_booking"
+          ? { ...task, status: "completed" as const }
+          : task,
+      ),
+      ...scheduledTasks,
+    ],
+  };
+}
+
 export function seedWorkflowFromOrders(
   orders: Order[],
   timestamp: string,
   snapshotFactory: (order: Order) => SessionSnapshot = () => emptySnapshot,
 ): ConsultationWorkflowState {
   return orders.reduce((state, order) => {
-    const { clientId, counselorId } = actorIds(order);
+    const { counselorId } = actorIds(order);
     if (order.status === "pending_confirm") {
       return {
         ...state,
@@ -329,30 +398,7 @@ export function seedWorkflowFromOrders(
     if (order.status === "scheduled") {
       return {
         ...state,
-        tasks: [
-          ...state.tasks,
-          {
-            id: `task-intake-${order.id}`,
-            actorRole: "client",
-            actorId: clientId,
-            taskType: "complete_intake",
-            status: order.intakeForm ? "completed" : "pending",
-            blockingSettlement: false,
-            orderId: order.id,
-            createdAt: timestamp,
-          },
-          {
-            id: `task-enter-${order.id}`,
-            actorRole: "counselor",
-            actorId: counselorId,
-            taskType: "enter_session",
-            status: "pending",
-            blockingSettlement: false,
-            orderId: order.id,
-            sessionId: getSessionId(order.id),
-            createdAt: timestamp,
-          },
-        ],
+        tasks: [...state.tasks, ...buildScheduledTasks(order, timestamp)],
       };
     }
     if (order.status === "completed" && !order.hasSummary) {

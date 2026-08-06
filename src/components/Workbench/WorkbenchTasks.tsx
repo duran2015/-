@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { Order } from '../../types';
+import { ChevronRight, LockKeyhole } from 'lucide-react';
+import { useAppStore } from '../../client-app/store';
+import type { Order, WorkflowTaskType } from '../../types';
 
 interface WorkbenchTasksProps {
   orders: Order[];
@@ -13,126 +14,119 @@ interface WorkbenchTasksProps {
   onProcessOrder?: (order: Order) => void;
 }
 
+type TaskDescriptor = {
+  statusText: string;
+  desc: string;
+  btnText: string;
+};
+
+const descriptors: Partial<Record<WorkflowTaskType, TaskDescriptor>> = {
+  confirm_booking: {
+    statusText: '预约等待确认',
+    desc: '确认后创建资料收集与入室待办',
+    btnText: '确认',
+  },
+  review_intake: {
+    statusText: '前序资料待查阅',
+    desc: '用户已填写咨询前资料',
+    btnText: '查看',
+  },
+  enter_session: {
+    statusText: '即将开始咨询',
+    desc: '咨询室已准备就绪',
+    btnText: '进入',
+  },
+  complete_session_review: {
+    statusText: '待确认总结',
+    desc: 'AI 草稿已生成 · 提交前结算锁定',
+    btnText: '复盘',
+  },
+  counselor_reflection: {
+    statusText: '待完成专业自评',
+    desc: '与咨询总结联动提交',
+    btnText: '填写',
+  },
+};
+
 export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
   orders,
   onConfirmOrder,
   onEnterRoom,
   onWriteSummary,
-  onOpenChat,
-  onProcessOrder,
+  onViewClientFile,
 }) => {
-  // Generate tasks from orders
-  const tasks = useMemo(() => {
-    const list: any[] = [];
-    
-    // Find pending confirm orders
-    orders.filter(o => o.status === 'pending_confirm').forEach(order => {
-      list.push({
-        id: `pending_${order.id}`,
-        order,
-        clientName: order.clientName,
-        clientAvatar: order.clientAvatar,
-        statusText: '预约等待确认',
-        desc: order.serviceTypeName,
-        time: order.bookingTimeSlot.split(' ')[0], // e.g. "14:00"
-        btnText: '处理',
-        btnClass: 'text-[#4F378B] bg-[#EADDFF] shadow-xs hover:shadow-sm',
-        onClick: () => onProcessOrder?.(order)
-      });
-    });
+  const workflowTasks = useAppStore((state) => state.consultationWorkflow.tasks);
 
-    // Find scheduled orders that are close (for now just all scheduled)
-    orders.filter(o => o.status === 'scheduled').slice(0, 1).forEach(order => {
-      list.push({
-        id: `scheduled_${order.id}`,
-        order,
-        clientName: order.clientName,
-        clientAvatar: order.clientAvatar,
-        statusText: '即将开始咨询',
-        desc: '咨询室已准备就绪',
-        time: order.bookingTimeSlot.split(' ')[0],
-        btnText: '进入',
-        btnClass: 'text-white bg-[#6750A4] shadow-xs hover:bg-[#594294]',
-        onClick: () => onEnterRoom(order)
-      });
-    });
-
-    // Find completed orders without summary
-    orders.filter(o => o.status === 'completed' && !o.hasSummary).forEach(order => {
-      list.push({
-        id: `summary_${order.id}`,
-        order,
-        clientName: order.clientName,
-        clientAvatar: order.clientAvatar,
-        statusText: '待写小结',
-        desc: '咨询已结束，待补充记录',
-        time: '昨天',
-        btnText: '撰写',
-        btnClass: 'text-[#49463D] bg-[#E7E0EC] hover:bg-[#E0D8E5]',
-        onClick: () => onWriteSummary(order)
-      });
-    });
-
-    // Add a mock message task to match user's screenshot
-    list.push({
-      id: 'mock_msg_1',
-      clientName: '李先生',
-      clientAvatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&auto=format&fit=crop&q=80',
-      statusText: '发送了新消息',
-      desc: '您咨询关于焦虑的问...',
-      time: '09:30',
-      btnText: '查看',
-      btnClass: 'text-[#49463D] bg-[#E7E0EC] hover:bg-[#E0D8E5]',
-      onClick: () => {
-        // mock click: open chat with the first order
-        onOpenChat?.(orders[0]);
-      }
-    });
-
-    return list;
-  }, [orders, onProcessOrder, onEnterRoom, onWriteSummary, onOpenChat]);
+  const tasks = useMemo(() =>
+    workflowTasks
+      .filter((task) => task.actorRole === 'counselor' && task.status !== 'completed' && descriptors[task.taskType])
+      .map((task) => {
+        const order = orders.find((item) => item.id === task.orderId);
+        const descriptor = descriptors[task.taskType];
+        if (!order || !descriptor) return null;
+        const isPrimary = task.taskType === 'enter_session';
+        const isReview = task.taskType === 'complete_session_review' || task.taskType === 'counselor_reflection';
+        return {
+          id: task.id,
+          order,
+          ...descriptor,
+          time: isReview ? '待完成' : order.bookingTimeSlot.split(' ')[0],
+          blockingSettlement: task.blockingSettlement,
+          btnClass: isPrimary
+            ? 'text-white bg-[#6750A4] shadow-xs hover:bg-[#594294]'
+            : isReview
+              ? 'text-[#4F378B] bg-[#EADDFF] shadow-xs'
+              : 'text-[#49463D] bg-[#E7E0EC] hover:bg-[#E0D8E5]',
+          onClick: () => {
+            if (task.taskType === 'confirm_booking') onConfirmOrder(order.id);
+            else if (task.taskType === 'review_intake') onViewClientFile?.(order);
+            else if (task.taskType === 'enter_session') onEnterRoom(order);
+            else onWriteSummary(order);
+          },
+        };
+      })
+      .filter((task): task is NonNullable<typeof task> => task !== null),
+    [workflowTasks, orders, onConfirmOrder, onViewClientFile, onEnterRoom, onWriteSummary],
+  );
 
   return (
-    <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-6 shadow-sm space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#FAF8F5]">
-        <h3 className="font-bold text-[16px] text-[#1D1B16] tracking-tight">待处理事项</h3>
-        <div className="flex items-center gap-1 text-[#7A756C] text-[13px] font-bold">
+    <div className="space-y-4 rounded-[28px] border border-[#E6E0D6] bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between border-b border-[#FAF8F5] pb-3">
+        <div>
+          <h3 className="text-[16px] font-bold tracking-tight text-[#1D1B16]">业务待办</h3>
+          <p className="mt-0.5 text-[10px] text-[#7A756C]">预约、资料、会谈、总结与结算联动</p>
+        </div>
+        <div className="flex items-center gap-1 text-[13px] font-bold text-[#7A756C]">
           <span>{tasks.length}</span>
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="h-4 w-4" />
         </div>
       </div>
 
       <div className="space-y-4">
-        {tasks.map(task => (
-          <div key={task.id} className="flex items-center justify-between group w-full">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-12 h-12 shrink-0">
-                <img src={task.clientAvatar} alt="" className="w-full h-full rounded-full object-cover bg-[#FAF8F5] border border-[#ECE6DC]" />
-              </div>
+        {tasks.map((task) => (
+          <div key={task.id} className="flex w-full items-center justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <img src={task.order.clientAvatar} alt="" className="h-12 w-12 shrink-0 rounded-full border border-[#ECE6DC] bg-[#FAF8F5] object-cover" />
               <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[15px] text-[#1D1B16] truncate">{task.clientName}</span>
-                  <span className="text-[12px] text-[#7A756C] font-medium shrink-0">{task.statusText}</span>
+                  <span className="truncate text-[15px] font-bold text-[#1D1B16]">{task.order.clientName}</span>
+                  <span className="shrink-0 text-[12px] font-medium text-[#7A756C]">{task.statusText}</span>
                 </div>
-                <div className="text-[12px] text-[#7A756C] mt-0.5 truncate">{task.desc}</div>
+                <div className="mt-0.5 truncate text-[12px] text-[#7A756C]">{task.desc}</div>
+                {task.blockingSettlement && (
+                  <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-[#8A5100]"><LockKeyhole size={11} />完成后进入 T+1 结算</div>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0 ml-auto">
-              <span className="text-[12px] text-[#7A756C] font-mono font-medium text-right w-[42px]">{task.time}</span>
-              <button 
-                onClick={task.onClick}
-                className={`text-[13px] font-bold w-16 py-2 rounded-full active:scale-95 transition text-center shrink-0 ${task.btnClass}`}
-              >
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <span className="w-[42px] text-right font-mono text-[10px] font-medium text-[#7A756C]">{task.time}</span>
+              <button onClick={task.onClick} className={`w-16 shrink-0 rounded-full py-2 text-center text-[13px] font-bold transition active:scale-95 ${task.btnClass}`}>
                 {task.btnText}
               </button>
             </div>
           </div>
         ))}
-        {tasks.length === 0 && (
-          <div className="text-center py-6 text-[#7A756C] text-sm">
-            暂无待处理事项
-          </div>
-        )}
+        {tasks.length === 0 && <div className="py-6 text-center text-sm text-[#7A756C]">所有业务待办已完成</div>}
       </div>
     </div>
   );

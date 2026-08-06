@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, Wallet, Clock, CheckCircle2, XCircle, CreditCard, Building2, 
-  Info, History, FileText, ChevronRight, X, Plus, Building, Phone, User, Check
+  Info, History, FileText, ChevronRight, X, Plus, Building, Phone, User, Check, LockKeyhole, UnlockKeyhole
 } from 'lucide-react';
 import { ConsultantProfile, BankAccount, WithdrawalRecord, BillRecord, BillRecordStatus } from '../../types';
 import { INITIAL_BANK_ACCOUNTS, INITIAL_WITHDRAWAL_RECORDS, INITIAL_BILL_RECORDS } from '../../data/mockData';
+import { useAppStore } from '../../client-app/store';
 
 interface IncomeViewProps {
   consultant: ConsultantProfile;
   onClose: () => void;
+  onOpenSessionReview?: (draftId: string) => void;
 }
 
-export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose }) => {
+export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose, onOpenSessionReview }) => {
+  const workflow = useAppStore((state) => state.consultationWorkflow);
+  const orders = useAppStore((state) => state.orders);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(INITIAL_BANK_ACCOUNTS);
   const [withdrawalRecords, setWithdrawalRecords] = useState<WithdrawalRecord[]>(INITIAL_WITHDRAWAL_RECORDS);
   const [billRecords, setBillRecords] = useState<BillRecord[]>(INITIAL_BILL_RECORDS);
@@ -103,6 +107,14 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose }) =
   const pendingSettlementTotal = billRecords
     .filter(b => b.status === 'pending_settlement')
     .reduce((sum, b) => sum + b.netAmount, 0);
+  const workflowSettlements = Object.entries(workflow.settlements)
+    .filter(([, status]) => status === 'blocked_by_summary' || status === 'eligible_t1')
+    .map(([orderId, status]) => ({
+      order: orders.find((order) => order.id === orderId),
+      status,
+      draftId: workflow.reviewDrafts.find((draft) => draft.orderId === orderId)?.id,
+    }))
+    .filter((item) => item.order);
 
   const renderBillStatusBadge = (status: BillRecordStatus) => {
     switch (status) {
@@ -220,6 +232,38 @@ export const IncomeView: React.FC<IncomeViewProps> = ({ consultant, onClose }) =
             </div>
           </div>
         </div>
+
+        {workflowSettlements.length > 0 && (
+          <div className="rounded-[24px] border border-[#E6E0D6] bg-white p-4 shadow-2xs">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-[#1D1B16]">咨询结算联动</h3>
+                <p className="mt-0.5 text-[10px] text-[#7A756C]">会谈总结状态决定订单是否进入 T+1 结算</p>
+              </div>
+              <span className="rounded-full bg-[#F3EDF7] px-2.5 py-1 text-[10px] font-bold text-[#6750A4]">{workflowSettlements.length} 笔</span>
+            </div>
+            <div className="space-y-2">
+              {workflowSettlements.map(({ order, status, draftId }) => order && (
+                <button
+                  key={order.id}
+                  onClick={() => draftId && onOpenSessionReview?.(draftId)}
+                  className="flex w-full items-center gap-3 rounded-[18px] border border-[#ECE6DC] bg-[#FAF8F5] p-3 text-left active:bg-[#F3EDF7]"
+                >
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-[14px] ${status === 'blocked_by_summary' ? 'bg-[#FFF0D9] text-[#8A5100]' : 'bg-[#E6F5EA] text-[#25683B]'}`}>
+                    {status === 'blocked_by_summary' ? <LockKeyhole size={18} /> : <UnlockKeyhole size={18} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] font-bold text-[#1D1B16]">{order.clientName} · ¥{order.price.toFixed(2)}</div>
+                    <div className={`mt-0.5 text-[10px] font-bold ${status === 'blocked_by_summary' ? 'text-[#8A5100]' : 'text-[#25683B]'}`}>
+                      {status === 'blocked_by_summary' ? '总结待提交 · 暂缓结算' : '总结已提交 · T+1 可结算'}
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-[#79747E]" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Sub Navigation Bar */}
         <div className="bg-[#FAF8F5] border border-[#ECE6DC] p-1.5 rounded-[20px] flex items-center gap-1 shadow-2xs text-xs">

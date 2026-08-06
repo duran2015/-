@@ -4,6 +4,7 @@ import { mockUser, mockOrders, mockAssessmentRecords } from "./data";
 
 import { INITIAL_ORDERS } from "../data/mockData";
 import {
+  confirmBookingWorkflow,
   endSessionWorkflow,
   saveReviewDraft as saveWorkflowReviewDraft,
   seedWorkflowFromOrders,
@@ -159,6 +160,7 @@ export interface AppState {
   saveSessionReview: (draftId: string, patch: Partial<SessionReviewDraft>) => void;
   submitSessionReview: (draftId: string, patch?: Partial<SessionReviewDraft>) => { ok: boolean; errors: string[] };
   completeWorkflowTask: (taskId: string) => void;
+  confirmConsultationBooking: (orderId: string) => void;
   hasAgreedPrivacy: boolean;
   agreePrivacy: () => void;
   logout: () => void;
@@ -312,6 +314,20 @@ export const useAppStore = create<AppState>((set, get) => ({
           task.id === taskId ? { ...task, status: "completed" as const } : task,
         ),
       },
+    }));
+  },
+  confirmConsultationBooking: (orderId) => {
+    const order = get().orders.find((item) => item.id === orderId) as Order | undefined;
+    if (!order) return;
+    set((state) => ({
+      consultationWorkflow: confirmBookingWorkflow(
+        state.consultationWorkflow,
+        order,
+        workflowTimestamp(),
+      ),
+      orders: state.orders.map((item) =>
+        item.id === orderId ? { ...item, status: "scheduled" } : item,
+      ),
     }));
   },
   logout: () => {
