@@ -19,6 +19,7 @@ interface OrdersTabProps {
   onSubPageChange?: (isSubPage: boolean) => void;
   onOpenOrderInfo?: (order: Order) => void;
   initialSelectedOrder?: Order | null;
+  initialViewMode?: 'order_detail' | 'client_profile';
   onClearInitialOrder?: () => void;
 }
 
@@ -32,6 +33,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   onSubPageChange,
   onOpenOrderInfo,
   initialSelectedOrder,
+  initialViewMode,
   onClearInitialOrder,
 }) => {
   const [activeStatus, setActiveStatus] = useState<string>('all');
@@ -45,10 +47,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   useEffect(() => {
     if (initialSelectedOrder) {
       setSelectedOrder(initialSelectedOrder);
-      setViewMode('order_detail');
+      if (initialViewMode === 'client_profile') {
+        handleOpenClientProfile(initialSelectedOrder);
+      } else {
+        setViewMode('order_detail');
+      }
       onClearInitialOrder?.();
     }
-  }, [initialSelectedOrder, onClearInitialOrder]);
+  }, [initialSelectedOrder, initialViewMode, onClearInitialOrder]);
 
   useEffect(() => {
     if (onSubPageChange) {

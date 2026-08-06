@@ -12,7 +12,7 @@ interface WorkbenchTasksProps {
   onSendReminder: (order: Order) => void;
   onViewClientFile?: (order: Order) => void;
   onOpenChat?: (order: Order) => void;
-  onProcessOrder?: (order: Order) => void;
+  onProcessOrder?: (order: Order, viewMode?: 'order_detail' | 'client_profile') => void;
 }
 
 type CurrentTaskDescriptor = {
@@ -80,10 +80,11 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
               ? 'rounded-full bg-[#EADDFF] px-4 py-2 text-[13px] font-bold text-[#4F378B] transition hover:bg-[#D8BFFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6750A4] active:scale-95'
               : 'rounded-full bg-[#F4EFF4] px-4 py-2 text-[13px] font-bold text-[#49454F] transition hover:bg-[#E7E0EC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6750A4] active:scale-95';
           const handleCurrentTask = () => {
-            if (currentTask.taskType === 'confirm_booking') onConfirmOrder(order.id);
-            else if (currentTask.taskType === 'review_intake') onViewClientFile?.(order);
-            else if (currentTask.taskType === 'enter_session') onEnterRoom(order);
-            else if (currentTask.taskType === 'complete_session_review') onWriteSummary(order);
+            if (currentTask.taskType === 'review_intake') {
+              onProcessOrder?.(order, 'client_profile');
+            } else {
+              onProcessOrder?.(order, 'order_detail');
+            }
           };
 
           if (!descriptor) return null;

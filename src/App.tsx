@@ -55,10 +55,10 @@ export default function App() {
   // Modals & Drawers
   const [activeLiveOrder, setActiveLiveOrder] = useState<Order | null>(null);
   const [activeSessionReviewId, setActiveSessionReviewId] = useState<string | null>(null);
-  const [selectedOrderForFile, setSelectedOrderForFile] = useState<Order | null>(null);
   const [showOrderInfo, setShowOrderInfo] = useState<Order | null>(null);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [activeOrderDetail, setActiveOrderDetail] = useState<Order | null>(null);
+  const [activeOrderViewMode, setActiveOrderViewMode] = useState<'order_detail' | 'client_profile'>('order_detail');
   const [showIncomeView, setShowIncomeView] = useState(false);
 
   // Dev Toggle
@@ -72,15 +72,6 @@ export default function App() {
 
   // Next upcoming session
   const nextScheduledOrder = displayedOrders.find((o) => o.status === 'scheduled');
-  const selectedOrderHasPendingIntakeReview = selectedOrderForFile
-    ? consultationWorkflow.tasks.some(
-        (task) =>
-          task.orderId === selectedOrderForFile.id &&
-          task.actorRole === 'counselor' &&
-          task.taskType === 'review_intake' &&
-          (task.status === 'pending' || task.status === 'in_progress'),
-      )
-    : false;
 
   // Action Handlers
   const handleToggleListening = () => {
@@ -120,8 +111,9 @@ export default function App() {
     setVouchers((prev) => [voucher, ...prev]);
   };
 
-  const handleProcessOrder = (order: Order) => {
+  const handleProcessOrder = (order: Order, viewMode: 'order_detail' | 'client_profile' = 'order_detail') => {
     setActiveOrderDetail(order);
+    setActiveOrderViewMode(viewMode);
     setActiveTab('messages');
   };
 
@@ -200,7 +192,6 @@ export default function App() {
                 onEnterRoom={(order) => setActiveLiveOrder(order)}
                 onWriteSummary={handleWriteSummary}
                 onSendReminder={handleSendReminder}
-                onViewClientFile={(order) => setSelectedOrderForFile(order)}
                 onOpenChat={(order) => setActiveChatOrder(order)}
                 onProcessOrder={handleProcessOrder}
               />
@@ -270,6 +261,7 @@ export default function App() {
               onSubPageChange={setIsSubPage}
               onOpenOrderInfo={(order) => setShowOrderInfo(order)}
               initialSelectedOrder={activeOrderDetail}
+              initialViewMode={activeOrderViewMode}
               onClearInitialOrder={() => setActiveOrderDetail(null)}
             />
           )}
@@ -330,77 +322,13 @@ export default function App() {
         />
       )}
 
-      {/* MODAL 3: Client File Quick View Drawer */}
-      {selectedOrderForFile && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-[#F9F7F2] border border-[#E5E0D5] rounded-t-[32px] sm:rounded-[32px] max-w-md w-full p-6 shadow-xl relative max-h-[85vh] overflow-y-auto">
-            <button
-              onClick={() => setSelectedOrderForFile(null)}
-              className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-[#EAE5DB]"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="w-12 h-1 bg-[#E5E0D5] rounded-full mx-auto mb-4 sm:hidden" />
-
-            <div className="flex items-center gap-3 mb-4">
-              <img
-                src={selectedOrderForFile.clientAvatar}
-                alt={selectedOrderForFile.clientName}
-                className="w-12 h-12 rounded-2xl object-cover ring-2 ring-[#5A6A50]/30"
-              />
-              <div>
-                <h3 className="font-serif font-bold text-base text-[#4A5344]">{selectedOrderForFile.clientName} 的来访者档案</h3>
-                <span className="text-xs text-[#5A6A50] font-medium">连续咨询第 4 次 · 专属建档</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs bg-white p-4 rounded-2xl border border-[#E5E0D5]">
-              <div>
-                <strong className="text-[#8C877E] block mb-1">主诉与议题：</strong>
-                <p className="text-[#3D3B38] font-medium">{selectedOrderForFile.complaintTopic}</p>
-              </div>
-              <div>
-                <strong className="text-[#8C877E] block mb-1">预问卷首诊测验结果：</strong>
-                <div className="bg-[#F2EDE4] p-3 rounded-xl border border-[#E5E0D5] space-y-1.5 text-[#4A5344]">
-                  <div>• 广义焦虑量表 (GAD-7): <strong className="text-[#D48C70]">12分 (中度焦虑)</strong></div>
-                  <div>• 躯体化紧绷定位: <strong>肩颈紧绷、睡眠中断</strong></div>
-                  <div>• 咨询期望: <strong>学会建立界限，缓解抉择恐惧</strong></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-5">
-              {selectedOrderHasPendingIntakeReview ? (
-                <button
-                  onClick={() => {
-                    completeIntakeReview(selectedOrderForFile.id);
-                    setSelectedOrderForFile(null);
-                  }}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#5A6A50] text-white text-xs font-semibold hover:bg-[#4D5B44] transition shadow-xs"
-                >
-                  完成查阅，继续下一步
-                </button>
-              ) : (
-                <button
-                  onClick={() => setSelectedOrderForFile(null)}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#5A6A50] text-white text-xs font-semibold hover:bg-[#4D5B44] transition shadow-xs"
-                >
-                  关闭档案
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL 5: IM Chat Drawer */}
       {activeChatOrder && (
         <ChatDrawer 
           order={activeChatOrder}
           isOpen={!!activeChatOrder}
           onClose={() => setActiveChatOrder(null)}
-          onViewClientProfile={(order) => setSelectedOrderForFile(order)}
+          onViewClientProfile={(order) => handleProcessOrder(order, 'client_profile')}
           onOpenOrderInfo={(order) => setShowOrderInfo(order)}
           onOpenSessionReview={(draftId) => {
             setActiveChatOrder(null);
