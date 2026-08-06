@@ -31,6 +31,7 @@ import {
   type MeetingState,
 } from "../../../voiceCallPresentation";
 import { buildMockSessionSnapshot } from "../../../consultationWorkflowMock";
+import { resolveMeetingClient } from "../../../meetingParticipant";
 import type { Order, SessionSnapshot } from "../../../types";
 
 type MediaPermissionState = { camera: boolean; microphone: boolean };
@@ -69,9 +70,13 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
   const isVideo = order?.serviceTypeName?.includes("视频") || order?.type?.includes("video") || order?.type === "video";
   const counselor = mockCounselors.find((item) => item.id === (order?.counselorId || selectedCounselorId)) || mockCounselors[0];
   const user = mockUser;
-  
-  const otherName = isCounselorView ? order?.userName || "小鹿用户3821" : counselor.name;
-  const otherAvatar = isCounselorView ? order?.avatar || user.avatar : counselor.avatar;
+  const meetingClient = resolveMeetingClient(order, {
+    name: user.name || "小鹿用户3821",
+    avatar: user.avatar,
+  });
+
+  const otherName = isCounselorView ? meetingClient.name : counselor.name;
+  const otherAvatar = isCounselorView ? meetingClient.avatar : counselor.avatar;
   const selfAvatar = isCounselorView ? counselor.avatar : user.avatar;
   const selfName = isCounselorView ? counselor.name : user.name || "我";
   const selfRole = isCounselorView ? "咨询师" : "用户";
@@ -140,7 +145,7 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
   }, [messages, showChat]);
 
   useEffect(() => {
-    if (aiScrollRef.current) aiScrollRef.current.scrollTop = aiScrollRef.current.scrollHeight;
+    if (aiPanelOpen && aiScrollRef.current) aiScrollRef.current.scrollTop = 0;
   }, [aiPanelOpen]);
 
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
@@ -459,48 +464,48 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
                    <button onClick={() => setAiPanelOpen(false)} className="rounded-full p-2 text-[#7A756C] hover:bg-[#F3E3DA] active:scale-95 transition-colors"><X size={20} /></button>
                 </div>
                 
-                <div className="flex min-h-0 flex-1 flex-col p-4 overflow-y-auto" ref={aiScrollRef}>
-                   
-                   {/* AI Insights Card */}
-                   <div className="mb-5 rounded-[20px] bg-[#F6EDFF] border border-[#EADDFF] p-4 shadow-sm">
-                     <div className="mb-2 flex items-center text-[12px] font-black text-[#6750A4]"><Sparkles size={14} className="mr-1.5" />实时情绪洞察</div>
-                     <p className="text-[13px] leading-relaxed text-[#21005D]">{mockSnapshot.insights[1]?.detail}</p>
-                   </div>
-                   
-                   {/* Live Transcription */}
-                   <div className="flex-1 flex flex-col rounded-[20px] bg-white border border-[#ECE6DC] p-4 shadow-sm min-h-[200px]">
-                     <div className="mb-3 text-[12px] font-black text-[#7A756C] flex justify-between items-center">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[calc(16px+env(safe-area-inset-bottom))]" ref={aiScrollRef}>
+                  <div className="space-y-5">
+                    {/* AI Insights Card */}
+                    <div className="rounded-[20px] bg-[#F6EDFF] border border-[#EADDFF] p-4 shadow-sm">
+                      <div className="mb-2 flex items-center text-[12px] font-black text-[#6750A4]"><Sparkles size={14} className="mr-1.5" />实时情绪洞察</div>
+                      <p className="text-[13px] leading-relaxed text-[#21005D]">{mockSnapshot.insights[1]?.detail}</p>
+                    </div>
+
+                    {/* Live Transcription */}
+                    <div className="rounded-[20px] bg-white border border-[#ECE6DC] p-4 shadow-sm">
+                      <div className="mb-3 text-[12px] font-black text-[#7A756C] flex justify-between items-center">
                         <span>实时转录流</span>
                         <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span className="text-[10px] font-normal">Recording</span></div>
-                     </div>
-                     <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-                       {mockSnapshot.transcript.slice(0, 4).map((segment) => (
-                         <div key={segment.id} className="text-[13px] leading-relaxed">
-                           <span className={`font-black mr-2 ${segment.speakerRole === "client" ? "text-[#6750A4]" : "text-[#7A756C]"}`}>{segment.speakerRole === "counselor" ? "我" : segment.speakerName}:</span>
-                           <span className="text-[#1D1B16]">{segment.text}</span>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-
-                </div>
-
-                {/* Scratchpad (Counselor Only) */}
-                {isCounselorView && (
-                  <div className="border-t border-[#ECE6DC] bg-white p-5 pb-[calc(20px+env(safe-area-inset-bottom))]">
-                    <div className="mb-3 flex items-center justify-between text-[12px] font-black text-[#7A756C]">
-                       <div className="flex items-center gap-1.5"><FileText size={14} /><span>咨询笔记 (仅自己可见)</span></div>
-                       <button className="text-[#6750A4] font-bold text-[11px] bg-[#EADDFF] px-2 py-1 rounded-md flex items-center gap-1"><Sparkles size={10} />AI提取重点</button>
+                      </div>
+                      <div className="space-y-4 pr-1">
+                        {mockSnapshot.transcript.slice(0, 4).map((segment) => (
+                          <div key={segment.id} className="text-[13px] leading-relaxed">
+                            <span className={`font-black mr-2 ${segment.speakerRole === "client" ? "text-[#6750A4]" : "text-[#7A756C]"}`}>{segment.speakerRole === "counselor" ? "我" : segment.speakerName}:</span>
+                            <span className="text-[#1D1B16]">{segment.text}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <textarea 
-                      className="w-full resize-none rounded-[16px] bg-[#FAF8F5] border border-[#ECE6DC] p-3 text-[13px] leading-relaxed text-[#1D1B16] outline-none focus:ring-2 focus:ring-[#6750A4]/20 focus:border-[#6750A4] transition-all" 
-                      rows={4} 
-                      placeholder="在这里记录临床观察或灵感，支持快捷键..." 
-                      value={scratchpad}
-                      onChange={(event) => setScratchpad(event.target.value)}
-                    />
+
+                    {/* Scratchpad (Counselor Only) */}
+                    {isCounselorView && (
+                      <div className="rounded-[20px] border border-[#ECE6DC] bg-white p-4 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between text-[12px] font-black text-[#7A756C]">
+                          <div className="flex items-center gap-1.5"><FileText size={14} /><span>咨询笔记 (仅自己可见)</span></div>
+                          <button className="text-[#6750A4] font-bold text-[11px] bg-[#EADDFF] px-2 py-1 rounded-md flex items-center gap-1"><Sparkles size={10} />AI提取重点</button>
+                        </div>
+                        <textarea
+                          className="w-full resize-none rounded-[16px] bg-[#FAF8F5] border border-[#ECE6DC] p-3 text-[13px] leading-relaxed text-[#1D1B16] outline-none focus:ring-2 focus:ring-[#6750A4]/20 focus:border-[#6750A4] transition-all"
+                          rows={8}
+                          placeholder="在这里记录临床观察或灵感，支持快捷键..."
+                          value={scratchpad}
+                          onChange={(event) => setScratchpad(event.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </motion.div>
             </>
           )}

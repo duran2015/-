@@ -98,7 +98,7 @@ Use one body container:
   <div className="space-y-5">
     {insightCard}
     {transcriptCardWithoutNestedScroller}
-    {isCounselorView && scratchpadCard}
+    {isCounselorView && scratchpadCardWithEightRowTextarea}
   </div>
 </div>
 ```
@@ -107,7 +107,7 @@ Remove the separate fixed scratchpad sibling and remove `overflow-y-auto flex-1`
 
 - [ ] **Step 3: Verify the browser behavior GREEN**
 
-Repeat the exact meeting flow. Assert the body has `scrollHeight > clientHeight`; set `scrollTop` to a positive value and assert the resulting `scrollTop > 0`. Assert the participant image source contains the active order's `clientAvatar` URL.
+Repeat the exact meeting flow. Assert the body has at least 80 pixels of available scroll distance; call `scrollTo(0, 80)` and assert the resulting `scrollTop >= 80`. Assert the participant image source contains the active order's `clientAvatar` URL.
 
 - [ ] **Step 4: Run complete verification**
 
