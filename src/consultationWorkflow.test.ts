@@ -5,6 +5,7 @@ import {
   confirmBookingWorkflow,
   emptyWorkflowState,
   endSessionWorkflow,
+  normalizeConsultationWorkflow,
   saveReviewDraft,
   seedWorkflowFromOrders,
   submitReviewDraft,
@@ -87,7 +88,7 @@ const validDraftPatch: Partial<SessionReviewDraft> = {
   },
 };
 
-test("ending a session creates one review, two counselor tasks, one card, and a settlement hold", () => {
+test("ending a session creates only the required counselor summary task", () => {
   const ended = endSessionWorkflow(
     emptyWorkflowState(),
     fixtureOrder,
@@ -98,11 +99,28 @@ test("ending a session creates one review, two counselor tasks, one card, and a 
   assert.equal(ended.reviewDrafts.length, 1);
   assert.deepEqual(
     ended.tasks.map((task) => task.taskType),
-    ["complete_session_review", "counselor_reflection"],
+    ["complete_session_review"],
   );
   assert.equal(ended.messages[0].audience, "counselor");
   assert.equal(ended.messages[0].draftId, ended.reviewDrafts[0].id);
   assert.equal(ended.settlements[fixtureOrder.id], "blocked_by_summary");
+});
+
+test("professional reflection does not block summary submission", () => {
+  const ended = endSessionWorkflow(emptyWorkflowState(), fixtureOrder, fixtureSnapshot, now);
+  const saved = saveReviewDraft(ended, "draft-order-1", {
+    ...validDraftPatch,
+    counselorReflection: { allianceQuality: null, goalProgress: null, reflection: "" },
+  }, now);
+
+  assert.equal(submitReviewDraft(saved, "draft-order-1", now).ok, true);
+});
+
+test("normalizing stored workflow removes legacy counselor reflection tasks", () => {
+  const state = endSessionWorkflow(emptyWorkflowState(), fixtureOrder, fixtureSnapshot, now);
+  state.tasks.push({ ...state.tasks[0], id: "legacy-reflection", taskType: "counselor_reflection" as never });
+
+  assert.equal(normalizeConsultationWorkflow(state).tasks.some((task) => task.id === "legacy-reflection"), false);
 });
 
 test("saving a review keeps settlement locked and does not create a client card", () => {
@@ -174,7 +192,6 @@ test("order states seed the matching actor tasks", () => {
   assert.equal(types.includes("review_intake"), true);
   assert.equal(types.includes("enter_session"), true);
   assert.equal(types.includes("complete_session_review"), true);
-  assert.equal(types.includes("counselor_reflection"), true);
 });
 
 test("ending a scheduled session completes the room-entry task", () => {

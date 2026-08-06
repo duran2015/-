@@ -6,6 +6,7 @@ import { INITIAL_ORDERS } from "../data/mockData";
 import {
   confirmBookingWorkflow,
   endSessionWorkflow,
+  normalizeConsultationWorkflow,
   saveReviewDraft as saveWorkflowReviewDraft,
   seedWorkflowFromOrders,
   submitReviewDraft as submitWorkflowReviewDraft,
@@ -44,7 +45,7 @@ const loadInitialWorkflow = (): ConsultationWorkflowState => {
     if (!Array.isArray(parsed.reviewDrafts) || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.messages)) {
       return buildInitialWorkflow();
     }
-    return parsed;
+    return normalizeConsultationWorkflow(parsed);
   } catch {
     return buildInitialWorkflow();
   }

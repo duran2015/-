@@ -237,8 +237,7 @@ export type WorkflowTaskType =
   | "enter_session"
   | "complete_session_review"
   | "read_session_recap"
-  | "review_counselor"
-  | "counselor_reflection";
+  | "review_counselor";
 
 export interface SessionTranscriptSegment {
   id: string;

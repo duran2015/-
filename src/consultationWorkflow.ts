@@ -93,18 +93,6 @@ const buildReviewTasks = (order: Order, draft: SessionReviewDraft, timestamp: st
     draftId: draft.id,
     createdAt: timestamp,
   },
-  {
-    id: `task-reflection-${order.id}`,
-    actorRole: "counselor",
-    actorId: draft.counselorId,
-    taskType: "counselor_reflection",
-    status: "pending",
-    blockingSettlement: true,
-    orderId: order.id,
-    sessionId: draft.sessionId,
-    draftId: draft.id,
-    createdAt: timestamp,
-  },
 ];
 
 const buildCounselorMessage = (order: Order, draft: SessionReviewDraft, timestamp: string): WorkflowMessage => ({
@@ -178,7 +166,6 @@ export function validateReviewDraft(draft: SessionReviewDraft): string[] {
   const errors: string[] = [];
   const clinical = draft.clinicalSummary;
   const client = draft.clientSummary;
-  const reflection = draft.counselorReflection;
   if (
     !clinical.mainConcern.trim() ||
     !clinical.clientState.trim() ||
@@ -192,10 +179,16 @@ export function validateReviewDraft(draft: SessionReviewDraft): string[] {
   if (!client.recap.trim() || client.actionItems.length === 0 || !client.nextPlan.trim()) {
     errors.push("请完善用户可见回顾");
   }
-  if (!reflection.allianceQuality || !reflection.goalProgress || !reflection.reflection.trim()) {
-    errors.push("请完成会谈复盘自评");
-  }
   return errors;
+}
+
+export function normalizeConsultationWorkflow(
+  state: ConsultationWorkflowState,
+): ConsultationWorkflowState {
+  return {
+    ...state,
+    tasks: state.tasks.filter((task) => (task.taskType as string) !== "counselor_reflection"),
+  };
 }
 
 const buildClientMessage = (draft: SessionReviewDraft, timestamp: string): WorkflowMessage => ({
