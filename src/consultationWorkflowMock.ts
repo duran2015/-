@@ -16,11 +16,6 @@ export function buildMockReviewPatch(order: Order): Partial<SessionReviewDraft> 
       actionItems: ["睡前记录一次自动想法", "完成四轮呼吸练习", "向负责人确认任务优先级"],
       nextPlan: "下次会谈继续回看睡眠变化，并练习更稳定地表达需求和边界。",
     },
-    counselorReflection: {
-      allianceQuality: "stable",
-      goalProgress: "partial",
-      reflection: "来访者对结构化梳理反应良好；后续需减少解释，增加对当下情绪体验的停留。",
-    },
   };
 }
 

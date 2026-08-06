@@ -57,6 +57,41 @@ test("projects the intake review before a later room task regardless of task ord
   );
 });
 
+test("treats the submitted pre-questionnaire as intake data", () => {
+  const scheduledWithQuestionnaire = makeOrder({
+    preQuestionnaire: {
+      mainTopic: "工作变动后持续失眠",
+      duration: "1-3个月",
+      event: "更换直属负责人",
+      expectation: "希望恢复稳定睡眠",
+      hasCounselingHistory: true,
+      hasSelfHarmThoughts: false,
+    },
+  });
+  const scheduledTasks = [
+    makeCounselorTask("enter_session", scheduledWithQuestionnaire.id),
+    makeCounselorTask("review_intake", scheduledWithQuestionnaire.id),
+  ];
+
+  const journey = buildCounselorJourneys([scheduledWithQuestionnaire], scheduledTasks)[0];
+
+  assert.equal(journey.currentTask.taskType, "review_intake");
+  assert.deepEqual(
+    journey.steps.map((step) => step.status),
+    ["completed", "current", "locked", "locked"],
+  );
+});
+
+test("includes the booking date and complete time slot in the journey appointment", () => {
+  const order = makeOrder();
+  const journey = buildCounselorJourneys(
+    [order],
+    [makeCounselorTask("enter_session", order.id)],
+  )[0];
+
+  assert.equal(journey.appointmentLabel, "2026-08-06 16:00 - 16:50");
+});
+
 test("skips intake review when the client did not submit an intake form", () => {
   const scheduledWithoutIntake = makeOrder();
   const roomTask = [makeCounselorTask("enter_session", scheduledWithoutIntake.id)];

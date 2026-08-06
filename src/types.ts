@@ -11,6 +11,15 @@ export type OrderServiceType =
   | '50min_audio'     // 50分钟语音咨询
   | '15min_listening'; // 15分钟极简倾听
 
+export interface PreQuestionnaire {
+  mainTopic: string;
+  duration: string;
+  event: string;
+  expectation: string;
+  hasCounselingHistory: boolean | null;
+  hasSelfHarmThoughts: boolean | null;
+}
+
 export interface ClientProfile {
   id: string;
   name: string;
@@ -87,6 +96,7 @@ export interface Order {
     hasCounselingHistory: boolean;
     previousCounselingType?: string;
   };
+  preQuestionnaire?: PreQuestionnaire;
 }
 
 export interface ConsultantProfile {
@@ -302,7 +312,7 @@ export interface SessionReviewDraft {
     actionItems: string[];
     nextPlan: string;
   };
-  counselorReflection: {
+  counselorReflection?: {
     allianceQuality: "needs_attention" | "stable" | "strong" | null;
     goalProgress: "limited" | "partial" | "clear" | null;
     reflection: string;
@@ -341,7 +351,8 @@ export interface WorkflowMessage {
   updatedAt: string;
 }
 
-export interface ArchivedSessionReview extends SessionReviewDraft {
+export interface ArchivedSessionReview
+  extends Omit<SessionReviewDraft, "status" | "submittedAt" | "counselorReflection"> {
   status: "submitted";
   submittedAt: string;
 }

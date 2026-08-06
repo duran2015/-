@@ -10,7 +10,7 @@ import {
   seedWorkflowFromOrders,
   submitReviewDraft,
 } from "./consultationWorkflow";
-import { buildMockSessionSnapshot } from "./consultationWorkflowMock";
+import { buildMockReviewPatch, buildMockSessionSnapshot } from "./consultationWorkflowMock";
 import type { Order, SessionReviewDraft, SessionSnapshot } from "./types";
 
 const now = "2026-08-06T10:00:00.000Z";
@@ -116,6 +116,22 @@ test("professional reflection does not block summary submission", () => {
   assert.equal(submitReviewDraft(saved, "draft-order-1", now).ok, true);
 });
 
+test("saving a current MVP draft strips legacy counselor reflection data", () => {
+  const ended = endSessionWorkflow(emptyWorkflowState(), fixtureOrder, fixtureSnapshot, now);
+  ended.reviewDrafts[0].counselorReflection = {
+    allianceQuality: "stable",
+    goalProgress: "partial",
+    reflection: "旧版专业自评",
+  };
+
+  const saved = saveReviewDraft(ended, "draft-order-1", validDraftPatch, now);
+
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(saved.reviewDrafts[0], "counselorReflection"),
+    false,
+  );
+});
+
 test("normalizing stored workflow removes legacy counselor reflection tasks", () => {
   const state = endSessionWorkflow(emptyWorkflowState(), fixtureOrder, fixtureSnapshot, now);
   state.tasks.push({ ...state.tasks[0], id: "legacy-reflection", taskType: "counselor_reflection" as never });
@@ -149,6 +165,13 @@ test("submitting a valid review atomically updates tasks, cards, archive, and se
   assert.equal(result.state.messages.filter((message) => message.audience === "counselor").length, 1);
   assert.equal(result.state.messages.find((message) => message.audience === "counselor")?.status, "submitted");
   assert.equal(result.state.archivedReviews.length, 1);
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(
+      result.state.archivedReviews[0],
+      "counselorReflection",
+    ),
+    false,
+  );
 });
 
 test("submitting an incomplete review preserves the draft and settlement hold", () => {
@@ -194,6 +217,49 @@ test("order states seed the matching actor tasks", () => {
   assert.equal(types.includes("complete_session_review"), true);
 });
 
+test("the submitted pre-questionnaire creates completed intake and counselor review tasks", () => {
+  const scheduled: Order = {
+    ...fixtureOrder,
+    id: "actual-questionnaire",
+    status: "scheduled" as const,
+    preQuestionnaire: {
+      mainTopic: "工作变动后持续失眠",
+      duration: "1-3个月",
+      event: "更换直属负责人",
+      expectation: "希望恢复稳定睡眠",
+      hasCounselingHistory: true,
+      hasSelfHarmThoughts: false,
+    },
+  };
+  const seeded = seedWorkflowFromOrders([scheduled], now);
+
+  assert.equal(
+    seeded.tasks.find((task) => task.taskType === "complete_intake")?.status,
+    "completed",
+  );
+  assert.equal(
+    seeded.tasks.some((task) => task.taskType === "review_intake"),
+    true,
+  );
+});
+
+test("the submitted pre-questionnaire is available to the review source snapshot", () => {
+  const completed: Order = {
+    ...fixtureOrder,
+    preQuestionnaire: {
+      mainTopic: "工作变动后持续失眠",
+      duration: "1-3个月",
+      event: "更换直属负责人",
+      expectation: "希望恢复稳定睡眠",
+      hasCounselingHistory: true,
+      hasSelfHarmThoughts: false,
+    },
+  };
+  const ended = endSessionWorkflow(emptyWorkflowState(), completed, fixtureSnapshot, now);
+
+  assert.equal(ended.reviewDrafts[0].sourceSnapshot.intakeAvailable, true);
+});
+
 test("ending a scheduled session completes the room-entry task", () => {
   const scheduled = { ...fixtureOrder, status: "scheduled" as const };
   const seeded = seedWorkflowFromOrders([scheduled], now);
@@ -231,5 +297,14 @@ test("mock session evidence is traceable and ready for a review draft", () => {
       insight.sourceIds.every((sourceId) => evidenceIds.has(sourceId)),
     ),
     true,
+  );
+});
+
+test("new mock review patches exclude counselor reflection", () => {
+  const patch = buildMockReviewPatch(fixtureOrder);
+
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(patch, "counselorReflection"),
+    false,
   );
 });

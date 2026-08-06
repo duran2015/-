@@ -7,6 +7,7 @@ import type {
   WorkflowMessage,
   WorkflowTask,
 } from "./types";
+import { hasIntakeData } from "./intakeData";
 
 export type ReviewSubmissionResult = {
   ok: boolean;
@@ -27,12 +28,6 @@ const emptyClientSummary = (): SessionReviewDraft["clientSummary"] => ({
   recap: "",
   actionItems: [],
   nextPlan: "",
-});
-
-const emptyCounselorReflection = (): SessionReviewDraft["counselorReflection"] => ({
-  allianceQuality: null,
-  goalProgress: null,
-  reflection: "",
 });
 
 export const emptyWorkflowState = (): ConsultationWorkflowState => ({
@@ -70,12 +65,11 @@ const buildReviewDraft = (
       transcriptSegmentIds: snapshot.transcript.map((item) => item.id),
       insightIds: snapshot.insights.map((item) => item.id),
       noteIds: snapshot.notes.map((item) => item.id),
-      intakeAvailable: Boolean(order.intakeForm || (order as Order & { preQuestionnaire?: unknown }).preQuestionnaire),
+      intakeAvailable: hasIntakeData(order),
       priorRecordIds: [],
     },
     clinicalSummary: emptyClinicalSummary(),
     clientSummary: emptyClientSummary(),
-    counselorReflection: emptyCounselorReflection(),
     updatedAt: timestamp,
   };
 };
@@ -145,20 +139,21 @@ export function saveReviewDraft(
 ): ConsultationWorkflowState {
   return {
     ...state,
-    reviewDrafts: state.reviewDrafts.map((draft) =>
-      draft.id === draftId && draft.status !== "submitted"
-        ? {
-            ...draft,
-            ...patch,
-            status: "draft",
-            clinicalSummary: { ...draft.clinicalSummary, ...patch.clinicalSummary },
-            clientSummary: { ...draft.clientSummary, ...patch.clientSummary },
-            counselorReflection: { ...draft.counselorReflection, ...patch.counselorReflection },
-            version: draft.version + 1,
-            updatedAt: timestamp,
-          }
-        : draft,
-    ),
+    reviewDrafts: state.reviewDrafts.map((draft) => {
+      if (draft.id !== draftId || draft.status === "submitted") return draft;
+
+      const { counselorReflection: _legacyDraftReflection, ...currentMvpDraft } = draft;
+      const { counselorReflection: _legacyReflection, ...currentMvpPatch } = patch;
+      return {
+        ...currentMvpDraft,
+        ...currentMvpPatch,
+        status: "draft",
+        clinicalSummary: { ...draft.clinicalSummary, ...patch.clinicalSummary },
+        clientSummary: { ...draft.clientSummary, ...patch.clientSummary },
+        version: draft.version + 1,
+        updatedAt: timestamp,
+      };
+    }),
   };
 }
 
@@ -191,6 +186,23 @@ export function normalizeConsultationWorkflow(
   };
 }
 
+export function completeIntakeReviewWorkflow(
+  state: ConsultationWorkflowState,
+  orderId: string,
+): ConsultationWorkflowState {
+  return {
+    ...state,
+    tasks: state.tasks.map((task) =>
+      task.orderId === orderId &&
+      task.actorRole === "counselor" &&
+      task.taskType === "review_intake" &&
+      (task.status === "pending" || task.status === "in_progress")
+        ? { ...task, status: "completed" as const }
+        : task,
+    ),
+  };
+}
+
 const buildClientMessage = (draft: SessionReviewDraft, timestamp: string): WorkflowMessage => ({
   id: `message-client-summary-${draft.orderId}`,
   orderId: draft.orderId,
@@ -207,6 +219,24 @@ const buildClientMessage = (draft: SessionReviewDraft, timestamp: string): Workf
   updatedAt: timestamp,
 });
 
+const buildArchivedReview = (
+  draft: SessionReviewDraft,
+  timestamp: string,
+): ArchivedSessionReview => ({
+  id: draft.id,
+  sessionId: draft.sessionId,
+  orderId: draft.orderId,
+  clientId: draft.clientId,
+  counselorId: draft.counselorId,
+  status: "submitted",
+  version: draft.version + 1,
+  sourceSnapshot: draft.sourceSnapshot,
+  clinicalSummary: draft.clinicalSummary,
+  clientSummary: draft.clientSummary,
+  updatedAt: timestamp,
+  submittedAt: timestamp,
+});
+
 export function submitReviewDraft(
   state: ConsultationWorkflowState,
   draftId: string,
@@ -219,13 +249,15 @@ export function submitReviewDraft(
   const errors = validateReviewDraft(draft);
   if (errors.length > 0) return { ok: false, state, errors };
 
-  const submittedDraft: ArchivedSessionReview = {
-    ...draft,
+  const { counselorReflection: _legacyReflection, ...currentMvpDraft } = draft;
+  const submittedDraft: SessionReviewDraft = {
+    ...currentMvpDraft,
     status: "submitted",
     version: draft.version + 1,
     submittedAt: timestamp,
     updatedAt: timestamp,
   };
+  const archivedReview = buildArchivedReview(draft, timestamp);
   const counselorMessageId = `message-summary-${draft.orderId}`;
   const clientMessageId = `message-client-summary-${draft.orderId}`;
   const nextMessages = state.messages.map((message) =>
@@ -279,7 +311,7 @@ export function submitReviewDraft(
       reviewDrafts: state.reviewDrafts.map((item) => (item.id === draft.id ? submittedDraft : item)),
       archivedReviews: state.archivedReviews.some((item) => item.id === draft.id)
         ? state.archivedReviews
-        : [...state.archivedReviews, submittedDraft],
+        : [...state.archivedReviews, archivedReview],
       tasks: [
         ...state.tasks.map((task) =>
           task.draftId === draft.id && task.actorRole === "counselor"
@@ -303,13 +335,14 @@ const emptySnapshot: SessionSnapshot = {
 
 const buildScheduledTasks = (order: Order, timestamp: string): WorkflowTask[] => {
   const { clientId, counselorId } = actorIds(order);
+  const intakeAvailable = hasIntakeData(order);
   return [
     {
       id: `task-intake-${order.id}`,
       actorRole: "client",
       actorId: clientId,
       taskType: "complete_intake",
-      status: order.intakeForm ? "completed" : "pending",
+      status: intakeAvailable ? "completed" : "pending",
       blockingSettlement: false,
       orderId: order.id,
       createdAt: timestamp,
@@ -325,7 +358,7 @@ const buildScheduledTasks = (order: Order, timestamp: string): WorkflowTask[] =>
       sessionId: getSessionId(order.id),
       createdAt: timestamp,
     },
-    ...(order.intakeForm
+    ...(intakeAvailable
       ? [
           {
             id: `task-review-intake-${order.id}`,

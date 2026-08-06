@@ -1,4 +1,5 @@
 import type { Order, WorkflowTask } from "./types";
+import { hasIntakeData } from "./intakeData";
 
 const phases = [
   { taskType: "confirm_booking", label: "确认预约" },
@@ -19,6 +20,7 @@ export type CounselorJourneyStep = {
 
 export type CounselorJourney = {
   order: Order;
+  appointmentLabel: string;
   steps: CounselorJourneyStep[];
   currentTask: WorkflowTask;
 };
@@ -27,7 +29,7 @@ const isPendingCounselorTask = (task: WorkflowTask) =>
   task.actorRole === "counselor" && (task.status === "pending" || task.status === "in_progress");
 
 const shouldSkipIntakeReview = (order: Order, taskType: CounselorJourneyTaskType) =>
-  taskType === "review_intake" && !order.intakeForm;
+  taskType === "review_intake" && !hasIntakeData(order);
 
 export function buildCounselorJourneys(
   orders: Order[],
@@ -51,6 +53,7 @@ export function buildCounselorJourneys(
 
     return [{
       order,
+      appointmentLabel: `${order.bookingDate} ${order.bookingTimeSlot}`,
       currentTask,
       steps: phases.map((phase, index) => ({
         ...phase,

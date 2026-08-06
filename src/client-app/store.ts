@@ -4,6 +4,7 @@ import { mockUser, mockOrders, mockAssessmentRecords } from "./data";
 
 import { INITIAL_ORDERS } from "../data/mockData";
 import {
+  completeIntakeReviewWorkflow,
   confirmBookingWorkflow,
   endSessionWorkflow,
   normalizeConsultationWorkflow,
@@ -180,6 +181,7 @@ export interface AppState {
   saveSessionReview: (draftId: string, patch: Partial<SessionReviewDraft>) => void;
   submitSessionReview: (draftId: string, patch?: Partial<SessionReviewDraft>) => { ok: boolean; errors: string[] };
   completeWorkflowTask: (taskId: string) => void;
+  completeIntakeReview: (orderId: string) => void;
   confirmConsultationBooking: (orderId: string) => void;
   hasAgreedPrivacy: boolean;
   agreePrivacy: () => void;
@@ -336,6 +338,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         task.id === taskId ? { ...task, status: "completed" as const } : task,
       ),
     };
+    persistWorkflow(nextWorkflow);
+    set({ consultationWorkflow: nextWorkflow });
+  },
+  completeIntakeReview: (orderId) => {
+    const nextWorkflow = completeIntakeReviewWorkflow(
+      get().consultationWorkflow,
+      orderId,
+    );
     persistWorkflow(nextWorkflow);
     set({ consultationWorkflow: nextWorkflow });
   },

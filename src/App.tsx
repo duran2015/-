@@ -21,7 +21,14 @@ import { IncomeView } from './components/Profile/IncomeView';
 import { X, ChevronRight } from 'lucide-react';
 
 export default function App() {
-  const { orders, ensureSessionReview, endConsultationSession, confirmConsultationBooking } = useAppStore();
+  const {
+    orders,
+    consultationWorkflow,
+    ensureSessionReview,
+    endConsultationSession,
+    completeIntakeReview,
+    confirmConsultationBooking,
+  } = useAppStore();
   const setOrders = (updater: any) => {
     // Adapter for legacy setOrders
     if (typeof updater === 'function') {
@@ -65,6 +72,15 @@ export default function App() {
 
   // Next upcoming session
   const nextScheduledOrder = displayedOrders.find((o) => o.status === 'scheduled');
+  const selectedOrderHasPendingIntakeReview = selectedOrderForFile
+    ? consultationWorkflow.tasks.some(
+        (task) =>
+          task.orderId === selectedOrderForFile.id &&
+          task.actorRole === 'counselor' &&
+          task.taskType === 'review_intake' &&
+          (task.status === 'pending' || task.status === 'in_progress'),
+      )
+    : false;
 
   // Action Handlers
   const handleToggleListening = () => {
@@ -355,12 +371,24 @@ export default function App() {
             </div>
 
             <div className="flex justify-end mt-5">
-              <button
-                onClick={() => setSelectedOrderForFile(null)}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#5A6A50] text-white text-xs font-semibold hover:bg-[#4D5B44] transition shadow-xs"
-              >
-                关闭档案
-              </button>
+              {selectedOrderHasPendingIntakeReview ? (
+                <button
+                  onClick={() => {
+                    completeIntakeReview(selectedOrderForFile.id);
+                    setSelectedOrderForFile(null);
+                  }}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#5A6A50] text-white text-xs font-semibold hover:bg-[#4D5B44] transition shadow-xs"
+                >
+                  完成查阅，继续下一步
+                </button>
+              ) : (
+                <button
+                  onClick={() => setSelectedOrderForFile(null)}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#5A6A50] text-white text-xs font-semibold hover:bg-[#4D5B44] transition shadow-xs"
+                >
+                  关闭档案
+                </button>
+              )}
             </div>
           </div>
         </div>

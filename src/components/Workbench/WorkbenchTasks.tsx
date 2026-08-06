@@ -109,7 +109,7 @@ export const WorkbenchTasks: React.FC<WorkbenchTasksProps> = ({
                 <img src={order.clientAvatar} alt="" className="h-10 w-10 shrink-0 rounded-full border border-[#ECE6DC] bg-white object-cover" />
                 <div className="min-w-0">
                   <div className="truncate text-[15px] font-bold text-[#1D1B16]">{order.clientName}</div>
-                  <div className="mt-0.5 truncate text-[11px] text-[#7A756C]">{order.bookingTimeSlot.split(' ')[0]}</div>
+                  <div className="mt-0.5 truncate text-[11px] text-[#7A756C]">{journey.appointmentLabel}</div>
                 </div>
               </div>
 
