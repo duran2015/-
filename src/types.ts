@@ -271,7 +271,7 @@ export interface SessionInsight {
   category: "topic" | "emotion" | "intervention" | "risk" | "plan";
   title: string;
   detail: string;
-  sourceType: "transcript" | "intake" | "note" | "history";
+  sourceType: "transcript" | "intake" | "note" | "history" | "emotion_event";
   sourceIds: string[];
   confidence: number;
 }

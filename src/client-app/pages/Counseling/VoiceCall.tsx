@@ -28,10 +28,15 @@ import { useAppStore } from "../../store";
 import { mockCounselors, mockUser } from "../../data";
 import {
   getVoiceCallPresentation,
+  getMeetingLayerClass,
   type MeetingState,
 } from "../../../voiceCallPresentation";
 import { buildMockSessionSnapshot } from "../../../consultationWorkflowMock";
 import { resolveMeetingClient } from "../../../meetingParticipant";
+import { getMockEmotionFeedback, toEmotionSessionInsights } from "../../../emotionFeedback";
+import { EmotionStatusChip } from "../../../components/ConsultationRoom/EmotionStatusChip";
+import { EmotionChangeSnackbar } from "../../../components/ConsultationRoom/EmotionChangeSnackbar";
+import { EmotionDynamicsCard } from "../../../components/ConsultationRoom/EmotionDynamicsCard";
 import type { Order, SessionSnapshot } from "../../../types";
 
 type MediaPermissionState = { camera: boolean; microphone: boolean };
@@ -93,12 +98,17 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
   const [cameraOff, setCameraOff] = useState(!isVideo);
   const [speaker, setSpeaker] = useState(true);
   const [duration, setDuration] = useState(0);
+  const emotionPresentation = useMemo(
+    () => getMockEmotionFeedback(duration, isVideo ? "video" : "voice", !cameraOff),
+    [duration, isVideo, cameraOff],
+  );
   const [scratchpad, setScratchpad] = useState(mockSnapshot.notes.map((note) => note.text).join("\n"));
   
   // AI Panel & More Menus
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showRiskReport, setShowRiskReport] = useState(false);
+  const [dismissedEmotionEventId, setDismissedEmotionEventId] = useState<string | null>(null);
 
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const platform = detectClientPlatform();
@@ -148,7 +158,19 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
     if (aiPanelOpen && aiScrollRef.current) aiScrollRef.current.scrollTop = 0;
   }, [aiPanelOpen]);
 
+  useEffect(() => {
+    const event = emotionPresentation.significantEvent;
+    if (!event || dismissedEmotionEventId === event.id) return;
+    const timer = setTimeout(() => setDismissedEmotionEventId(event.id), 6000);
+    return () => clearTimeout(timer);
+  }, [emotionPresentation.significantEvent?.id, dismissedEmotionEventId]);
+
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
+
+  const openEmotionDynamics = () => {
+    setAiPanelOpen(true);
+    requestAnimationFrame(() => document.getElementById("emotion-dynamics")?.focus());
+  };
 
   const leaveMeeting = () => {
     setActiveCallSession(null);
@@ -170,6 +192,13 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
       const snapshot: SessionSnapshot = {
         ...mockSnapshot,
         durationSeconds: duration || mockSnapshot.durationSeconds,
+        insights: [
+          ...mockSnapshot.insights,
+          ...toEmotionSessionInsights(
+            mockSnapshot.transcript[0]?.sessionId || `session-${sessionOrder.id}`,
+            emotionPresentation.significantEvent ? [emotionPresentation.significantEvent] : [],
+          ),
+        ],
         notes: scratchpad.trim()
           ? [
               { id: `${mockSnapshot.transcript[0]?.sessionId || `session-${sessionOrder.id}`}-n-live`, text: scratchpad.trim() },
@@ -310,7 +339,7 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
 
   if (meetingState === "ended") {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#FAF8F5] p-7 text-center">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${getMeetingLayerClass("ended")} z-[99999] flex h-[100dvh] w-screen flex-col items-center justify-center overflow-y-auto bg-[#FAF8F5] p-7 text-center`}>
         <div className="mb-5 flex h-[88px] w-[88px] items-center justify-center rounded-[28px] bg-[#EADDFF] text-[#21005D] shadow-lg shadow-[#EADDFF]/50"><CheckCircle2 size={44} strokeWidth={2.5} /></div>
         <h1 className="text-[24px] font-black text-[#1D1B16]">本次会议已结束</h1>
         <p className="mt-2 text-[14px] leading-relaxed text-[#7A756C]">双方已离开预约会议室，通话时长 {formatTime(duration)}</p>
@@ -358,6 +387,26 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
     </div>
   );
 
+  const VideoConsultationView = () => (
+    <div className="relative h-full w-full overflow-hidden bg-[#1D1B16]">
+      {cameraOff ? (
+        <div className="flex h-full flex-col items-center justify-center">
+          <img src={otherAvatar} alt={otherName} className="h-36 w-36 rounded-full border-4 border-white/15 object-cover shadow-2xl" />
+          <p className="mt-5 text-[14px] font-bold text-white/75">对方视频已关闭 · 当前使用语音分析</p>
+        </div>
+      ) : (
+        <>
+          <img src={otherAvatar} alt={`${otherName}的视频画面`} className="h-full w-full scale-110 object-cover blur-[1px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
+          <div className="absolute bottom-28 left-5 rounded-full bg-black/45 px-4 py-2 text-[13px] font-bold backdrop-blur-md"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400" />{otherName}</div>
+        </>
+      )}
+      <div className="absolute right-5 top-36 h-32 w-24 overflow-hidden rounded-[22px] border-2 border-white/15 bg-[#322F35] shadow-xl">
+        <img src={selfAvatar} alt="我的画面" className="h-full w-full object-cover" />
+      </div>
+    </div>
+  );
+
   return (
     <motion.div data-meeting-room initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[99999] flex h-[100dvh] flex-col overflow-hidden bg-[#1D1B16] text-white" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh' }}>
       {/* Top Floating Header */}
@@ -368,6 +417,7 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
             <LockKeyhole size={12} className="mr-1.5 text-emerald-400" />预约会议 · {roomNumber}
           </div>
           <div className="mt-2 text-[13px] font-mono text-white/80 drop-shadow-md font-bold tracking-widest">{meetingState === "waiting" ? "1/2 人已入会" : formatTime(duration)}</div>
+          {meetingState === "in-call" && isCounselorView && <EmotionStatusChip presentation={emotionPresentation} onOpen={openEmotionDynamics} />}
         </div>
         <button onClick={() => { setNotice("已切换摄像头"); }} aria-label="切换摄像头" className={`flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur-md pointer-events-auto active:scale-95 transition-transform ${isVideo ? "" : "invisible"}`}><SwitchCamera size={20} /></button>
       </div>
@@ -400,8 +450,10 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
                  </div>
                </div>
             </div>
-          ) : (
+          ) : roomPresentation.layout === "audio-call" ? (
             <AudioConsultationView />
+          ) : (
+            <VideoConsultationView />
           )}
 
           {/* Bottom Control Bar */}
@@ -466,11 +518,7 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
                 
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[calc(16px+env(safe-area-inset-bottom))]" ref={aiScrollRef}>
                   <div className="space-y-5">
-                    {/* AI Insights Card */}
-                    <div className="rounded-[20px] bg-[#F6EDFF] border border-[#EADDFF] p-4 shadow-sm">
-                      <div className="mb-2 flex items-center text-[12px] font-black text-[#6750A4]"><Sparkles size={14} className="mr-1.5" />实时情绪洞察</div>
-                      <p className="text-[13px] leading-relaxed text-[#21005D]">{mockSnapshot.insights[1]?.detail}</p>
-                    </div>
+                    {isCounselorView && <EmotionDynamicsCard presentation={emotionPresentation} />}
 
                     {/* Live Transcription */}
                     <div className="rounded-[20px] bg-white border border-[#ECE6DC] p-4 shadow-sm">
@@ -511,6 +559,18 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {isCounselorView && emotionPresentation.significantEvent && dismissedEmotionEventId !== emotionPresentation.significantEvent.id && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}>
+            <EmotionChangeSnackbar
+              event={emotionPresentation.significantEvent}
+              onOpen={() => { setDismissedEmotionEventId(emotionPresentation.significantEvent!.id); openEmotionDynamics(); }}
+              onDismiss={() => setDismissedEmotionEventId(emotionPresentation.significantEvent!.id)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       
 
