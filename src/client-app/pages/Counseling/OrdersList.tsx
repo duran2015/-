@@ -11,9 +11,10 @@ import {
 } from "lucide-react";
 import { mockCounselors } from "../../data";
 import { EmptyState } from "../../components/EmptyState";
+import { getClientJourneyPresentation } from "../../../clientJourneyPresentation";
 
 export function OrdersList() {
-  const { popView, pushView, orders, setBookingOrder, setSelectedCounselorId, appMode, activeOrderTab, setSelectedCounselorOrder } = useAppStore();
+  const { popView, pushView, orders, setBookingOrder, setSelectedCounselorId, appMode, activeOrderTab, setSelectedCounselorOrder, consultationWorkflow, setActiveCallSession, setIsCallMinimized, completeWorkflowTask } = useAppStore();
   const [now, setNow] = useState(new Date());
 
   const isCounselorMode = appMode === "counselor";
@@ -74,6 +75,7 @@ export function OrdersList() {
           <div className="space-y-4">
             {displayOrders.map((order, ind) => {
               const counselor = getCounselor(order.counselorId);
+              const clientJourney = !isCounselorMode ? getClientJourneyPresentation(order, consultationWorkflow) : null;
               
               // 针对咨询师端，伪造用户的标签数据，保留原本丰富的UI样式
               const displayName = isCounselorMode ? (order.userName || "新用户") : counselor.name;
@@ -135,7 +137,7 @@ export function OrdersList() {
                     }`}>
                       {isCounselorMode 
                         ? (order.status === "paid" ? "待服务" : order.status === "pending" ? "待支付" : order.status === "completed" ? "已完成" : "已取消")
-                        : (order.status === "paid" ? "待咨询" : order.status === "pending" ? "待支付" : order.status === "completed" ? "履约完成" : order.status === "cancelled" ? "已取消" : order.status === "failed" ? "预约/支付失败" : "已退款")
+                        : clientJourney?.statusLabel
                       }
                     </span>
                   </div>
@@ -163,23 +165,35 @@ export function OrdersList() {
                       </div>
                     </div>
 
-                    {order.status === "paid" && (
+                    {!isCounselorMode && clientJourney && clientJourney.primaryAction !== "none" && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isCounselorMode) {
-                            setSelectedCounselorOrder(order);
-                            pushView("counseling-text-chat");
-                          } else {
-                            setBookingOrder(order);
-                            setSelectedCounselorId(order.counselorId);
-                            pushView("counseling-text-chat");
+                          setBookingOrder(order);
+                          setSelectedCounselorId(order.counselorId);
+                          if (clientJourney.primaryAction === "pay") return pushView("counseling-payment");
+                          if (clientJourney.primaryAction === "complete_intake") return pushView("pre-questionnaire");
+                          if (clientJourney.primaryAction === "enter_session") {
+                            if (order.type === "text") return pushView("counseling-text-chat");
+                            setIsCallMinimized(false);
+                            return setActiveCallSession(order);
                           }
+                          if (clientJourney.primaryAction === "read_summary" || clientJourney.primaryAction === "view_summary") {
+                            const recapTask = consultationWorkflow.tasks.find((task) => task.orderId === order.id && task.taskType === "read_session_recap" && task.status !== "completed");
+                            if (recapTask) completeWorkflowTask(recapTask.id);
+                            return pushView("counseling-summary");
+                          }
+                          if (clientJourney.primaryAction === "evaluate") return pushView("user-evaluation" as any);
+                          return pushView("user-order-detail");
                         }}
-                        className="px-3.5 py-1.5 rounded-lg text-[12px] font-bold flex items-center justify-center transition-all bg-gray-900 text-white active:scale-[0.98] shrink-0"
+                        disabled={clientJourney.primaryAction === "wait_for_summary"}
+                        className="px-3.5 py-1.5 rounded-full text-[12px] font-bold flex items-center justify-center transition-all bg-[#6750A4] text-white active:scale-[0.98] shrink-0 disabled:bg-[#E7E0EC] disabled:text-[#79747E]"
                       >
-                        {isCounselorMode ? "联系用户" : "联系咨询师"}
+                        {clientJourney.actionLabel}
                       </button>
+                    )}
+                    {isCounselorMode && order.status === "paid" && (
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedCounselorOrder(order); pushView("counseling-text-chat"); }} className="px-3.5 py-1.5 rounded-lg text-[12px] font-bold bg-gray-900 text-white">联系用户</button>
                     )}
                   </div>
                 </div>

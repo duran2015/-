@@ -4,7 +4,7 @@ import { useAppStore } from "../../store";
 import { ChevronLeft } from "lucide-react";
 
 export function PreCounselingQuestionnaire() {
-  const { popView, pushView, bookingOrder, updateOrder } = useAppStore();
+  const { popView, pushView, bookingOrder, updateOrder, consultationWorkflow, completeWorkflowTask } = useAppStore();
   const [preQuestionnaire, setPreQuestionnaire] = useState({
     mainTopic: "",
     duration: "",
@@ -26,6 +26,10 @@ export function PreCounselingQuestionnaire() {
     if (bookingOrder) {
       // Update the order in the store with the questionnaire data
       updateOrder(bookingOrder.id, { preQuestionnaire });
+      const intakeTask = consultationWorkflow.tasks.find(
+        (task) => task.orderId === bookingOrder.id && task.actorRole === "client" && task.taskType === "complete_intake" && task.status !== "completed",
+      );
+      if (intakeTask) completeWorkflowTask(intakeTask.id);
     }
 
     // Go directly to the chat/service channel
@@ -224,7 +228,7 @@ export function PreCounselingQuestionnaire() {
           onClick={handleSubmit}
           className="w-full py-4 rounded-full bg-gray-900 text-white font-bold text-[15px] active:scale-[0.98] transition-transform shadow-md shadow-gray-900/10"
         >
-          提交并进入沟通通道
+          保存资料并联系咨询师
         </button>
       </div>
     </motion.div>

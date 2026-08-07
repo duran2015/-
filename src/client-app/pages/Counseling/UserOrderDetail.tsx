@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useAppStore } from "../../store";
-import { ArrowLeft, MessageSquare, Video, Clock, Lock, ShieldAlert, CalendarX } from "lucide-react";
+import { ArrowLeft, MessageSquare, Video, Clock, ShieldAlert, CalendarX, Sparkles, ClipboardList } from "lucide-react";
 import { mockCounselors } from "../../data";
 import { MissingDataPage } from "../../components/EmptyState";
+import { getClientJourneyPresentation } from "../../../clientJourneyPresentation";
 
 export function UserOrderDetail() {
-  const { popView, pushView, bookingOrder, updateOrder, setActiveCallSession, setIsCallMinimized } = useAppStore();
+  const { popView, pushView, bookingOrder, updateOrder, setActiveCallSession, setIsCallMinimized, consultationWorkflow, completeWorkflowTask } = useAppStore();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export function UserOrderDetail() {
   };
 
   const counselor = mockCounselors.find((c) => c.id === bookingOrder.counselorId) || mockCounselors[0];
+  const journey = getClientJourneyPresentation(bookingOrder, consultationWorkflow);
 
   const getLockStatus = () => {
     if (bookingOrder.type === "text") return { isLocked: false, lockMessage: "" };
@@ -92,6 +94,20 @@ export function UserOrderDetail() {
     }
   };
 
+  const handlePrimaryAction = () => {
+    if (journey.primaryAction === "pay") return pushView("counseling-payment");
+    if (journey.primaryAction === "complete_intake") return pushView("pre-questionnaire");
+    if (journey.primaryAction === "enter_session") return handleEnterConsultation();
+    if (journey.primaryAction === "read_summary" || journey.primaryAction === "view_summary") {
+      const recapTask = consultationWorkflow.tasks.find(
+        (task) => task.orderId === bookingOrder.id && task.actorRole === "client" && task.taskType === "read_session_recap" && task.status !== "completed",
+      );
+      if (recapTask) completeWorkflowTask(recapTask.id);
+      return pushView("counseling-summary");
+    }
+    if (journey.primaryAction === "evaluate") return pushView("user-evaluation" as any);
+  };
+
   const { isLocked, lockMessage } = getLockStatus();
 
   return (
@@ -117,20 +133,9 @@ export function UserOrderDetail() {
         <div className="bg-white rounded-[1.25rem] p-5 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-50">
             <span className="text-gray-500 text-[14px]">订单状态</span>
-            <span className={`font-bold text-[15px] flex items-center ${
-              bookingOrder.status === 'paid' ? 'text-primary' :
-              bookingOrder.status === 'pending' ? 'text-orange-500' :
-              'text-gray-400'
-            }`}>
-              {bookingOrder.status === "paid" ? "待咨询" : 
-               bookingOrder.status === "pending" ? (
-                 <>
-                   待支付 <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-[11px] font-bold flex items-center"><Clock size={10} className="mr-1"/> {formatPaymentTime(paymentTimeLeft)}</span>
-                 </>
-               ) : 
-               bookingOrder.status === "completed" ? "履约完成" : 
-               bookingOrder.status === "cancelled" ? "已取消" : 
-               bookingOrder.status === "failed" ? "预约/支付失败" : "已退款"}
+            <span className="flex items-center text-[15px] font-bold text-primary">
+              {journey.statusLabel}
+              {bookingOrder.status === "pending" && <span className="ml-2 flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[11px] text-orange-600"><Clock size={10} className="mr-1"/> {formatPaymentTime(paymentTimeLeft)}</span>}
             </span>
           </div>
 
@@ -207,6 +212,19 @@ export function UserOrderDetail() {
           </div>
         </div>
 
+        <div className="mb-4 rounded-[24px] border border-[#D0BCFF] bg-[#F6EDFF] p-5 text-[#21005D] shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-[#EADDFF] text-[#6750A4]">
+              {journey.primaryAction === "read_summary" || journey.primaryAction === "view_summary" ? <Sparkles size={21} /> : <ClipboardList size={21} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-black text-[#6750A4]">当前事项</p>
+              <h3 className="mt-1 text-[16px] font-black">{journey.currentLabel}</h3>
+              <p className="mt-1 text-[12px] leading-5 text-[#49454F]">{journey.description}</p>
+            </div>
+          </div>
+        </div>
+
         {bookingOrder.status === "completed" && bookingOrder.counselorAdvice && (
           <div className="bg-white rounded-[1.25rem] p-5 shadow-sm border border-gray-100 mb-4">
             <h3 className="text-[15px] font-bold text-gray-900 flex items-center mb-3">
@@ -221,7 +239,7 @@ export function UserOrderDetail() {
           </div>
         )}
         
-        {(bookingOrder.status === "paid" || bookingOrder.status === "pending") && (
+        {journey.canCancel && (
           <div className="bg-orange-50 rounded-[1rem] p-4 flex items-start space-x-2">
             <ShieldAlert size={16} className="text-orange-500 mt-0.5 shrink-0" />
             <p className="text-[12px] text-orange-700 leading-relaxed">
@@ -233,7 +251,7 @@ export function UserOrderDetail() {
 
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-20">
         <div className="flex space-x-3">
-          {(bookingOrder.status === "paid" || bookingOrder.status === "pending") && (
+          {journey.canCancel && (
             <button
               onClick={handleCancelOrder}
               className="flex-1 py-3.5 rounded-full font-bold bg-gray-50 text-gray-600 active:bg-gray-100 transition-colors border border-gray-200"
@@ -242,32 +260,13 @@ export function UserOrderDetail() {
             </button>
           )}
 
-          {bookingOrder.status === "paid" && (
-            <div className="flex-1 relative">
-              <button
-                onClick={() => pushView("counseling-text-chat")}
-                className={`w-full py-3.5 rounded-full font-bold flex items-center justify-center transition-all bg-gray-900 text-white active:scale-[0.98]`}
-              >
-                联系咨询师
-              </button>
-            </div>
-          )}
-
-          {bookingOrder.status === "completed" && !bookingOrder.isEvaluated && (
-            <button 
-              onClick={() => pushView("user-evaluation" as any)}
-              className="flex-1 py-3.5 rounded-full font-bold bg-gray-900 text-white active:scale-[0.98] transition-all"
-            >
-              评价咨询师
+          {journey.primaryAction !== "none" && journey.primaryAction !== "wait_for_summary" && (
+            <button onClick={handlePrimaryAction} className="flex-[1.4] rounded-full bg-[#6750A4] py-3.5 font-bold text-white shadow-lg shadow-[#6750A4]/20 active:scale-[0.98] transition-transform">
+              {journey.actionLabel}
             </button>
           )}
-          {bookingOrder.status === "completed" && bookingOrder.isEvaluated && (
-            <button 
-              disabled
-              className="flex-1 py-3.5 rounded-full font-bold bg-gray-100 text-gray-400 cursor-not-allowed"
-            >
-              已评价
-            </button>
+          {journey.primaryAction === "wait_for_summary" && (
+            <button onClick={() => pushView("counseling-text-chat")} className="flex-1 rounded-full bg-[#EADDFF] py-3.5 font-bold text-[#21005D] active:scale-[0.98]">联系咨询师</button>
           )}
         </div>
       </div>

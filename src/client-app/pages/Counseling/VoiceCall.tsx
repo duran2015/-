@@ -215,8 +215,14 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
         pushView("counselor-session-notes" as any);
       }
     } else {
-      leaveMeeting();
-      pushView("user-evaluation" as any);
+      const sessionOrder = order as Order;
+      useAppStore.getState().endConsultationSession(sessionOrder, {
+        ...mockSnapshot,
+        durationSeconds: duration || mockSnapshot.durationSeconds,
+      });
+      setActiveCallSession(null);
+      setIsCallMinimized(false);
+      pushView("user-order-detail" as any);
     }
   };
 
@@ -357,7 +363,7 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
           onClick={finishAndGoToSummary} 
           className="mt-8 w-full rounded-full bg-[#6750A4] py-4 text-[15px] font-black text-white shadow-lg shadow-[#6750A4]/30 active:scale-95 transition-transform"
         >
-          {isCounselorView ? "查看 AI 咨询总结" : "返回并评价"}
+          {isCounselorView ? "查看 AI 咨询总结" : "返回预约详情"}
         </button>
       </motion.div>
     );
@@ -478,7 +484,7 @@ export function VoiceCall({ propOrder, propMode, onClose, onSessionEnded }: Voic
             </button>
 
             {/* AI Panel Toggle (Highlight) */}
-            {meetingState === "in-call" && (
+            {meetingState === "in-call" && isCounselorView && (
               <button onClick={() => setAiPanelOpen(!aiPanelOpen)} className={`flex h-[42px] w-[42px] shrink-0 sm:h-[56px] sm:w-[56px] shrink-0 flex-col items-center justify-center rounded-[20px] sm:rounded-[22px] transition-all active:scale-95 ${aiPanelOpen ? "bg-[#EADDFF] text-[#21005D]" : "bg-[#6750A4] text-white shadow-[0_0_20px_rgba(103,80,164,0.6)]"}`}>
                 <Sparkles size={22} strokeWidth={2.5} />
               </button>

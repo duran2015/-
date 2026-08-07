@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { useAppStore } from "../../store";
 import { mockCounselors, mockConsultationRecords, mockNotifications } from "../../data";
 import { Bell, ShieldAlert, Video, ArrowRight, PhoneCall, Sparkles, CheckCircle2 } from "lucide-react";
+import { getClientJourneyPresentation } from "../../../clientJourneyPresentation";
 
 export function MessagesTab() {
   const { pushView, user, setSelectedConsultationId, setActiveCallSession, setIsCallMinimized, setBookingOrder, setSelectedCounselorOrder, orders, appMode, counselorStatus, consultationWorkflow, completeWorkflowTask } = useAppStore();
@@ -128,6 +129,8 @@ export function MessagesTab() {
           {sharedSummary && (
             <button
               onClick={() => {
+                const summaryOrder = orders.find((order) => order.id === sharedSummary.orderId);
+                if (summaryOrder) setBookingOrder(summaryOrder);
                 const readTask = consultationWorkflow.tasks.find(
                   (task) => task.draftId === sharedSummary.draftId && task.taskType === "read_session_recap",
                 );
@@ -209,11 +212,15 @@ export function MessagesTab() {
           {/* Human Counselors Chats */}
           {chats.map(({ record, counselor }) => {
             const isText = record.type === "text";
+            const clientJourney = !isCounselorMode ? getClientJourneyPresentation(record, consultationWorkflow) : null;
             let lastMsg = "";
             let subStatus = "待咨询前准备";
             
             // Mock subStatus logic for demonstration
-            if (record.status === "paid") {
+            if (!isCounselorMode && clientJourney) {
+              lastMsg = clientJourney.description;
+              subStatus = clientJourney.currentLabel;
+            } else if (record.status === "paid") {
                if (record.type === "voice" || record.type === "video") {
                  lastMsg = record.type === "voice" ? "语音咨询待履约..." : "视频咨询待履约...";
                  subStatus = "已同步摘要";

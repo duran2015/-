@@ -19,6 +19,7 @@ import { useAppStore } from './client-app/store';
 import { Order, ServiceProduct, ViralVoucher, ConsultantProfile, SessionSnapshot } from './types';
 import { IncomeView } from './components/Profile/IncomeView';
 import { X, ChevronRight } from 'lucide-react';
+import { CounselorNotificationCenter } from './components/Notifications/CounselorNotificationCenter';
 
 export default function App() {
   const {
@@ -76,6 +77,7 @@ export default function App() {
   const [activeOrderViewMode, setActiveOrderViewMode] = useState<'order_detail' | 'client_profile'>('order_detail');
   const [activeOrderReturnTab, setActiveOrderReturnTab] = useState<MainTabType | null>(null);
   const [showIncomeView, setShowIncomeView] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const displayedOrders = isMockEmpty ? [] : orders;
   const displayedProducts = isMockEmpty ? [] : products;
@@ -106,6 +108,21 @@ export default function App() {
   // Action Handlers
   const handleToggleListening = () => {
     setConsultant((prev) => ({ ...prev, isListeningActive: !prev.isListeningActive }));
+  };
+
+  const getUserAppUrl = (hash: 'home' | 'login') => {
+    const host = window.location.hostname || 'localhost';
+    return `${window.location.protocol}//${host}:4312/splash#/${hash}`;
+  };
+
+  const handleSwitchToUser = () => {
+    window.location.assign(getUserAppUrl('home'));
+  };
+
+  const handleCounselorLogout = () => {
+    window.localStorage.removeItem('isLoggedIn');
+    window.localStorage.removeItem('appMode');
+    window.location.assign(getUserAppUrl('login'));
   };
 
   const handleConfirmOrder = (orderId: string) => {
@@ -197,6 +214,7 @@ export default function App() {
               const target = nextScheduledOrder || displayedOrders[0];
               if (target) setActiveLiveOrder(target);
             }}
+            onOpenNotifications={() => setShowNotifications(true)}
           />
         )}
 
@@ -361,6 +379,8 @@ export default function App() {
               onOpenOrderInfo={(order) => setShowOrderInfo(order)}
               onOpenIncomeView={() => setShowIncomeView(true)}
               onScheduleConfigured={() => setHasConfiguredSchedule(true)}
+              onSwitchToUser={handleSwitchToUser}
+              onLogout={handleCounselorLogout}
             />
           )}
 
@@ -386,6 +406,12 @@ export default function App() {
               setActiveSessionReviewId(draftId);
             }}
             onOpenOrderInfo={(order) => setShowOrderInfo(order)}
+          />
+        )}
+
+        {showNotifications && (
+          <CounselorNotificationCenter
+            onClose={() => setShowNotifications(false)}
           />
         )}
 

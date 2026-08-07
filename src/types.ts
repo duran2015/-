@@ -460,7 +460,7 @@ export type AppView =
   | "about-us"
   | "legal-document";
 
-export type AppTab = "home" | "counseling" | "messages" | "profile" | "appointments" | "growth" | "clients" | "earnings";
+export type AppTab = "home" | "counseling" | "counselors" | "messages" | "profile" | "appointments" | "growth" | "clients" | "earnings";
 
 export interface UserProfile {
   id: string;

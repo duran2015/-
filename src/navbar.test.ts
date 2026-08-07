@@ -11,6 +11,7 @@ test("home header omits the AI quote action and keeps neighboring actions", () =
     consultant: INITIAL_CONSULTANT,
     onToggleListening: () => undefined,
     onOpenLiveSession: () => undefined,
+    onOpenNotifications: () => undefined,
     onOpenAiQuoteModal: () => undefined,
   } as ComponentProps<typeof Navbar>;
 

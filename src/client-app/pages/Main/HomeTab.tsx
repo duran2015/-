@@ -5,10 +5,10 @@ import {
   ShieldAlert,
   ChevronLeft,
   CalendarDays,
+  CalendarClock,
   Lock,
   Plus,
   Bell,
-  ClipboardList,
   Wind,
   Headphones,
   Moon,
@@ -19,11 +19,11 @@ import {
   HeartPulse,
   Sparkles,
   ChevronDown,
-  FileText,
-  MessageSquare
+  FileText
 } from "lucide-react";
 import { useAppStore } from "../../store";
 import { mockUser } from "../../data";
+import { getClientJourneyPresentation } from "../../../clientJourneyPresentation";
 
 // 5级 Emoji 体系
 const EMOTIONS = [
@@ -47,7 +47,7 @@ const TAGS = [
 ];
 
 export function HomeTab() {
-  const { user, pushView, setTab, assessmentRecords } = useAppStore();
+  const { user, pushView, setTab, assessmentRecords, orders, consultationWorkflow, setBookingOrder } = useAppStore();
 
   const isNewUser = user.isNewUser || false;
   const hasRisk = user.hasRisk || false;
@@ -73,6 +73,10 @@ export function HomeTab() {
   };
 
   const ipStatus = getIpStatus();
+  const activeConsultationOrder = orders.find((order) => !["cancelled", "refunded"].includes(order.status as string));
+  const activeConsultation = activeConsultationOrder
+    ? getClientJourneyPresentation(activeConsultationOrder, consultationWorkflow)
+    : null;
 
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -213,15 +217,23 @@ export function HomeTab() {
         </div>
       </div>
 
-      {/* 快捷入口 */}
-      <div className="px-5 mb-5 mt-2">
-        <div className="grid grid-cols-4 gap-2.5">
-          <button onClick={() => pushView("ai-chat")} className="flex flex-col items-center justify-center bg-white/90 rounded-[20px] py-4 shadow-sm border border-white active:scale-95 transition-transform"><div className="w-10 h-10 bg-[#eeeefe] text-[#6567a8] rounded-[14px] flex items-center justify-center mb-2 shadow-inner"><MessageSquare size={20} /></div><span className="text-[12px] font-bold text-gray-800">AI 倾诉</span></button>
-          <button onClick={() => pushView("counseling-entrance")} className="flex flex-col items-center justify-center bg-white/90 rounded-[20px] py-4 shadow-sm border border-white active:scale-95 transition-transform"><div className="w-10 h-10 bg-[#e7f4ef] text-primary rounded-[14px] flex items-center justify-center mb-2 shadow-inner"><Activity size={20} /></div><span className="text-[12px] font-bold text-gray-800">真人咨询</span></button>
-          <button onClick={() => setShowInputSheet(true)} className="flex flex-col items-center justify-center bg-white/90 rounded-[20px] py-4 shadow-sm border border-white active:scale-95 transition-transform"><div className="w-10 h-10 bg-[#fff1df] text-[#c87a30] rounded-[14px] flex items-center justify-center mb-2 shadow-inner"><Smile size={20} /></div><span className="text-[12px] font-bold text-gray-800">情绪记录</span></button>
-          <button onClick={() => pushView("mini-assessment-home")} className="flex flex-col items-center justify-center bg-white/90 rounded-[20px] py-4 shadow-sm border border-white active:scale-95 transition-transform"><div className="w-10 h-10 bg-[#e8f1f7] text-[#4d7792] rounded-[14px] flex items-center justify-center mb-2 shadow-inner"><ClipboardList size={20} /></div><span className="text-[12px] font-bold text-gray-800">心理测评</span></button>
+      {activeConsultationOrder && activeConsultation && (
+        <div className="px-5 mb-6">
+          <button
+            onClick={() => { setBookingOrder(activeConsultationOrder); pushView("user-order-detail"); }}
+            className="w-full rounded-[24px] border border-[#D0BCFF] bg-[#F6EDFF] p-4 text-left text-[#21005D] shadow-sm active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[15px] bg-[#EADDFF] text-[#6750A4]"><CalendarClock size={21} /></div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-black text-[#6750A4]">我的咨询 · {activeConsultation.statusLabel}</span><ChevronRight size={17} /></div>
+                <h2 className="mt-1 text-[15px] font-black">{activeConsultation.currentLabel}</h2>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-[#49454F]">{activeConsultation.description}</p>
+              </div>
+            </div>
+          </button>
         </div>
-      </div>
+      )}
 
       {/* 双人职场关系测试：社交获客入口 */}
       <div className="px-5 mb-6 mt-3">

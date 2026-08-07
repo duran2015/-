@@ -4,6 +4,7 @@ import { useAppStore } from "../../store";
 import { ArrowLeft, Star, Heart, CheckCircle2, CalendarPlus, ActivitySquare, MessageSquareOff } from "lucide-react";
 import { mockCounselors } from "../../data";
 import { MissingDataPage } from "../../components/EmptyState";
+import { isStructuredEvaluationComplete } from "../../../clientJourneyPresentation";
 
 export function UserEvaluation() {
   const { popView, bookingOrder, updateOrder, pushView, selectedCounselorId, consultationWorkflow, completeWorkflowTask } = useAppStore();
@@ -24,6 +25,16 @@ export function UserEvaluation() {
 
   if (!bookingOrder) {
     return <MissingDataPage icon={MessageSquareOff} title="暂时无法评价" description="没有找到对应的已完成服务。请从预约记录中选择一笔已结束的咨询后再评价。" onBack={popView} actionLabel="返回预约记录" />;
+  }
+
+  const sharedSummary = consultationWorkflow.messages.find(
+    (message) => message.orderId === bookingOrder.id && message.audience === "client" && message.status === "shared",
+  );
+  const recapTask = consultationWorkflow.tasks.find(
+    (task) => task.orderId === bookingOrder.id && task.actorRole === "client" && task.taskType === "read_session_recap",
+  );
+  if (!submitted && (!sharedSummary || (recapTask && recapTask.status !== "completed"))) {
+    return <MissingDataPage icon={MessageSquareOff} title="请先查看咨询回顾" description="咨询师提交回顾后，请先阅读回顾和行动建议，再完成本次服务评价。" onBack={popView} actionLabel="返回预约详情" />;
   }
 
   const counselor = mockCounselors.find((c) => c.id === bookingOrder.counselorId);
@@ -92,15 +103,13 @@ export function UserEvaluation() {
   };
 
   const handleSubmit = () => {
-    if (!structuredEval.feltUnderstood || !structuredEval.wasHelpful) {
+    if (!isStructuredEvaluationComplete(structuredEval)) {
       alert("请完成核心评价选项");
       return;
     }
     updateOrder(bookingOrder.id, { isEvaluated: true });
     const evaluationTask = consultationWorkflow.tasks.find(
       (task) => task.taskType === "review_counselor" && task.orderId === bookingOrder.id && task.status !== "completed",
-    ) || consultationWorkflow.tasks.find(
-      (task) => task.taskType === "review_counselor" && task.status !== "completed",
     );
     if (evaluationTask) completeWorkflowTask(evaluationTask.id);
     alert("评价提交成功，感谢您的反馈！");

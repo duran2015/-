@@ -1,19 +1,16 @@
 import { useAppStore } from "../store";
-import { Home, MessageCircle, MessageSquare, User } from "lucide-react";
+import { Home, MessageCircle, MessageSquare, User, HeartHandshake } from "lucide-react";
 import { motion } from "motion/react";
+import { getClientPrimaryTabs } from "../../clientNavigation";
 
 export function BottomNav() {
   const { currentTab, setTab, pushView } = useAppStore();
 
-  const userTabs = [
-    { id: "home", icon: Home, label: "首页" },
-    { id: "ai", icon: MessageCircle, label: "小鹿助手" },
-    { id: "messages", icon: MessageSquare, label: "消息" },
-    { id: "profile", icon: User, label: "我的" },
-  ] as const;
+  const icons = { home: Home, ai: MessageCircle, counselors: HeartHandshake, messages: MessageSquare, profile: User };
+  const userTabs = getClientPrimaryTabs().map((tab) => ({ ...tab, icon: icons[tab.id] }));
 
   return (
-    <nav className="w-full shrink-0 h-[80px] bg-[#FAF8F5] border-t border-[#ECE6DC] flex px-2 items-center justify-around z-30 pb-safe">
+    <nav className="w-full shrink-0 h-[80px] bg-[#FAF8F5] border-t border-[#ECE6DC] flex px-1 items-center justify-around z-30 pb-safe">
       {userTabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = currentTab === tab.id;
@@ -29,7 +26,7 @@ export function BottomNav() {
             }}
             className="flex flex-col items-center justify-center flex-1 min-w-0 py-2 group"
           >
-            <div className="relative flex items-center justify-center w-16 h-8 mb-1 transition-colors z-10">
+            <div className="relative flex items-center justify-center w-14 h-8 mb-1 transition-colors z-10">
               {isActive && (
                 <motion.div
                   layoutId="client-nav-indicator"

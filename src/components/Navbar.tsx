@@ -6,12 +6,14 @@ interface NavbarProps {
   consultant: ConsultantProfile;
   onToggleListening: () => void;
   onOpenLiveSession: () => void;
+  onOpenNotifications: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   consultant,
   onToggleListening,
   onOpenLiveSession,
+  onOpenNotifications,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#ECE6DC] px-4 py-3 transition-all">
@@ -65,6 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Notifications */}
           <div className="relative">
             <button
+              onClick={onOpenNotifications}
               className="w-9 h-9 flex items-center justify-center rounded-full text-[#49463D] hover:bg-[#E8E2D5] transition active:scale-95"
               title="消息通知"
             >
@@ -79,5 +82,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-
 
