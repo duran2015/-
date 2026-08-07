@@ -69,22 +69,31 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     }
   }, [viewMode, onSubPageChange]);
 
+  const isPendingStatus = (status: OrderStatus) => 
+    status === 'pending_confirm' || status === 'pending_reschedule_confirm' || status === 'pending_cancel_confirm';
+
   const statusTabs = [
     { key: 'all', label: '全部订单', count: orders.length },
-    { key: 'pending_confirm', label: '待确认接单', count: orders.filter((o) => o.status === 'pending_confirm').length },
+    { key: 'pending', label: '待处理', count: orders.filter((o) => isPendingStatus(o.status)).length },
     { key: 'scheduled', label: '待咨询', count: orders.filter((o) => o.status === 'scheduled').length },
     { key: 'completed', label: '已完成', count: orders.filter((o) => o.status === 'completed').length },
     { key: 'refunded', label: '退款/售后', count: orders.filter((o) => o.status === 'refunded').length },
   ];
 
   const filteredOrders = orders.filter((order) => {
-    return activeStatus === 'all' || order.status === activeStatus;
+    if (activeStatus === 'all') return true;
+    if (activeStatus === 'pending') return isPendingStatus(order.status);
+    return order.status === activeStatus;
   });
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case 'pending_confirm':
-        return <span className="bg-amber-100 text-amber-900 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-amber-300">待确认接单</span>;
+        return <span className="bg-amber-100 text-amber-900 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-amber-300">待接单</span>;
+      case 'pending_reschedule_confirm':
+        return <span className="bg-amber-100 text-amber-900 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-amber-300">待改期</span>;
+      case 'pending_cancel_confirm':
+        return <span className="bg-amber-100 text-amber-900 text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-amber-300">待取消</span>;
       case 'scheduled':
         return <span className="bg-[#EADDFF] text-[#21005D] text-[11px] px-2.5 py-0.5 rounded-full font-semibold border border-[#D0BCFF]">待咨询</span>;
       case 'in_progress':
@@ -225,7 +234,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
               className="bg-white rounded-[28px] p-5 shadow-sm hover:bg-[#FAF8F5] transition cursor-pointer group flex items-center gap-4 relative border border-transparent hover:border-[#E6E0D6]"
             >
               {/* Unread dot mock */}
-              {(order.status === 'pending_confirm' || order.status === 'scheduled') && (
+              {(isPendingStatus(order.status) || order.status === 'scheduled') && (
                 <div className="absolute top-4 left-3 w-3 h-3 bg-[#B3261E] rounded-full border-2 border-white z-10 shadow-xs" />
               )}
               

@@ -498,6 +498,40 @@ export const INITIAL_ORDERS: Order[] = [
     note: '已按平台规则友好办理改期退款，客户表示感谢。',
     hasSummary: false,
     createdAt: '2026-07-29 20:30'
+  },
+  {
+    id: 'ord_107',
+    orderNo: 'ORD20260806-01',
+    clientName: '郑青',
+    clientAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    serviceType: '50min_video',
+    serviceTypeName: '50分钟标准视频咨询',
+    bookingDate: '2026-08-07',
+    bookingTimeSlot: '10:00 - 10:50',
+    price: 500,
+    status: 'pending_reschedule_confirm',
+    preMoodScore: 5,
+    complaintTopic: '职场人际关系冲突',
+    note: '用户申请改期，原定今天下午。',
+    hasSummary: false,
+    createdAt: '2026-08-05 10:00'
+  },
+  {
+    id: 'ord_108',
+    orderNo: 'ORD20260806-02',
+    clientName: '周小杰',
+    clientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    serviceType: '15min_listening',
+    serviceTypeName: '15分钟急诊倾听体验',
+    bookingDate: '2026-08-08',
+    bookingTimeSlot: '20:00 - 20:15',
+    price: 39,
+    status: 'pending_cancel_confirm',
+    preMoodScore: 7,
+    complaintTopic: '情绪极度焦虑',
+    note: '用户申请规则外取消。',
+    hasSummary: false,
+    createdAt: '2026-08-05 15:30'
   }
 ];
 

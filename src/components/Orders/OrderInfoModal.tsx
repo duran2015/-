@@ -5,12 +5,17 @@ import { Order, OrderStatus } from '../../types';
 interface OrderInfoModalProps {
   order: Order;
   onClose: () => void;
+  onConfirmOrder?: (orderId: string) => void;
 }
 
 const getStatusBadge = (status: OrderStatus) => {
   switch (status) {
     case 'pending_confirm':
       return <span className="bg-amber-100 text-amber-900 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-300">待接单</span>;
+    case 'pending_reschedule_confirm':
+      return <span className="bg-amber-100 text-amber-900 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-300">待改期</span>;
+    case 'pending_cancel_confirm':
+      return <span className="bg-amber-100 text-amber-900 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-300">待取消</span>;
     case 'scheduled':
       return <span className="bg-[#EADDFF] text-[#21005D] text-xs px-2.5 py-1 rounded-full font-semibold border border-[#D0BCFF]">待咨询</span>;
     case 'completed':
@@ -20,7 +25,7 @@ const getStatusBadge = (status: OrderStatus) => {
   }
 };
 
-export const OrderInfoModal: React.FC<OrderInfoModalProps> = ({ order, onClose }) => {
+export const OrderInfoModal: React.FC<OrderInfoModalProps> = ({ order, onClose, onConfirmOrder }) => {
   return (
     <div className="fixed inset-0 z-50 bg-[#FAF8F5] overflow-y-auto animate-in fade-in duration-200">
       {/* Top Navigation */}
@@ -39,7 +44,7 @@ export const OrderInfoModal: React.FC<OrderInfoModalProps> = ({ order, onClose }
         </div>
       </div>
 
-      <div className="p-4 max-w-lg mx-auto space-y-4 pb-safe">
+      <div className="p-4 max-w-lg mx-auto space-y-4 pb-28">
         {/* Status Card */}
         <div className="bg-white rounded-[20px] p-5 shadow-sm border border-[#ECE6DC]">
           <div className="flex justify-between items-center mb-4">
@@ -114,6 +119,35 @@ export const OrderInfoModal: React.FC<OrderInfoModalProps> = ({ order, onClose }
           </div>
         </div>
       </div>
+
+      {/* Fixed Bottom Action Bar */}
+      {(order.status === 'pending_confirm' || order.status === 'pending_reschedule_confirm' || order.status === 'pending_cancel_confirm') && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#ECE6DC] p-4 pb-safe z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+          <div className="max-w-lg mx-auto flex gap-3">
+            <button 
+              onClick={() => alert('已拒绝')}
+              className="flex-1 py-3.5 rounded-full bg-[#FAF8F5] border border-[#ECE6DC] text-[#49463D] text-[15px] font-bold hover:bg-[#E8E2D5] transition active:scale-95"
+            >
+              拒绝
+            </button>
+            <button 
+              onClick={() => {
+                if (order.status === 'pending_confirm' && onConfirmOrder) {
+                  onConfirmOrder(order.id);
+                  onClose();
+                } else {
+                  alert('已接受');
+                  onClose();
+                }
+              }}
+              className="flex-1 py-3.5 rounded-full bg-[#6750A4] text-white text-[15px] font-bold hover:bg-[#594294] transition shadow-md active:scale-95"
+            >
+              {order.status === 'pending_confirm' ? '确认接单' : 
+               order.status === 'pending_cancel_confirm' ? '同意取消' : '同意修改'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

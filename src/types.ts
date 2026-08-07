@@ -1,5 +1,7 @@
 export type OrderStatus = 
-  | 'pending_confirm' // 待确认
+  | 'pending_confirm' // 待确认 (待接单)
+  | 'pending_reschedule_confirm' // 待确认改期
+  | 'pending_cancel_confirm' // 待确认取消
   | 'scheduled'       // 待咨询
   | 'in_progress'     // 服务中
   | 'completed'       // 已完成
@@ -242,6 +244,8 @@ export type SessionSettlementStatus = "not_applicable" | "blocked_by_summary" | 
 export type WorkflowTaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 export type WorkflowTaskType =
   | "confirm_booking"
+  | "handle_reschedule"
+  | "handle_cancel_request"
   | "complete_intake"
   | "review_intake"
   | "enter_session"

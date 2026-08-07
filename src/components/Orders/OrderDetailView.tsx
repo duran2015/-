@@ -24,7 +24,7 @@ interface OrderDetailViewProps {
     id: string;
     type: TimelineItemType;
     sopType?: 'confirm_order' | 'intake_form' | 'enter_room' | 'write_summary';
-    cardType?: 'reschedule' | 'scale_assignment' | 'new_booking';
+    cardType?: 'reschedule' | 'scale_assignment' | 'new_booking' | 'cancel_request';
     cardState?: 'pending' | 'resolved' | 'rejected';
     cardData?: any;
     content?: string | React.ReactNode;
@@ -116,7 +116,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
         timestamp: addTime(40)
       });
 
-      if (order.status === 'scheduled') {
+      if (order.status === 'pending_reschedule_confirm' || order.status === 'pending_cancel_confirm' || order.status === 'scheduled') {
         // Therapist sends a scale (Resolved)
         newItems.push({
           id: 'card_1',
@@ -127,15 +127,29 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
           timestamp: addTime(50)
         });
 
-        // Client requests a reschedule (Pending)
-        newItems.push({
-          id: 'card_2',
-          type: 'interactive_card_client',
-          cardType: 'reschedule',
-          cardState: 'pending',
-          cardData: { newTime: '明天下午 14:00 - 14:50', reason: '临时有个紧急会议，实在抱歉老师。' },
-          timestamp: addTime(80)
-        });
+        if (order.status === 'pending_reschedule_confirm') {
+          newItems.push({
+            id: 'card_2',
+            type: 'interactive_card_client',
+            cardType: 'reschedule',
+            cardState: 'pending',
+            cardData: { newTime: '明天下午 14:00 - 14:50', reason: '临时有个紧急会议，实在抱歉老师。' },
+            timestamp: addTime(80)
+          });
+          return newItems;
+        }
+
+        if (order.status === 'pending_cancel_confirm') {
+          newItems.push({
+            id: 'card_3',
+            type: 'interactive_card_client',
+            cardType: 'cancel_request',
+            cardState: 'pending',
+            cardData: { reason: '在约定规则范围外申请取消，暂时不涉及退款操作。' },
+            timestamp: addTime(80)
+          });
+          return newItems;
+        }
 
         newItems.push({
           id: 'evt_3',
@@ -441,18 +455,27 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                       <div className="w-6 h-6 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
                         {item.cardType === 'new_booking' ? (
                           <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
+                        ) : item.cardType === 'cancel_request' ? (
+                          <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
                         ) : (
                           <Calendar className="w-3.5 h-3.5 text-amber-600" />
                         )}
                       </div>
                       {item.cardType === 'reschedule' ? '申请修改预约时间' : 
-                       item.cardType === 'new_booking' ? '发起了一条服务预约' : '发来一条互动请求'}
+                       item.cardType === 'new_booking' ? '发起了一条服务预约' :
+                       item.cardType === 'cancel_request' ? '申请取消预约' : '发来一条互动请求'}
                     </h4>
                     
                     {item.cardData && item.cardType === 'reschedule' && (
                       <div className="bg-[#FAF8F5] p-3 rounded-[12px] text-xs text-[#49463D] mb-4 space-y-1.5 border border-[#ECE6DC]/50">
                         <p><span className="font-medium text-[#7A756C]">期望时间：</span>{item.cardData.newTime}</p>
                         <p><span className="font-medium text-[#7A756C]">修改原因：</span>{item.cardData.reason}</p>
+                      </div>
+                    )}
+
+                    {item.cardData && item.cardType === 'cancel_request' && (
+                      <div className="bg-[#FAF8F5] p-3 rounded-[12px] text-xs text-[#49463D] mb-4 space-y-1.5 border border-[#ECE6DC]/50">
+                        <p><span className="font-medium text-[#7A756C]">取消原因：</span>{item.cardData.reason}</p>
                       </div>
                     )}
 
@@ -465,20 +488,31 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
                     {item.cardState === 'pending' ? (
                       <div className="flex gap-2">
-                        <button className="flex-1 py-2 rounded-[12px] bg-[#FAF8F5] border border-[#ECE6DC] text-[#49463D] text-xs font-bold hover:bg-[#E8E2D5] transition active:scale-95">
+                        <button 
+                          onClick={() => alert('已拒绝该请求')}
+                          className="flex-1 py-2 rounded-[12px] bg-[#FAF8F5] border border-[#ECE6DC] text-[#49463D] text-xs font-bold hover:bg-[#E8E2D5] transition active:scale-95"
+                        >
                           拒绝
                         </button>
                         <button 
-                          onClick={() => item.cardType === 'new_booking' && onConfirmOrder(order.id)}
+                          onClick={() => {
+                            if (item.cardType === 'new_booking') {
+                              onConfirmOrder(order.id);
+                            } else {
+                              alert('已接受请求');
+                            }
+                          }}
                           className="flex-1 py-2 rounded-[12px] bg-[#6750A4] text-white text-xs font-bold hover:bg-[#594294] transition shadow-xs active:scale-95"
                         >
-                          {item.cardType === 'new_booking' ? '确认接单' : '同意修改'}
+                          {item.cardType === 'new_booking' ? '接单' : 
+                           item.cardType === 'cancel_request' ? '接受' : '接受'}
                         </button>
                       </div>
                     ) : item.cardState === 'resolved' ? (
                       <div className="text-center py-2 bg-emerald-50 rounded-[12px] text-emerald-700 text-xs font-bold flex items-center justify-center gap-1.5 border border-emerald-100">
                         <CheckCircle2 className="w-4 h-4" />
-                        {item.cardType === 'new_booking' ? '已确认接单' : '已同意修改'}
+                        {item.cardType === 'new_booking' ? '已接单' : 
+                         item.cardType === 'cancel_request' ? '已接受取消' : '已接受修改'}
                       </div>
                     ) : (
                       <div className="text-center py-2 bg-stone-100 rounded-[12px] text-stone-500 text-xs font-bold">

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { TabNavigation, MainTabType } from './components/TabNavigation';
 import { NextSessionCard } from './components/Workbench/NextSessionCard';
-import { TodaySchedule } from './components/Workbench/TodaySchedule';
 import { WorkbenchTasks } from './components/Workbench/WorkbenchTasks';
 import { ScheduleTab } from './components/Schedule/ScheduleTab';
 import { OrdersTab } from './components/Orders/OrdersTab';
@@ -99,7 +98,7 @@ export default function App() {
 
   // Helper counts
   const pendingSummaryCount = displayedOrders.filter((o) => o.status === 'completed' && !o.hasSummary).length;
-  const pendingOrderCount = displayedOrders.filter((o) => o.status === 'pending_confirm').length;
+  const pendingOrderCount = displayedOrders.filter((o) => o.status === 'pending_confirm' || o.status === 'pending_reschedule_confirm' || o.status === 'pending_cancel_confirm').length;
 
   // Next upcoming session
   const nextScheduledOrder = displayedOrders.find((o) => o.status === 'scheduled');
@@ -262,9 +261,6 @@ export default function App() {
                 onProcessOrder={handleProcessOrder}
               />
 
-              {/* Income Trend Chart */}
-              {!isMockEmpty && <TodaySchedule />}
-
               {/* Quick Actions */}
               <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
@@ -380,7 +376,6 @@ export default function App() {
           />
         )}
 
-        {/* Income View Overlay (Inside max-w-md relative container) */}
         {showIncomeView && (
           <IncomeView
             consultant={displayedConsultant}
@@ -432,7 +427,8 @@ export default function App() {
       {showOrderInfo && (
         <OrderInfoModal 
           order={showOrderInfo} 
-          onClose={() => setShowOrderInfo(null)} 
+          onClose={() => setShowOrderInfo(null)}
+          onConfirmOrder={handleConfirmOrder}
         />
       )}
 
