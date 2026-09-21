@@ -1,0 +1,18 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e143]:
+    - generic [ref=f2e144]:
+      - button "返回上一页" [ref=f2e145] [cursor=pointer]
+      - generic [ref=f2e148]:
+        - heading "标记已发布" [active] [level=2] [ref=f2e434]
+        - generic [ref=f2e150]: 安排发布节奏，是否采纳与执行由你决定。
+    - status [ref=f2e403]: 所选任务已迁移到独立任务，原记录保留，不重复计数。
+    - paragraph [ref=f2e151]: 演示场景：已过期计划。不会改动“我的安排”。
+    - generic [ref=f2e435]:
+      - heading "职场压力与边界：一份沟通准备清单" [level=3] [ref=f2e436]
+      - paragraph [ref=f2e437]: 请在实际发布后标记。这里只记录你的确认，不会代你发布，也不会自动核验外部平台。
+      - generic [ref=f2e438]:
+        - text: 已发布内容链接（可选）
+        - textbox "已发布内容链接（可选）" [ref=f2e439]:
+          - /placeholder: https://
+      - button "确认已发布" [ref=f2e440] [cursor=pointer]
+      - button "取消" [ref=f2e441] [cursor=pointer]

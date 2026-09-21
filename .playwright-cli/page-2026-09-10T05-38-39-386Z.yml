@@ -1,0 +1,49 @@
+- generic [ref=f1e3]:
+  - generic [ref=f1e4]:
+    - 'button "Dev: 切换为新用户" [ref=f1e5]'
+    - button "重置入驻" [ref=f1e6]
+  - generic [ref=f1e7]:
+    - main [ref=f1e8]:
+      - generic [ref=f1e9]:
+        - generic [ref=f1e10]:
+          - button "返回上一页" [ref=f1e11] [cursor=pointer]
+          - generic [ref=f1e14]:
+            - heading "发布计划" [level=2] [ref=f1e15]
+            - generic [ref=f1e16]: 安排发布节奏，是否采纳与执行由你决定。
+        - generic [ref=f1e17]:
+          - button "生成计划" [ref=f1e18] [cursor=pointer]
+          - button "手动添加" [ref=f1e22] [cursor=pointer]
+        - navigation "计划分类" [ref=f1e24]:
+          - button "当前安排" [pressed] [ref=f1e25] [cursor=pointer]
+          - button "待采纳建议" [ref=f1e26] [cursor=pointer]
+          - button "历史计划" [ref=f1e27] [cursor=pointer]
+        - generic [ref=f1e28]:
+          - heading "还没有当前发布安排" [level=3] [ref=f1e31]
+          - paragraph [ref=f1e32]: 可以生成一份建议后再决定，也可以直接添加一项任务。
+        - group [ref=f1e33]:
+          - generic "原型演示 · 切换状态" [active] [ref=f1e34] [cursor=pointer]
+          - generic [ref=f1e71]:
+            - text: 演示场景
+            - combobox "演示场景" [ref=f1e72]:
+              - option "我的安排" [selected]
+              - option "全新咨询师"
+              - option "待采纳建议"
+              - option "当前有效计划"
+              - option "尚未开始"
+              - option "已过期计划"
+              - option "已过期建议"
+              - option "全部完成"
+              - option "仅手动任务"
+          - paragraph [ref=f1e73]: 每个场景独立保存在本机；重置只影响当前演示。数据日期以重置当天为基准。
+        - paragraph [ref=f1e35]: 当前为本机交互原型，未连接跨设备同步及自动发布。
+    - navigation [ref=f1e36]:
+      - generic [ref=f1e37]:
+        - button "1 工作台" [ref=f1e38]:
+          - generic [ref=f1e39]: "1"
+          - generic [ref=f1e46]: 工作台
+        - button "3 预约" [ref=f1e47]:
+          - generic [ref=f1e48]: "3"
+          - generic [ref=f1e52]: 预约
+        - button "消息" [ref=f1e53]
+        - button "增长" [ref=f1e58]
+        - button "我的" [ref=f1e64]

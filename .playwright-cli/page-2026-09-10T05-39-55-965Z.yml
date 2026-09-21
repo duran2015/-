@@ -1,0 +1,78 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e6]:
+    - generic [ref=f2e7]:
+      - button "返回上一页" [ref=f2e8] [cursor=pointer]
+      - generic [ref=f2e11]:
+        - heading "生成发布计划" [active] [level=2] [ref=f2e88]
+        - generic [ref=f2e13]: 安排发布节奏，是否采纳与执行由你决定。
+    - status [ref=f2e58]: 任务已添加。
+    - paragraph [ref=f2e36]: 演示场景：全新咨询师。不会改动“我的安排”。
+    - generic [ref=f2e89]:
+      - paragraph [ref=f2e90]: 按你的选择生成可调整的安排，不覆盖已有计划。当前为规则生成示例，尚未接入 AI 服务。
+      - group [ref=f2e91]:
+        - generic [ref=f2e92]:
+          - generic [ref=f2e93]:
+            - text: 开始日期
+            - textbox "开始日期" [ref=f2e94]: 2026-09-10
+          - generic [ref=f2e95]:
+            - text: 结束日期
+            - textbox "结束日期" [ref=f2e96]: 2026-09-16
+        - button "使用未来7天" [ref=f2e97] [cursor=pointer]
+        - generic [ref=f2e98]:
+          - text: 关注主题
+          - textbox "关注主题" [ref=f2e99]: 职场焦虑与倦怠
+        - generic [ref=f2e100]: 可参考你的擅长方向：职场焦虑与倦怠、亲密关系与沟通、情绪过载与自我关怀、高敏感人群适应、个人成长与自我认同
+        - group "发布渠道（多选）" [ref=f2e101]:
+          - generic [ref=f2e103]:
+            - generic [ref=f2e104] [cursor=pointer]:
+              - checkbox "小红书" [checked] [ref=f2e105]
+              - text: 小红书
+            - generic [ref=f2e106] [cursor=pointer]:
+              - checkbox "公众号" [ref=f2e107]
+              - text: 公众号
+            - generic [ref=f2e108] [cursor=pointer]:
+              - checkbox "朋友圈" [ref=f2e109]
+              - text: 朋友圈
+            - generic [ref=f2e110] [cursor=pointer]:
+              - checkbox "视频号" [ref=f2e111]
+              - text: 视频号
+        - group "内容形式（多选）" [ref=f2e112]:
+          - generic [ref=f2e114]:
+            - generic [ref=f2e115] [cursor=pointer]:
+              - checkbox "图文" [checked] [ref=f2e116]
+              - text: 图文
+            - generic [ref=f2e117] [cursor=pointer]:
+              - checkbox "文章" [ref=f2e118]
+              - text: 文章
+            - generic [ref=f2e119] [cursor=pointer]:
+              - checkbox "短视频" [ref=f2e120]
+              - text: 短视频
+        - generic [ref=f2e121]:
+          - text: 本周期内容数量
+          - spinbutton "本周期内容数量" [ref=f2e122]: "3"
+        - group "偏好的发布日（可选）" [ref=f2e123]:
+          - generic [ref=f2e125]:
+            - generic [ref=f2e126] [cursor=pointer]:
+              - checkbox "周日" [ref=f2e127]
+              - text: 周日
+            - generic [ref=f2e128] [cursor=pointer]:
+              - checkbox "周一" [ref=f2e129]
+              - text: 周一
+            - generic [ref=f2e130] [cursor=pointer]:
+              - checkbox "周二" [ref=f2e131]
+              - text: 周二
+            - generic [ref=f2e132] [cursor=pointer]:
+              - checkbox "周三" [ref=f2e133]
+              - text: 周三
+            - generic [ref=f2e134] [cursor=pointer]:
+              - checkbox "周四" [ref=f2e135]
+              - text: 周四
+            - generic [ref=f2e136] [cursor=pointer]:
+              - checkbox "周五" [ref=f2e137]
+              - text: 周五
+            - generic [ref=f2e138] [cursor=pointer]:
+              - checkbox "周六" [ref=f2e139]
+              - text: 周六
+          - generic [ref=f2e140]: 不选则在周期内均匀安排；同一天可能有多项内容。
+      - button "生成建议，先看一看" [ref=f2e141] [cursor=pointer]
+      - button "取消" [ref=f2e142] [cursor=pointer]

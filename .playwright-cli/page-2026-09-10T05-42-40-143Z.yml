@@ -1,0 +1,41 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e143]:
+    - generic [ref=f2e144]:
+      - button "返回上一页" [ref=f2e145] [cursor=pointer]
+      - generic [ref=f2e148]:
+        - heading "发布计划" [active] [level=2] [ref=f2e442]
+        - generic [ref=f2e150]: 安排发布节奏，是否采纳与执行由你决定。
+    - status [ref=f2e403]: 任务已更新。
+    - paragraph [ref=f2e151]: 演示场景：已过期计划。不会改动“我的安排”。
+    - generic [ref=f2e443]:
+      - button "生成计划" [ref=f2e444] [cursor=pointer]
+      - button "手动添加" [ref=f2e448] [cursor=pointer]
+    - navigation "计划分类" [ref=f2e450]:
+      - button "当前安排" [pressed] [ref=f2e451] [cursor=pointer]
+      - button "待采纳建议" [ref=f2e452] [cursor=pointer]
+      - button "历史计划" [ref=f2e453] [cursor=pointer]
+    - generic [ref=f2e454]:
+      - heading "独立任务" [level=3] [ref=f2e455]
+      - paragraph [ref=f2e456]: 不依赖周期计划，按自己的日期安排。
+      - article [ref=f2e457]:
+        - generic [ref=f2e458]:
+          - generic [ref=f2e459]:
+            - generic [ref=f2e460]: 2026-09-10 · 小红书 · 图文
+            - heading "职场压力与边界：一份沟通准备清单" [level=3] [ref=f2e461]
+          - generic [ref=f2e462]: 已发布
+        - paragraph [ref=f2e463]: 依据你选择的「职场压力与边界」、4项内容及发布日偏好安排。
+        - generic [ref=f2e464]: 从历史计划迁入 · 现为独立任务
+        - generic [ref=f2e465]: 由咨询师标记已发布，未验证外部平台结果。
+        - button "纠正完成状态" [ref=f2e467] [cursor=pointer]
+    - group [ref=f2e468]:
+      - generic "原型演示 · 切换状态" [ref=f2e469] [cursor=pointer]
+      - option "我的安排"
+      - option "全新咨询师"
+      - option "待采纳建议"
+      - option "当前有效计划"
+      - option "尚未开始"
+      - option "已过期计划" [selected]
+      - option "已过期建议"
+      - option "全部完成"
+      - option "仅手动任务"
+    - paragraph [ref=f2e470]: 当前为本机交互原型，未连接跨设备同步及自动发布。

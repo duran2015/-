@@ -1,0 +1,75 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e143]:
+    - generic [ref=f2e144]:
+      - button "返回上一页" [ref=f2e145] [cursor=pointer]
+      - generic [ref=f2e148]:
+        - heading "发布计划" [active] [level=2] [ref=f2e272]
+        - generic [ref=f2e150]: 安排发布节奏，是否采纳与执行由你决定。
+    - status [ref=f2e237]: 已采纳所选项目；未选项目不创建任务，原有安排保持不变。
+    - paragraph [ref=f2e151]: 演示场景：全新咨询师。不会改动“我的安排”。
+    - generic [ref=f2e273]:
+      - button "生成计划" [ref=f2e274] [cursor=pointer]
+      - button "手动添加" [ref=f2e278] [cursor=pointer]
+    - navigation "计划分类" [ref=f2e280]:
+      - button "当前安排" [pressed] [ref=f2e281] [cursor=pointer]
+      - button "待采纳建议" [ref=f2e282] [cursor=pointer]
+      - button "历史计划" [ref=f2e283] [cursor=pointer]
+    - generic [ref=f2e284]:
+      - generic [ref=f2e285]:
+        - generic [ref=f2e286]:
+          - heading "晋升沟通" [level=3] [ref=f2e287]
+          - generic [ref=f2e288]: 2026-09-10 — 2026-09-16
+          - generic [ref=f2e289]: 已完成 0/2 项 · 已取消及已迁移不计入
+        - generic [ref=f2e290]: 进行中
+      - generic [ref=f2e291]:
+        - article [ref=f2e292]:
+          - generic [ref=f2e293]:
+            - generic [ref=f2e294]:
+              - generic [ref=f2e295]: 2026-09-10 · 小红书 · 图文
+              - heading "晋升沟通：一个常见困扰与自我观察问题" [level=3] [ref=f2e296]
+            - generic [ref=f2e297]: 待完成
+          - paragraph [ref=f2e298]: 依据你选择的「晋升沟通」、3项内容及发布日偏好安排。
+          - generic [ref=f2e299]:
+            - button "编辑 / 改期" [ref=f2e300] [cursor=pointer]
+            - button "标记已发布" [ref=f2e301] [cursor=pointer]
+            - button "去创作" [ref=f2e302] [cursor=pointer]
+            - button "取消任务" [ref=f2e303] [cursor=pointer]
+        - article [ref=f2e304]:
+          - generic [ref=f2e305]:
+            - generic [ref=f2e306]:
+              - generic [ref=f2e307]: 2026-09-14 · 小红书 · 图文
+              - heading "晋升沟通：一份沟通准备清单" [level=3] [ref=f2e308]
+            - generic [ref=f2e309]: 待完成
+          - paragraph [ref=f2e310]: 依据你选择的「晋升沟通」、3项内容及发布日偏好安排。
+          - generic [ref=f2e311]:
+            - button "编辑 / 改期" [ref=f2e312] [cursor=pointer]
+            - button "标记已发布" [ref=f2e313] [cursor=pointer]
+            - button "去创作" [ref=f2e314] [cursor=pointer]
+            - button "取消任务" [ref=f2e315] [cursor=pointer]
+    - generic [ref=f2e316]:
+      - heading "独立任务" [level=3] [ref=f2e317]
+      - paragraph [ref=f2e318]: 不依赖周期计划，按自己的日期安排。
+      - article [ref=f2e319]:
+        - generic [ref=f2e320]:
+          - generic [ref=f2e321]:
+            - generic [ref=f2e322]: 2026-09-10 · 暂未确定 · 暂未确定
+            - heading "本周沟通清单（交互测试）" [level=3] [ref=f2e323]
+          - generic [ref=f2e324]: 待完成
+        - generic [ref=f2e325]:
+          - button "编辑 / 改期" [ref=f2e326] [cursor=pointer]
+          - button "标记已发布" [ref=f2e327] [cursor=pointer]
+          - button "去创作" [ref=f2e328] [cursor=pointer]
+          - button "取消任务" [ref=f2e329] [cursor=pointer]
+          - button "删除" [ref=f2e330] [cursor=pointer]
+    - group [ref=f2e331]:
+      - generic "原型演示 · 切换状态" [ref=f2e332] [cursor=pointer]
+      - option "我的安排"
+      - option "全新咨询师" [selected]
+      - option "待采纳建议"
+      - option "当前有效计划"
+      - option "尚未开始"
+      - option "已过期计划"
+      - option "已过期建议"
+      - option "全部完成"
+      - option "仅手动任务"
+    - paragraph [ref=f2e333]: 当前为本机交互原型，未连接跨设备同步及自动发布。

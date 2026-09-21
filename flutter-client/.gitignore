@@ -62,3 +62,4 @@ packages/nertc_core/
 *.bak.spm
 # Gradle 构建缓存（平台插件构建产物，勿提交）
 **/.gradle/
+.vercel

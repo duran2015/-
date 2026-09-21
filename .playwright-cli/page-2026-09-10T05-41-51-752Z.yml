@@ -1,0 +1,88 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e143]:
+    - generic [ref=f2e144]:
+      - button "返回上一页" [ref=f2e145] [cursor=pointer]
+      - generic [ref=f2e148]:
+        - heading "发布计划" [level=2] [ref=f2e272]
+        - generic [ref=f2e150]: 安排发布节奏，是否采纳与执行由你决定。
+    - paragraph [ref=f2e151]: 演示场景：已过期计划。不会改动“我的安排”。
+    - generic [ref=f2e273]:
+      - button "生成计划" [ref=f2e274] [cursor=pointer]
+      - button "手动添加" [ref=f2e278] [cursor=pointer]
+    - navigation "计划分类" [ref=f2e280]:
+      - button "当前安排" [ref=f2e281] [cursor=pointer]
+      - button "待采纳建议" [ref=f2e282] [cursor=pointer]
+      - button "历史计划" [pressed] [ref=f2e283] [cursor=pointer]
+    - generic [ref=f2e338]:
+      - generic [ref=f2e339]:
+        - generic [ref=f2e340]:
+          - heading "职场压力与边界" [level=3] [ref=f2e341]
+          - generic [ref=f2e342]: 2026-09-01 — 2026-09-07
+          - generic [ref=f2e343]: 已完成 2/4 项 · 已取消及已迁移不计入
+        - generic [ref=f2e344]: 已结束
+      - generic [ref=f2e345]:
+        - article [ref=f2e346]:
+          - generic [ref=f2e347]:
+            - generic [ref=f2e348]:
+              - generic [ref=f2e349]: 2026-09-01 · 小红书 · 图文
+              - heading "职场压力与边界：一个常见困扰与自我观察问题" [level=3] [ref=f2e350]
+            - generic [ref=f2e351]: 已发布
+          - paragraph [ref=f2e352]: 依据你选择的「职场压力与边界」、4项内容及发布日偏好安排。
+          - generic [ref=f2e353]: 由咨询师标记已发布，未验证外部平台结果。
+          - button "纠正完成状态" [ref=f2e355] [cursor=pointer]
+        - article [ref=f2e356]:
+          - generic [ref=f2e357]:
+            - generic [ref=f2e358]:
+              - generic [ref=f2e359]: 2026-09-03 · 公众号 · 文章
+              - heading "职场压力与边界：可以尝试的日常练习" [level=3] [ref=f2e360]
+            - generic [ref=f2e361]: 已发布
+          - paragraph [ref=f2e362]: 依据你选择的「职场压力与边界」、4项内容及发布日偏好安排。
+          - generic [ref=f2e363]: 由咨询师标记已发布，未验证外部平台结果。
+          - button "纠正完成状态" [ref=f2e365] [cursor=pointer]
+        - article [ref=f2e366]:
+          - generic [ref=f2e367]:
+            - generic [ref=f2e368]:
+              - generic [ref=f2e369]: 2026-09-05 · 小红书 · 图文
+              - heading "职场压力与边界：一份沟通准备清单" [level=3] [ref=f2e370]
+            - generic [ref=f2e371]: 待完成
+          - paragraph [ref=f2e372]: 原定日期已过，可以改期，也可以暂不处理。
+          - paragraph [ref=f2e373]: 依据你选择的「职场压力与边界」、4项内容及发布日偏好安排。
+          - generic [ref=f2e374]:
+            - generic [ref=f2e375] [cursor=pointer]:
+              - checkbox "选择此任务" [ref=f2e376]
+              - text: 选择此任务
+            - button "取消任务" [ref=f2e377] [cursor=pointer]
+        - article [ref=f2e378]:
+          - generic [ref=f2e379]:
+            - generic [ref=f2e380]:
+              - generic [ref=f2e381]: 2026-09-07 · 公众号 · 文章
+              - heading "职场压力与边界：常见误解与支持边界" [level=3] [ref=f2e382]
+            - generic [ref=f2e383]: 待完成
+          - paragraph [ref=f2e384]: 原定日期已过，可以改期，也可以暂不处理。
+          - paragraph [ref=f2e385]: 依据你选择的「职场压力与边界」、4项内容及发布日偏好安排。
+          - generic [ref=f2e386]:
+            - generic [ref=f2e387] [cursor=pointer]:
+              - checkbox "选择此任务" [ref=f2e388]
+              - text: 选择此任务
+            - button "取消任务" [ref=f2e389] [cursor=pointer]
+      - generic [ref=f2e390]:
+        - button "迁移所选任务" [disabled] [ref=f2e391]
+        - button "取消所选" [disabled] [ref=f2e392]
+        - button "暂不处理" [ref=f2e393] [cursor=pointer]
+    - group [ref=f2e331]:
+      - generic "原型演示 · 切换状态" [active] [ref=f2e332] [cursor=pointer]
+      - generic [ref=f2e334]:
+        - text: 演示场景
+        - combobox "演示场景" [ref=f2e335]:
+          - option "我的安排"
+          - option "全新咨询师"
+          - option "待采纳建议"
+          - option "当前有效计划"
+          - option "尚未开始"
+          - option "已过期计划" [selected]
+          - option "已过期建议"
+          - option "全部完成"
+          - option "仅手动任务"
+      - paragraph [ref=f2e336]: 每个场景独立保存在本机；重置只影响当前演示。数据日期以重置当天为基准。
+      - button "重置当前演示" [ref=f2e337] [cursor=pointer]
+    - paragraph [ref=f2e333]: 当前为本机交互原型，未连接跨设备同步及自动发布。

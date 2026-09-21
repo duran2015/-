@@ -1,0 +1,44 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e6]:
+    - generic [ref=f2e7]:
+      - button "返回上一页" [ref=f2e8] [cursor=pointer]
+      - generic [ref=f2e11]:
+        - heading "编辑发布任务" [active] [level=2] [ref=f2e38]
+        - generic [ref=f2e13]: 安排发布节奏，是否采纳与执行由你决定。
+    - paragraph [ref=f2e36]: 演示场景：全新咨询师。不会改动“我的安排”。
+    - generic [ref=f2e39]:
+      - generic [ref=f2e40]:
+        - generic [ref=f2e41]:
+          - text: 任务标题
+          - textbox "任务标题" [ref=f2e42]
+        - generic [ref=f2e43]:
+          - text: 计划日期
+          - textbox "计划日期" [ref=f2e44]: 2026-09-10
+        - generic [ref=f2e45]:
+          - text: 发布渠道
+          - combobox "发布渠道" [ref=f2e46]:
+            - option "暂未确定" [selected]
+            - option "小红书"
+            - option "公众号"
+            - option "朋友圈"
+            - option "视频号"
+        - generic [ref=f2e47]:
+          - text: 内容形式
+          - combobox "内容形式" [ref=f2e48]:
+            - option "暂未确定" [selected]
+            - option "图文"
+            - option "文章"
+            - option "短视频"
+        - generic [ref=f2e49]:
+          - text: 所属计划
+          - combobox "所属计划" [ref=f2e50]:
+            - option "独立任务" [selected]
+        - generic [ref=f2e51]:
+          - text: 关联内容链接（可选）
+          - textbox "关联内容链接（可选）" [ref=f2e52]:
+            - /placeholder: https://
+        - generic [ref=f2e53]:
+          - text: 备注（可选）
+          - textbox "备注（可选）" [ref=f2e54]
+      - button "保存任务" [ref=f2e55] [cursor=pointer]
+      - button "取消" [ref=f2e56] [cursor=pointer]

@@ -1,0 +1,16 @@
+- main [ref=f2e5]:
+  - generic [ref=f2e143]:
+    - generic [ref=f2e144]:
+      - button "返回上一页" [ref=f2e145] [cursor=pointer]
+      - generic [ref=f2e148]:
+        - heading "重新安排任务" [active] [level=2] [ref=f2e394]
+        - generic [ref=f2e150]: 安排发布节奏，是否采纳与执行由你决定。
+    - paragraph [ref=f2e151]: 演示场景：已过期计划。不会改动“我的安排”。
+    - generic [ref=f2e395]:
+      - heading "迁移 1 项任务" [level=3] [ref=f2e396]
+      - paragraph [ref=f2e397]: 所选任务统一安排到新日期，作为独立任务；之后可逐项调整。
+      - generic [ref=f2e398]:
+        - text: 新的计划日期
+        - textbox "新的计划日期" [ref=f2e399]: 2026-09-10
+      - button "确认迁移" [ref=f2e400] [cursor=pointer]
+      - button "暂不处理" [ref=f2e401] [cursor=pointer]
