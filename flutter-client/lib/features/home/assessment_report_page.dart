@@ -135,6 +135,14 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
     );
   }
 
+  void _openAiInterpretation() {
+    context.push(RoutePaths.ai);
+  }
+
+  void _openProfessionalInterpretation() {
+    context.push('${RoutePaths.supportConsultants}?offer=interpretation');
+  }
+
   /// 返回上一页。
   ///
   /// - 从「量表测试记录 / 全部测评」进入：正常 pop 回列表；
@@ -257,8 +265,7 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                                         style: AppTextStyles.titleSmall,
                                       ),
                                       const SizedBox(height: AppDimens.gap10),
-                                      _buildBox(
-                                          child: _buildSuggestionRows()),
+                                      _buildBox(child: _buildSuggestionRows()),
                                     ],
                                   ),
                                 ),
@@ -458,8 +465,7 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
     );
   }
 
-  /// 底部重新测操作栏（iOS setupBottomBar：白底 + #EAEAEA@40% 上阴影，
-  /// 渐变「重新测」按钮 46 高圆角 22.5 + 11 #666 复测提示）。
+  /// 测评完成后的支持入口：AI 解读与付费专业解读；重新测降为次级操作。
   Widget _buildBottomBar() {
     return Container(
       decoration: BoxDecoration(
@@ -484,36 +490,43 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _onRetestTapped,
-                child: Container(
-                  height: _retestHeight,
-                  decoration: BoxDecoration(
-                    // iOS applyBrandGradient：start 色在右
-                    gradient: const LinearGradient(
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                      colors: [
-                        AppColors.brandGradientStart,
-                        AppColors.brandGradientEnd,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(_retestCorner),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '重新测',
-                    style: AppTextStyles.title.copyWith(color: Colors.white),
-                  ),
-                ),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('想进一步理解结果？',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
               ),
               const SizedBox(height: AppDimens.gap8),
-              Text(
-                _report.retestHint,
-                style: AppTextStyles.label
-                    .copyWith(color: AppColors.textSecondary),
-                textAlign: TextAlign.center,
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, _retestHeight),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_retestCorner),
+                      ),
+                    ),
+                    onPressed: _openAiInterpretation,
+                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                    label: const Text('AI 解读'),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.gap8),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, _retestHeight),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_retestCorner),
+                      ),
+                    ),
+                    onPressed: _openProfessionalInterpretation,
+                    child: const Text('专业解读 · ¥9.9'),
+                  ),
+                ),
+              ]),
+              TextButton(
+                onPressed: _onRetestTapped,
+                child: Text('重新测 · ${_report.retestHint}'),
               ),
             ],
           ),

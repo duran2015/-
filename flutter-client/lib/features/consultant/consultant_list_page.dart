@@ -14,7 +14,12 @@ import 'consultant_models.dart';
 
 /// 底部导航中的真人咨询独立页。
 class ConsultantTabPage extends StatelessWidget {
-  const ConsultantTabPage({super.key});
+  const ConsultantTabPage({
+    super.key,
+    this.newcomerInterpretation = false,
+  });
+
+  final bool newcomerInterpretation;
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +36,12 @@ class ConsultantTabPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '真人倾听师',
+                      '真人支持',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '先看擅长与可约时间，再选择适合你的咨询师',
+                      '查看擅长方向与可约时间，选择咨询或倾听服务',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -45,11 +50,21 @@ class ConsultantTabPage extends StatelessWidget {
                   ],
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: SupportProfilePrompt(compact: true),
+              if (newcomerInterpretation)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  child: _InterpretationCouponNotice(),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: SupportProfilePrompt(compact: true),
+                ),
+              Expanded(
+                child: ConsultantListView(
+                  newcomerInterpretation: newcomerInterpretation,
+                ),
               ),
-              const Expanded(child: ConsultantListView()),
             ],
           ),
         ),
@@ -59,7 +74,12 @@ class ConsultantTabPage extends StatelessWidget {
 }
 
 class ConsultantListView extends ConsumerWidget {
-  const ConsultantListView({super.key});
+  const ConsultantListView({
+    super.key,
+    this.newcomerInterpretation = false,
+  });
+
+  final bool newcomerInterpretation;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,10 +94,14 @@ class ConsultantListView extends ConsumerWidget {
           .fetchList(pageNum: pageNum, pageSize: pageSize),
       itemBuilder: (context, item, index) => ConsultantCell(
         consultant: item,
+        newcomerInterpretation: newcomerInterpretation,
         onTap: () {
           final id = item.consultantId;
           if (id == null) return;
-          context.push('${RoutePaths.consultantDetail}?consultantId=$id');
+          final offer = newcomerInterpretation ? '&offer=interpretation' : '';
+          context.push(
+            '${RoutePaths.consultantDetail}?consultantId=$id$offer',
+          );
         },
       ),
     );
@@ -87,10 +111,16 @@ class ConsultantListView extends ConsumerWidget {
 /// 用户决策优先级：擅长匹配 → 资质 → 可约时间/方式 → 经验口碑 → 价格。
 /// 列表只呈现能帮助初筛的信息，完整受训与介绍仍在详情页查看。
 class ConsultantCell extends StatelessWidget {
-  const ConsultantCell({super.key, required this.consultant, this.onTap});
+  const ConsultantCell({
+    super.key,
+    required this.consultant,
+    this.onTap,
+    this.newcomerInterpretation = false,
+  });
 
   final Consultant consultant;
   final VoidCallback? onTap;
+  final bool newcomerInterpretation;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +332,41 @@ class ConsultantCell extends StatelessWidget {
             style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
           ),
         ),
-        if (consultant.priceText != null)
+        if (newcomerInterpretation)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '主题解读  ¥9.9',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colors.onSurfaceVariant,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
+              Text.rich(
+                TextSpan(
+                  children: const [
+                    TextSpan(text: '券后 ', style: TextStyle(fontSize: 10)),
+                    TextSpan(
+                      text: '¥0',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    TextSpan(
+                      text: '/次',
+                      style:
+                          TextStyle(fontSize: 10, fontWeight: FontWeight.w400),
+                    ),
+                  ],
+                  style: const TextStyle(color: AppColors.brandTeal),
+                ),
+              ),
+            ],
+          )
+        else if (consultant.priceText != null)
           Text.rich(
             TextSpan(
               children: [
@@ -323,6 +387,49 @@ class ConsultantCell extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _InterpretationCouponNotice extends StatelessWidget {
+  const _InterpretationCouponNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFD9F4F0), Color(0xFFF2EFFF)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.brandTeal.withValues(alpha: .12)),
+      ),
+      child: const Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.confirmation_number_rounded,
+                color: AppColors.brandTeal, size: 21),
+          ),
+          SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('9.9元主题解读券已选中',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                SizedBox(height: 3),
+                Text('选择咨询师和可约时间，本次解读券后¥0',
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

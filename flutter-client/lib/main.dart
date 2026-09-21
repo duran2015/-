@@ -33,8 +33,8 @@ void main() async {
   );
 
   // 默认 API_ENV=live：debug / release 均直连真实后端。
-  // 仅显式 --dart-define=API_ENV=mock 且 debug 时注册本地 mock。
-  if (kDebugMode && ApiEnv.isMock) registerDevMocks();
+  // 仅显式 --dart-define=API_ENV=mock 时注册本地 mock，供线上演示包使用。
+  if (ApiEnv.isMock) registerDevMocks();
   // WebView 预热（iOS 参照：XYWebViewPrewarmManager.prewarmIfNeeded）
   if (!kIsWeb) WebViewPrewarm.prewarmIfNeeded();
   runApp(const ProviderScope(child: XinyuApp()));

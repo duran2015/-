@@ -27,6 +27,25 @@ class RoutePaths {
   /// 用户端主壳（含 tab）
   static const String home = '/home';
 
+  /// 从首页头部进入的消息中心。
+  static const String messages = '/messages';
+
+  /// 3.0 服务页复用的内容与练习承接页。
+  static const String supportResource = '/support/resource';
+  static const String supportPractice = '/support/practice';
+  static const String supportCheckIn = '/support/check-in';
+  static const String supportTools = '/support/tools';
+  static const String supportConsultants = '/support/consultants';
+
+  /// 新客福利活动页（领券、首体验、分享与复购承接）。
+  static const String newcomerGrowth = '/growth/newcomer';
+
+  /// 好友收到免费解读后的分享落地页。
+  static const String newcomerGift = '/growth/gift';
+
+  /// 首次真人咨询完成后的继续支持券落地页。
+  static const String newcomerFollowUp = '/growth/follow-up';
+
   /// 咨询师端统一出口（Web 环境跳转独立咨询师端）。
   static const String counselor = '/counselor';
 

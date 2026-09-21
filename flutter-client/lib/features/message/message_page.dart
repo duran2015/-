@@ -21,7 +21,9 @@ import 'message_view_model.dart';
 /// 结构：透明导航「消息」+ 共享背景 → 顶部「系统通知」卡 →「对话」分区标题
 /// → 普通会话列表（白底圆角卡 + 分隔线）→ 空态「暂无对话」。
 class MessagePage extends ConsumerWidget {
-  const MessagePage({super.key});
+  const MessagePage({super.key, this.showBack = false});
+
+  final bool showBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,9 +36,9 @@ class MessagePage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AppNavBar(
+              AppNavBar(
                 title: '消息',
-                showBack: false,
+                showBack: showBack,
                 transparent: true,
               ),
               const SizedBox(height: AppDimens.gap12),

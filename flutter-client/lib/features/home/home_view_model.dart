@@ -15,6 +15,7 @@ class HomeState {
   const HomeState({
     this.moodRecords = const {},
     this.assessments = const [],
+    this.campaign,
   });
 
   /// 日期 yyyy-MM-dd → 情绪记录
@@ -23,13 +24,17 @@ class HomeState {
   /// 专业测评列表（进入首页后由接口填充）
   final List<HomeAssessment> assessments;
 
+  final HomeCampaignBanner? campaign;
+
   HomeState copyWith({
     Map<String, MoodRecordItem>? moodRecords,
     List<HomeAssessment>? assessments,
+    HomeCampaignBanner? campaign,
   }) {
     return HomeState(
       moodRecords: moodRecords ?? this.moodRecords,
       assessments: assessments ?? this.assessments,
+      campaign: campaign ?? this.campaign,
     );
   }
 }
@@ -50,6 +55,20 @@ class HomeViewModel extends Notifier<HomeState> {
   bool _isSubmittingMood = false;
   bool _isFetchingMoodCalendar = false;
   bool _isFetchingAssessmentList = false;
+  bool _isFetchingCampaign = false;
+
+  Future<void> fetchCampaignBanner({bool force = false}) async {
+    if (_isFetchingCampaign && !force) return;
+    _isFetchingCampaign = true;
+    try {
+      final campaign = await _api.fetchCampaignBanner();
+      state = state.copyWith(
+        campaign: campaign?.enabled == true ? campaign : null,
+      );
+    } finally {
+      _isFetchingCampaign = false;
+    }
+  }
 
   // ---------- 顶部问候（iOS userInfo 固定文案） ----------
 

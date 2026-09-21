@@ -80,14 +80,17 @@ final assessmentListViewModelProvider =
 /// iOS 参照：XYHomeAssessmentListViewController +
 /// View/XYHomeAssessmentListCell.swift。
 class AssessmentListPage extends ConsumerStatefulWidget {
-  const AssessmentListPage({super.key});
+  const AssessmentListPage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
-  ConsumerState<AssessmentListPage> createState() =>
-      _AssessmentListPageState();
+  ConsumerState<AssessmentListPage> createState() => _AssessmentListPageState();
 }
 
 class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
+  String _category = '全部';
+
   @override
   void initState() {
     super.initState();
@@ -147,6 +150,20 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(assessmentListViewModelProvider);
+    final visibleItems = state.items.where((item) {
+      if (_category == '全部') return true;
+      final text = '${item.title}${item.subtitle}';
+      return switch (_category) {
+        '性格' => text.contains('性格') || text.contains('人格'),
+        '情绪' =>
+          text.contains('焦虑') || text.contains('抑郁') || text.contains('情绪'),
+        '关系' =>
+          text.contains('关系') || text.contains('依恋') || text.contains('爱情'),
+        '职场' =>
+          text.contains('职场') || text.contains('工作') || text.contains('能力'),
+        _ => true,
+      };
+    }).toList();
 
     return Scaffold(
       // iOS：XYOrderBackgroundView + 透明导航栏，标题「全部测评」
@@ -154,7 +171,31 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
         child: SafeArea(
           child: Column(
             children: [
-              const AppNavBar(title: '全部测评', transparent: true),
+              if (widget.embedded)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('心理测评', style: AppTextStyles.titleLarge),
+                        SizedBox(height: 5),
+                        Text(
+                          '从具体问题开始，结果仅用于自我了解。',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                const AppNavBar(title: '全部测评', transparent: true),
+              if (widget.embedded)
+                _AssessmentCategoryBar(
+                  selected: _category,
+                  onSelected: (value) => setState(() => _category = value),
+                ),
               Expanded(
                 child: state.loading && state.isEmpty
                     ? const AppLoadingView()
@@ -172,16 +213,15 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
                         : AppRefreshIndicator(
                             onRefresh: _onRefresh,
                             child: ListView.builder(
-                              physics:
-                                  const AlwaysScrollableScrollPhysics(),
+                              physics: const AlwaysScrollableScrollPhysics(),
                               // iOS contentInset：top 6 / bottom 20
                               padding: const EdgeInsets.only(
                                 top: AppDimens.gap6,
                                 bottom: AppDimens.gap20,
                               ),
-                              itemCount: state.items.length,
+                              itemCount: visibleItems.length,
                               itemBuilder: (context, index) {
-                                final item = state.items[index];
+                                final item = visibleItems[index];
                                 return _AssessmentListCell(
                                   item: item,
                                   onTap: () => _handleAction(item),
@@ -198,6 +238,44 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
   }
 }
 
+class _AssessmentCategoryBar extends StatelessWidget {
+  const _AssessmentCategoryBar({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 76,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          children: [
+            for (final item in const [
+              ('全部', Icons.apps_rounded),
+              ('性格', Icons.psychology_outlined),
+              ('情绪', Icons.favorite_border_rounded),
+              ('关系', Icons.people_outline_rounded),
+              ('职场', Icons.work_outline_rounded),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  selected: selected == item.$1,
+                  onSelected: (_) => onSelected(item.$1),
+                  avatar: Icon(item.$2, size: 18),
+                  label: Text(item.$1),
+                  showCheckmark: false,
+                ),
+              ),
+          ],
+        ),
+      );
+}
+
 /// 全部测评列表卡片 Cell。
 /// iOS 参照：XYHomeAssessmentListCell
 /// （卡片 94 高圆角 16，图标 48，操作按钮 70×32 圆角 16：
@@ -209,7 +287,7 @@ class _AssessmentListCell extends StatelessWidget {
   final VoidCallback onTap;
 
   /// 卡片高（iOS cardHeight 94）
-  static const double _cardHeight = 94;
+  static const double _cardHeight = 116;
 
   /// 卡片间距（iOS cardGap 10）
   static const double _cardGap = 10;
@@ -287,7 +365,32 @@ class _AssessmentListCell extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: AppDimens.gap8),
+                    const SizedBox(height: AppDimens.gap6),
+                    Row(
+                      children: [
+                        if (item.originalPriceText?.isNotEmpty == true) ...[
+                          Text(
+                            item.originalPriceText!,
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textTertiary,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          item.priceText,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: item.priceText == '免费'
+                                ? const Color(0xFF357169)
+                                : const Color(0xFFE97932),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppDimens.gap4),
                     // 题目数 + 已测人数 12 #666（间距 12）
                     Row(
                       children: [

@@ -8,65 +8,45 @@ class AppTabBar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onTap,
-    required this.onDeerTap,
     this.unreadCount = 0,
-    this.deerBadge = 0,
+    this.compact = false,
   });
 
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final VoidCallback onDeerTap;
   final int unreadCount;
-
-  /// 小鹿（中央按钮）角标：机器人 rbt_xinyu001 未读数。
-  final int deerBadge;
-
-  static const int _badgeMax = 99;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = switch (currentIndex) {
-      0 => 0,
-      1 => 2,
-      2 => 3,
-      _ => 4,
-    };
-    return NavigationBar(
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (index) {
-        switch (index) {
-          case 0:
-            onTap(0);
-          case 1:
-            onDeerTap();
-          case 2:
-            onTap(1);
-          case 3:
-            onTap(2);
-          case 4:
-            onTap(3);
-        }
-      },
+    const homeLayerColor = Color(0xFFF1F5F0);
+    final barColor = compact ? Colors.white : homeLayerColor;
+    final bar = NavigationBar(
+      height: 68,
+      backgroundColor: barColor,
+      elevation: 0,
+      selectedIndex: currentIndex,
+      onDestinationSelected: onTap,
       destinations: [
         const NavigationDestination(
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home_rounded),
           label: '首页',
         ),
-        NavigationDestination(
-          icon: _badgeIcon(Icons.auto_awesome_outlined, deerBadge),
-          selectedIcon: _badgeIcon(Icons.auto_awesome, deerBadge),
-          label: '小鹿',
+        const NavigationDestination(
+          icon: Icon(Icons.people_outline_rounded),
+          selectedIcon: Icon(Icons.people_alt_rounded),
+          label: '真人支持',
         ),
         const NavigationDestination(
-          icon: Icon(Icons.support_agent_outlined),
-          selectedIcon: Icon(Icons.support_agent_rounded),
-          label: '真人咨询',
+          icon: Icon(Icons.assignment_outlined),
+          selectedIcon: Icon(Icons.assignment_rounded),
+          label: '测评',
         ),
-        NavigationDestination(
-          icon: _badgeIcon(Icons.forum_outlined, unreadCount),
-          selectedIcon: _badgeIcon(Icons.forum_rounded, unreadCount),
-          label: '消息',
+        const NavigationDestination(
+          icon: Icon(Icons.auto_stories_outlined),
+          selectedIcon: Icon(Icons.auto_stories_rounded),
+          label: '课程练习',
         ),
         const NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
@@ -75,14 +55,25 @@ class AppTabBar extends StatelessWidget {
         ),
       ],
     );
-  }
 
-  Widget _badgeIcon(IconData icon, int count) {
-    final child = Icon(icon);
-    if (count <= 0) return child;
-    return Badge(
-      label: Text(count > _badgeMax ? '99+' : '$count'),
-      child: child,
+    if (!compact) {
+      return ColoredBox(
+        color: homeLayerColor,
+        child: SafeArea(top: false, child: bar),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(26, 0, 26, 12),
+      child: Material(
+        color: Colors.white,
+        elevation: 12,
+        shadowColor: const Color(0x330F2E29),
+        borderRadius: BorderRadius.circular(34),
+        clipBehavior: Clip.antiAlias,
+        child: bar,
+      ),
     );
   }
 }

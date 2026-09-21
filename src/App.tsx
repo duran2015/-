@@ -7,6 +7,7 @@ import { ScheduleTab } from './components/Schedule/ScheduleTab';
 import { OrdersTab } from './components/Orders/OrdersTab';
 import { OrderInfoModal } from './components/Orders/OrderInfoModal';
 import { GrowthTab } from './components/Growth/GrowthTab';
+import { readSavedCopy, saveProfileCopy } from './components/Growth/profileSharing';
 import { ProfileTab } from './components/Profile/ProfileTab';
 import { VoiceCall } from './client-app/pages/Counseling/VoiceCall';
 import { SessionReviewWorkspace } from './components/SessionReview/SessionReviewWorkspace';
@@ -40,12 +41,12 @@ export default function App() {
     }
   };
 
-  const [consultant, setConsultant] = useState(INITIAL_CONSULTANT);
+  const [consultant, setConsultant] = useState(() => readSavedCopy(window.localStorage, INITIAL_CONSULTANT));
   const [products, setProducts] = useState<ServiceProduct[]>(INITIAL_SERVICE_PRODUCTS);
   const [settlements] = useState(INITIAL_SETTLEMENTS);
   const [vouchers, setVouchers] = useState<ViralVoucher[]>(INITIAL_VIRAL_VOUCHERS);
 
-  const [activeTab, setActiveTab] = useState<MainTabType>('workbench');
+  const [activeTab, setActiveTab] = useState<MainTabType>(() => new URLSearchParams(window.location.search).get('tab') === 'growth' ? 'growth' : 'workbench');
   const [isSubPage, setIsSubPage] = useState<boolean>(false);
   const [mockState, setMockState] = useState<'demo' | 'empty' | 'unonboarded'>('demo');
 
@@ -62,7 +63,7 @@ export default function App() {
 
   // Reset isSubPage when tab changes
   React.useEffect(() => {
-    setIsSubPage(false);
+    setIsSubPage(activeTab === 'growth' && (new URLSearchParams(window.location.search).has('profile') || new URLSearchParams(window.location.search).get('plan') === 'publish'));
     if (activeTab !== 'profile') {
       setInitialProfileSection('menu');
     }
@@ -145,6 +146,7 @@ export default function App() {
   };
 
   const handleUpdateConsultant = (updated: ConsultantProfile) => {
+    saveProfileCopy(window.localStorage, updated);
     setConsultant(updated);
   };
 
@@ -187,6 +189,7 @@ export default function App() {
     <div className="min-h-screen bg-[#EAE5DB] text-[#1D1B16] font-sans flex flex-col items-center justify-start p-0 sm:p-2 md:p-4">
       
       {/* Dev Toggle for State */}
+      {!(activeTab === 'growth' && isSubPage) && (
       <div className="fixed top-4 right-4 z-[100] flex gap-1">
         <button 
           onClick={() => setMockState(mockState === 'demo' ? 'empty' : 'demo')} 
@@ -201,6 +204,7 @@ export default function App() {
           重置入驻
         </button>
       </div>
+      )}
 
       {/* Main Container Wrapper */}
       <div className="w-full max-w-md bg-[#FAF8F5] min-h-screen sm:min-h-[840px] sm:rounded-[28px] sm:border sm:border-[#ECE6DC] shadow-xl overflow-hidden flex flex-col relative">
@@ -362,6 +366,7 @@ export default function App() {
               onAddVoucher={handleAddVoucher}
               onSubPageChange={setIsSubPage}
               onNavigateToProfile={() => setActiveTab('profile')}
+              onUpdateConsultant={handleUpdateConsultant}
             />
           )}
 

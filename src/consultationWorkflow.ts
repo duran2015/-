@@ -183,6 +183,28 @@ export function normalizeConsultationWorkflow(
   return {
     ...state,
     tasks: state.tasks.filter((task) => (task.taskType as string) !== "counselor_reflection"),
+    snapshots: Object.fromEntries(
+      Object.entries(state.snapshots || {}).map(([sessionId, snapshot]) => [
+        sessionId,
+        {
+          ...snapshot,
+          insights: snapshot.insights.map((insight) => {
+            if (insight.title === "核心议题：工作适应与自我评价") {
+              return { ...insight, title: "本次主要内容", detail: "工作调整后担心无法适应，晚间反复思考并影响入睡。" };
+            }
+            if (insight.title === "焦虑伴随躯体紧张") {
+              return {
+                ...insight,
+                title: "用户表达与会谈变化",
+                detail: "用户提到胸口发紧、思绪混乱；在梳理后表示想法“没那么绝对了”。",
+                sourceIds: [`${sessionId}-t4`, `${sessionId}-t6`],
+              };
+            }
+            return insight;
+          }),
+        },
+      ]),
+    ),
   };
 }
 

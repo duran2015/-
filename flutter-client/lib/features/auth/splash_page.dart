@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,18 +46,16 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       Future<void>.delayed(SplashPage._minDisplay),
     ]);
     if (!mounted) return;
-    // DEV_AUTO_LOGIN（仅 debug + mock 模式走查用，默认关闭）：无登录态时
+    // DEV_AUTO_LOGIN（仅显式 mock 演示模式使用，默认关闭）：无登录态时
     // 直接以 dev_mock 单身份 user 假数据登录，跳过登录页直达主端。
     // 开启方式：flutter run/build 加 --dart-define=DEV_AUTO_LOGIN=1。
     // API_ENV=live 真实联调下不生效（必须用真实短信登录）。
-    if (kDebugMode &&
-        ApiEnv.isMock &&
+    if (ApiEnv.isMock &&
         SplashPage._devAutoLoginEnabled &&
         ref.read(authControllerProvider) == null) {
       try {
         await ref.read(authControllerProvider.notifier).applyLogin(
-              LoginData.fromJson(
-                  devMockLoginData('13800000000', dual: false)),
+              LoginData.fromJson(devMockLoginData('13800000000', dual: false)),
             );
       } catch (_) {
         // 存储不可用时忽略，按未登录分流

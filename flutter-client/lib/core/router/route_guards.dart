@@ -17,6 +17,7 @@ class RouteGuards {
     RoutePaths.splash,
     RoutePaths.login, // 含 /login/verify、/login/bind-phone 等子路径
     RoutePaths.webview, // H5 落地页允许未登录访问
+    RoutePaths.newcomerGift, // 好友分享落地页先承接权益，再引导登录
   ];
 
   /// 咨询师专属路径（契约 §3.4：1010 在用户端拦截；
@@ -28,9 +29,8 @@ class RouteGuards {
   };
 
   /// 该路径是否需要登录态。
-  static bool requiresAuth(String path) => !publicPrefixes.any(
-        (p) => path == p || path.startsWith('$p/'),
-      );
+  static bool requiresAuth(String path) =>
+      !publicPrefixes.any((p) => path == p || path.startsWith('$p/'));
 
   /// 守卫判定：返回重定向目标路径；返回 null 表示放行。
   ///

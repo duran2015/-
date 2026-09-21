@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -19,7 +19,7 @@ import {
 
 import { useAppStore } from "../../client-app/store";
 import { getReviewProgress } from "../../sessionReviewPresentation";
-import type { SessionReviewDraft, SessionInsight } from "../../types";
+import type { SessionReviewDraft } from "../../types";
 
 type ReviewTab = "evidence" | "clinical" | "client";
 
@@ -30,7 +30,7 @@ interface SessionReviewWorkspaceProps {
 }
 
 const tabItems: Array<{ id: ReviewTab; label: string; shortLabel: string }> = [
-  { id: "evidence", label: "AI 证据", shortLabel: "证据" },
+  { id: "evidence", label: "AI 线索", shortLabel: "线索" },
   { id: "clinical", label: "临床总结", shortLabel: "临床" },
   { id: "client", label: "用户回顾", shortLabel: "分享" },
 ];
@@ -71,52 +71,6 @@ const Field = ({
   </div>
 );
 
-const EvidenceCard = ({
-  insight,
-  active,
-  onClick,
-}: {
-  insight: SessionInsight;
-  active: boolean;
-  onClick: () => void;
-}) => {
-  const categoryLabel = {
-    topic: "核心议题",
-    emotion: "情绪线索",
-    intervention: "干预效果",
-    risk: "风险观察",
-    plan: "后续计划",
-  }[insight.category];
-  
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-[24px] p-4 text-left transition-all ${
-        active
-          ? "bg-[#EADDFF] text-[#21005D]" // Primary Container
-          : "bg-[#F3EDF7] text-[#1D1B20] hover:bg-[#E8DEF8]" // Surface Container High
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className={`mb-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${active ? "bg-[#21005D] text-[#EADDFF]" : "bg-[#EADDFF] text-[#21005D]"}`}>
-            {categoryLabel}
-          </div>
-          <h3 className="text-[15px] font-bold">{insight.title}</h3>
-        </div>
-        <span className={`shrink-0 text-[11px] font-bold ${active ? "text-[#21005D]" : "text-[#6750A4]"}`}>
-          {Math.round(insight.confidence * 100)}% 匹配
-        </span>
-      </div>
-      <p className={`mt-2 text-[13px] leading-relaxed ${active ? "text-[#21005D]/80" : "text-[#49454F]"}`}>{insight.detail}</p>
-      <div className={`mt-3 flex items-center gap-1 text-[11px] font-bold ${active ? "text-[#21005D]" : "text-[#6750A4]"}`}>
-        溯源 {insight.sourceIds.length} 条原文 <ChevronRight size={14} />
-      </div>
-    </button>
-  );
-};
-
 export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: SessionReviewWorkspaceProps) {
   const {
     consultationWorkflow,
@@ -128,7 +82,8 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
   const storedDraft = consultationWorkflow.reviewDrafts.find((item) => item.id === draftId);
   const [draft, setDraft] = useState<SessionReviewDraft | null>(storedDraft || null);
   const [activeTab, setActiveTab] = useState<ReviewTab>("clinical");
-  const [selectedInsightId, setSelectedInsightId] = useState<string | null>(null);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  const excerptSectionRef = useRef<HTMLDivElement>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -142,14 +97,25 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
   const order = storedDraft
     ? orders.find((item) => item.id === storedDraft.orderId)
     : undefined;
-    
+  const topicInsight = snapshot?.insights.find((item) => item.category === "topic");
+  const expressionInsight = snapshot?.insights.find((item) => item.category === "emotion");
+  const planInsight = snapshot?.insights.find((item) => item.category === "plan");
+
   const isSubmitted = draft?.status === "submitted";
   const progress = draft ? getReviewProgress(draft) : null;
-  const selectedInsight = snapshot?.insights.find((item) => item.id === selectedInsightId);
-  const selectedSourceIds = useMemo(
-    () => new Set(selectedInsight?.sourceIds || []),
-    [selectedInsight],
-  );
+  const selectedSourceSet = new Set(selectedSourceIds);
+  const defaultExcerptIds = Array.from(new Set(snapshot?.insights.flatMap((insight) => insight.sourceIds) || []));
+  const excerptSourceIds = selectedSourceIds.length > 0 ? selectedSourceIds : defaultExcerptIds;
+  const transcriptExcerpts = (snapshot?.transcript || [])
+    .filter((segment) => excerptSourceIds.includes(segment.id))
+    .slice(0, 3);
+  const toggleSources = (ids: string[]) => {
+    const isCurrentSelection = selectedSourceIds.length === ids.length && ids.every((id) => selectedSourceIds.includes(id));
+    setSelectedSourceIds(isCurrentSelection ? [] : ids);
+    if (!isCurrentSelection) {
+      requestAnimationFrame(() => excerptSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  };
 
   if (!draft || !storedDraft) {
     return (
@@ -331,34 +297,52 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
           {activeTab === "evidence" && (
             <div className="space-y-4 pt-2">
               <div className="rounded-[28px] bg-[#FFFBFE] p-5 shadow-sm">
-                <div className="flex items-center gap-2 text-[#6750A4] mb-4">
+                <div className="flex items-center gap-2 text-[#6750A4] mb-3">
                   <Sparkles size={20} />
-                  <h2 className="text-[16px] font-bold text-[#1D1B20]">AI 智能洞察与溯源</h2>
+                  <h2 className="text-[16px] font-bold text-[#1D1B20]">AI 整理的会谈线索</h2>
                 </div>
-                <p className="text-[13px] text-[#49454F] mb-6">AI 基于全程语音转录生成的辅助线索。点击卡片可查看原文来源。</p>
-                
-                <div className="space-y-3">
-                  {snapshot?.insights.map((insight) => (
-                    <EvidenceCard key={insight.id} insight={insight} active={selectedInsightId === insight.id} onClick={() => setSelectedInsightId(selectedInsightId === insight.id ? null : insight.id)} />
-                  ))}
+                <p className="text-[13px] text-[#49454F] mb-2">根据会谈转录整理，仅供咨询师核对，不代表专业判断。</p>
+
+                <div className="divide-y divide-[#E7E0EA]">
+                  {topicInsight && <section className="py-5">
+                    <h3 className="text-[15px] font-bold text-[#1D1B20]">本次主要内容</h3>
+                    <p className="mt-1 text-[12px] text-[#79747E]">概括用户这次主要谈了什么。</p>
+                    <p className="mt-3 border-l-2 border-[#CAC4D0] pl-4 text-[14px] leading-relaxed text-[#1D1B20]">{topicInsight.detail}</p>
+                    <button type="button" onClick={() => toggleSources(topicInsight.sourceIds)} className="mt-2 ml-4 inline-flex min-h-10 items-center gap-1 text-[12px] font-bold text-[#6750A4]">来源：用户表达 {topicInsight.sourceIds.length} 条 <ChevronRight size={14} /></button>
+                  </section>}
+
+                  {expressionInsight && <section className="py-5">
+                    <h3 className="text-[15px] font-bold text-[#1D1B20]">用户表达与会谈变化</h3>
+                    <p className="mt-1 text-[12px] text-[#79747E]">只陈述用户说过的感受与当场表达的变化。</p>
+                    <p className="mt-3 border-l-2 border-[#CAC4D0] pl-4 text-[14px] leading-relaxed text-[#1D1B20]">{expressionInsight.detail}</p>
+                    <button type="button" onClick={() => toggleSources(expressionInsight.sourceIds)} className="mt-2 ml-4 inline-flex min-h-10 items-center gap-1 text-[12px] font-bold text-[#6750A4]">来源：用户表达 {expressionInsight.sourceIds.length} 条 <ChevronRight size={14} /></button>
+                  </section>}
+
+                  {planInsight && <section className="py-5">
+                    <h3 className="text-[15px] font-bold text-[#1D1B20]">待确认的后续安排</h3>
+                    <p className="mt-1 text-[12px] text-[#79747E]">来自会谈中的咨询师表达，最终在用户回顾中编辑确认。</p>
+                    <p className="mt-3 border-l-2 border-[#CAC4D0] pl-4 text-[14px] leading-relaxed text-[#1D1B20]">{planInsight.detail}</p>
+                    <button type="button" onClick={() => toggleSources(planInsight.sourceIds)} className="mt-2 ml-4 inline-flex min-h-10 items-center gap-1 text-[12px] font-bold text-[#6750A4]">来源：咨询师表达 {planInsight.sourceIds.length} 条 <ChevronRight size={14} /></button>
+                  </section>}
                 </div>
               </div>
 
-              {/* 实时转录与笔记区域 */}
+              {/* 摘录与笔记区域 */}
               <div className="rounded-[28px] bg-[#FFFBFE] p-5 shadow-sm space-y-6">
-                <div>
+                <div ref={excerptSectionRef} className="scroll-mt-4">
                   <h3 className="mb-4 flex items-center justify-between text-[15px] font-bold text-[#1D1B20]">
-                    <span className="flex items-center gap-2"><History size={18} className="text-[#6750A4]" />语音转录记录</span>
-                    <span className="text-[12px] font-medium text-[#79747E] bg-[#F3EDF7] px-2 py-0.5 rounded-full">{snapshot?.transcript.length || 0} 条</span>
+                    <span className="flex items-center gap-2"><History size={18} className="text-[#6750A4]" />原文摘录</span>
+                    <span className="text-[12px] font-medium text-[#79747E] bg-[#F3EDF7] px-2 py-0.5 rounded-full">{transcriptExcerpts.length} 条</span>
                   </h3>
+                  <p className="mb-4 text-[12px] leading-relaxed text-[#79747E]">仅展示 AI 总结实际引用的原话，最多 3 条。</p>
                   <div className="space-y-3">
-                    {snapshot?.transcript.map((segment) => (
-                      <div key={segment.id} className={`rounded-[16px] p-4 transition-all ${selectedSourceIds.has(segment.id) ? "bg-[#EADDFF] border border-[#6750A4]" : "bg-[#F3EDF7] border border-transparent"}`}>
+                    {transcriptExcerpts.map((segment) => (
+                      <div key={segment.id} className="rounded-[16px] border border-transparent bg-[#F3EDF7] p-4">
                         <div className="flex items-center justify-between text-[11px] mb-2">
-                          <span className={`font-bold ${selectedSourceIds.has(segment.id) ? "text-[#21005D]" : "text-[#49454F]"}`}>{segment.speakerName}</span>
-                          <span className={selectedSourceIds.has(segment.id) ? "text-[#21005D]/70" : "text-[#79747E]"}>{Math.floor(segment.startsAtSeconds / 60).toString().padStart(2, "0")}:{(segment.startsAtSeconds % 60).toString().padStart(2, "0")}</span>
+                          <span className="font-bold text-[#49454F]">{segment.speakerName}</span>
+                          <span className="text-[#79747E]">{Math.floor(segment.startsAtSeconds / 60).toString().padStart(2, "0")}:{(segment.startsAtSeconds % 60).toString().padStart(2, "0")}</span>
                         </div>
-                        <p className={`text-[13px] leading-relaxed ${selectedSourceIds.has(segment.id) ? "text-[#21005D]" : "text-[#1D1B20]"}`}>{segment.text}</p>
+                        <p className="text-[13px] leading-relaxed text-[#1D1B20]">{segment.text}</p>
                       </div>
                     ))}
                   </div>
@@ -370,7 +354,7 @@ export function SessionReviewWorkspace({ draftId, onClose, onSubmitted }: Sessio
                   </h3>
                   <div className="space-y-3">
                     {snapshot?.notes.map((note) => (
-                      <div key={note.id} className={`rounded-[16px] p-4 text-[13px] leading-relaxed ${selectedSourceIds.has(note.id) ? "bg-[#EADDFF] border border-[#6750A4] text-[#21005D]" : "bg-[#FFF8E7] border border-[#FFDDB3] text-[#5D3A00]"}`}>
+                      <div key={note.id} className={`rounded-[16px] p-4 text-[13px] leading-relaxed ${selectedSourceSet.has(note.id) ? "bg-[#EADDFF] border border-[#6750A4] text-[#21005D]" : "bg-[#FFF8E7] border border-[#FFDDB3] text-[#5D3A00]"}`}>
                         {note.text}
                       </div>
                     ))}

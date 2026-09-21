@@ -18,6 +18,7 @@ import '../features/auth/verify_code_page.dart';
 import '../features/ai/ai_consult_page.dart';
 import '../features/chat/chat_page.dart';
 import '../features/consultant/consultant_detail_page.dart';
+import '../features/consultant/consultant_list_page.dart';
 import '../features/consultant/review_list_page.dart';
 import '../features/counselor/consult_record_page.dart';
 import '../features/counselor/counselor_order_detail_page.dart';
@@ -25,7 +26,11 @@ import '../features/evaluate/evaluate_page.dart';
 import '../features/home/assessment_list_page.dart';
 import '../features/home/assessment_report_page.dart';
 import '../features/home/assessment_webview_page.dart';
+import '../features/service/service_page.dart';
+import '../features/growth/newcomer_growth_models.dart';
+import '../features/growth/newcomer_growth_page.dart';
 import '../features/message/system_notification_page.dart';
+import '../features/message/message_page.dart';
 import '../features/mine/account_security_page.dart';
 import '../features/mine/assessment_record_page.dart';
 import '../features/mine/blacklist_page.dart';
@@ -108,8 +113,66 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ---------- 主壳 ----------
       GoRoute(
         path: RoutePaths.home,
-        // 用户端主壳：首页/消息/我的三 Tab + 小鹿中央按钮（iOS XYMainTabBarController）
-        builder: (context, state) => const MainShellPage(),
+        // 用户端主壳；tab 查询参数支持外部活动页直达指定一级入口。
+        builder: (context, state) => MainShellPage(
+          initialTab: switch (state.uri.queryParameters['tab']) {
+            'consultant' => 1,
+            'assessment' => 2,
+            'growth' => 3,
+            'mine' => 4,
+            _ => 0,
+          },
+          newcomerInterpretation:
+              state.uri.queryParameters['offer'] == 'interpretation',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.messages,
+        builder: (context, state) => const MessagePage(showBack: true),
+      ),
+      GoRoute(
+        path: RoutePaths.supportResource,
+        builder: (context, state) => SupportResourcePage(
+          title: state.uri.queryParameters['title'] ?? '具体帮助',
+          type: state.uri.queryParameters['type'] ?? '内容',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.supportPractice,
+        builder: (context, state) => const SupportPracticePage(),
+      ),
+      GoRoute(
+        path: RoutePaths.supportCheckIn,
+        builder: (context, state) => const SupportCheckInPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.supportTools,
+        builder: (context, state) => const SupportToolsPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.supportConsultants,
+        builder: (context, state) => ConsultantTabPage(
+          newcomerInterpretation:
+              state.uri.queryParameters['offer'] == 'interpretation',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.newcomerGrowth,
+        builder: (context, state) => NewcomerGrowthPage(
+          initialStage: growthCampaignStageFrom(
+            state.uri.queryParameters['stage'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.newcomerGift,
+        builder: (context, state) => NewcomerGiftPage(
+          inviter: state.uri.queryParameters['inviter'] ?? '一位朋友',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.newcomerFollowUp,
+        builder: (context, state) => const NewcomerFollowUpPage(),
       ),
       GoRoute(
         path: RoutePaths.counselor,
@@ -175,8 +238,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
           return AssessmentReportPage(
             userAssessId: int.tryParse(rawId?.trim() ?? ''),
-            assessmentTitle:
-                nonEmpty(q['title'] ?? q['assessmentTitle'] ?? q['name']),
+            assessmentTitle: nonEmpty(
+              q['title'] ?? q['assessmentTitle'] ?? q['name'],
+            ),
             h5Link: nonEmpty(q['h5Link']),
           );
         },
@@ -290,9 +354,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             transitionDuration: Duration.zero,
             reverseTransitionDuration: Duration.zero,
             transitionsBuilder: (_, __, ___, child) => child,
-            child: ConsultRoomBridgePage(
-              query: state.uri.queryParameters,
-            ),
+            child: ConsultRoomBridgePage(query: state.uri.queryParameters),
           );
         },
       ),
@@ -322,18 +384,27 @@ final routerProvider = Provider<GoRouter>((ref) {
 
           return EvaluatePage(
             orderId: firstNonEmpty(const ['orderId', 'order_id', 'orderID']),
-            counselorId:
-                firstNonEmpty(const ['counselorId', 'userId', 'consultantId']),
-            counselorName: firstNonEmpty(
-              const ['counselorName', 'name', 'consultantName'],
-              '咨询师',
-            ),
-            counselorAvatar: firstNonEmpty(
-              const ['counselorAvatar', 'avatar', 'consultantAvatar'],
-            ).isEmpty
+            counselorId: firstNonEmpty(const [
+              'counselorId',
+              'userId',
+              'consultantId',
+            ]),
+            counselorName: firstNonEmpty(const [
+              'counselorName',
+              'name',
+              'consultantName',
+            ], '咨询师'),
+            counselorAvatar: firstNonEmpty(const [
+              'counselorAvatar',
+              'avatar',
+              'consultantAvatar',
+            ]).isEmpty
                 ? null
-                : firstNonEmpty(
-                    const ['counselorAvatar', 'avatar', 'consultantAvatar']),
+                : firstNonEmpty(const [
+                    'counselorAvatar',
+                    'avatar',
+                    'consultantAvatar',
+                  ]),
           );
         },
       ),
@@ -354,6 +425,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           consultantId:
               int.tryParse(state.uri.queryParameters['consultantId'] ?? '') ??
                   0,
+          newcomerInterpretation:
+              state.uri.queryParameters['offer'] == 'interpretation',
         ),
       ),
       GoRoute(

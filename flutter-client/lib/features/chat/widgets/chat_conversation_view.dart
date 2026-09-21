@@ -40,6 +40,8 @@ class ChatConversationView extends ConsumerStatefulWidget {
     required this.peerName,
     this.peerAvatar,
     this.inputEnabled = true,
+    this.initialText,
+    this.conversationHeader,
   });
 
   /// 对方 IM userId（机器人会话 = @RBT#xinyu001）
@@ -54,6 +56,13 @@ class ChatConversationView extends ConsumerStatefulWidget {
   /// 输入是否可用。AI 页未同意「AI 服务数据说明」时传 false，禁用快捷回复
   /// 与输入栏（对齐 iOS isUserInteractionEnabled=false）。默认 true。
   final bool inputEnabled;
+
+  /// 从首页输入框带入的首条消息。历史消息完成加载后仅发送一次。
+  final String? initialText;
+
+  /// 可选的会话内页头。首页把快捷能力作为上下文插入消息流时使用；
+  /// 普通 IM 页面不传，保持原有布局。
+  final Widget? conversationHeader;
 
   /// 历史分页大小（Android getC2CHistoryMessageList count=20）
   static const int pageSize = 20;
@@ -97,6 +106,7 @@ class ChatConversationViewState extends ConsumerState<ChatConversationView> {
   /// 本端是否已拉黑对方（屏蔽输入栏）。
   /// iOS 参照：XYChatContainerViewController.isBlocked。
   bool _isBlocked = false;
+  bool _initialTextSent = false;
 
   ImService get _im => ref.read(imServiceProvider);
 
@@ -178,10 +188,18 @@ class ChatConversationViewState extends ConsumerState<ChatConversationView> {
       });
       // 进入页：无动画贴底，保证最新消息在视口底部（非 animateTo）
       _scrollToBottom(jump: true);
+      await _sendInitialTextIfNeeded();
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  Future<void> _sendInitialTextIfNeeded() async {
+    final text = widget.initialText?.trim() ?? '';
+    if (_initialTextSent || text.isEmpty || !mounted) return;
+    _initialTextSent = true;
+    await _sendText(text);
   }
 
   /// 下拉加载更早（正向列表滚到顶部触发；前置插入后校正 offset 防跳动）
@@ -546,6 +564,7 @@ class ChatConversationViewState extends ConsumerState<ChatConversationView> {
     final identity = ref.watch(currentIdentityProvider);
     return Column(
       children: [
+        if (widget.conversationHeader != null) widget.conversationHeader!,
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,

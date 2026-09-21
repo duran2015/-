@@ -172,6 +172,18 @@ void registerDevMocks() {
   /// 本阶段提交的心情记录（内存态，驱动 trend/calendar 演示闭环）
   final moodStore = <String, Map<String, dynamic>>{};
 
+  ApiClient.registerMock('/app/home/campaign-banner', (body) {
+    return ok(data: {
+      'id': 'assessment_share_001',
+      'title': '测测你的关系安全感',
+      'subtitle': '限时 ¥9.9 · 生成结果卡并邀请好友一起测',
+      'imageUrl': null,
+      'targetType': 'assessment_list',
+      'targetValue': '',
+      'enabled': true,
+    });
+  });
+
   Map<String, dynamic> moodItem(
     String dateKey,
     int score, {
@@ -276,6 +288,8 @@ void registerDevMocks() {
           'description': '评估近一周抑郁情绪状态',
           'questionCount': 20,
           'testedCount': 12345,
+          'priceText': '¥9.9',
+          'originalPriceText': '¥39.9',
           'sortOrder': 1,
           'category': 'clinical',
           'h5Link': 'https://admin.currantmind.cn/assessment/sds.html',
@@ -291,6 +305,8 @@ void registerDevMocks() {
           'description': '评估近一周焦虑情绪状态',
           'questionCount': 20,
           'testedCount': 9860,
+          'priceText': '¥9.9',
+          'originalPriceText': '¥39.9',
           'sortOrder': 2,
           'category': 'clinical',
           'h5Link': 'https://admin.currantmind.cn/assessment/sas.html',
@@ -306,6 +322,8 @@ void registerDevMocks() {
           'description': '了解你的性格类型与特质',
           'questionCount': 93,
           'testedCount': 234567,
+          'priceText': '免费',
+          'originalPriceText': null,
           'sortOrder': 3,
           'category': 'clinical',
           'h5Link': 'https://admin.currantmind.cn/assessment/mbti.html',
@@ -321,6 +339,8 @@ void registerDevMocks() {
           'description': '快速筛查广泛性焦虑',
           'questionCount': 7,
           'testedCount': 321,
+          'priceText': '¥19.9',
+          'originalPriceText': '¥79.9',
           'sortOrder': 4,
           'category': 'clinical',
           'h5Link': 'https://admin.currantmind.cn/assessment/gad7.html',

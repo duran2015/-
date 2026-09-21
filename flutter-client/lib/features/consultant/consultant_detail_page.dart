@@ -28,9 +28,14 @@ import 'review_list_page.dart';
 /// XYCounselorDetailViewController.swift（区块顺序：头部→介绍→
 /// 资质/擅长/风格合并卡→最近可约→评价；底部固定预约栏）。
 class ConsultantDetailPage extends ConsumerStatefulWidget {
-  const ConsultantDetailPage({super.key, required this.consultantId});
+  const ConsultantDetailPage({
+    super.key,
+    required this.consultantId,
+    this.newcomerInterpretation = false,
+  });
 
   final int consultantId;
+  final bool newcomerInterpretation;
 
   @override
   ConsumerState<ConsultantDetailPage> createState() =>
@@ -256,6 +261,7 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
   /// 底部咨询方式摘要（按 supportMode 映射为「文字/语音/视频」去重拼接 + 「支持」）
   /// iOS 参照：XYCounselorDetailViewModel.methods
   String get _methods {
+    if (widget.newcomerInterpretation) return '主题解读 · 预约制';
     final seen = <String>{};
     final names = <String>[];
     for (final cap in _capabilities) {
@@ -274,6 +280,7 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
   /// 起步价文案数值（取所有咨询能力最低价，不含 ¥；无能力则空）
   /// iOS 参照：XYCounselorDetailViewModel.price
   String get _priceValue {
+    if (widget.newcomerInterpretation) return '0';
     final prices = _capabilities.map((c) => c.price).whereType<double>();
     if (prices.isEmpty) return '';
     return formatPrice(prices.reduce((a, b) => a < b ? a : b));
@@ -431,6 +438,10 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
       padding: const EdgeInsets.only(top: 6, bottom: 16),
       children: [
         _buildHeaderSection(),
+        if (widget.newcomerInterpretation) ...[
+          const SizedBox(height: _sectionSpacing),
+          _buildNewcomerInterpretationNotice(),
+        ],
         const SizedBox(height: _sectionSpacing),
         _buildIntroductionSection(),
         const SizedBox(height: _sectionSpacing),
@@ -452,6 +463,39 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
         borderRadius: BorderRadius.circular(AppDimens.cardRadius),
       ),
       child: child,
+    );
+  }
+
+  Widget _buildNewcomerInterpretationNotice() {
+    return _cardSection(
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD9F4F0), Color(0xFFF2EFFF)],
+          ),
+          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.confirmation_number_rounded,
+                color: AppColors.brandTeal, size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('新客主题解读券已选中', style: AppTextStyles.title),
+                  SizedBox(height: 4),
+                  Text('选择下方可约时间完成预约，原价¥9.9，本次券后¥0。',
+                      style: AppTextStyles.caption),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -601,7 +645,8 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
         borderRadius: BorderRadius.circular(_headerAvatarSize / 2),
         border: Border.all(color: Colors.white, width: 2.5),
         image: _avatar.isNotEmpty
-            ? DecorationImage(image: ImageUtils.getImageProvider(_avatar), fit: BoxFit.cover)
+            ? DecorationImage(
+                image: ImageUtils.getImageProvider(_avatar), fit: BoxFit.cover)
             : null,
       ),
       child: _avatar.isEmpty
@@ -1041,7 +1086,10 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
                   const SizedBox(height: 4),
                   Text.rich(
                     TextSpan(children: [
-                      TextSpan(text: '起步价 ', style: AppTextStyles.label),
+                      TextSpan(
+                        text: widget.newcomerInterpretation ? '券后 ' : '起步价 ',
+                        style: AppTextStyles.label,
+                      ),
                       TextSpan(
                         text: '¥',
                         style: AppTextStyles.title.copyWith(
@@ -1074,7 +1122,7 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  '查看排期并预约',
+                  widget.newcomerInterpretation ? '选择时间并预约' : '查看排期并预约',
                   style: AppTextStyles.title.copyWith(color: Colors.white),
                 ),
               ),
@@ -1095,6 +1143,9 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
       AppToast.show(context, '暂无可约时间');
       return;
     }
+    final bookingCapabilities = widget.newcomerInterpretation
+        ? _newcomerInterpretationCapabilities(detail.capabilities)
+        : detail.capabilities;
     showBookingSheet(
       context,
       viewModel: BookingViewModel(
@@ -1103,8 +1154,24 @@ class _ConsultantDetailPageState extends ConsumerState<ConsultantDetailPage> {
         counselorImUserId: detail.imUserId ?? '',
         consultantId: detail.consultantId ?? widget.consultantId,
         availability: detail.recentAvailability,
-        capabilities: detail.capabilities,
+        capabilities: bookingCapabilities,
       ),
     );
+  }
+
+  List<ConsultantCapability> _newcomerInterpretationCapabilities(
+    List<ConsultantCapability> capabilities,
+  ) {
+    final base = capabilities.isEmpty ? null : capabilities.first;
+    return [
+      ConsultantCapability(
+        capabilityId: base?.capabilityId,
+        capabilityName: '新客主题解读',
+        description: '围绕一个测评主题，由咨询师预约解读；新客券已抵扣',
+        duration: base?.duration ?? 20,
+        price: 0,
+        supportMode: base?.supportMode ?? '2',
+      ),
+    ];
   }
 }

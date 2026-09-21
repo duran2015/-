@@ -234,6 +234,39 @@ class HomeToolItem {
   final String linkUrl;
 }
 
+/// 首页运营横幅。后台可控制上下线、文案、图片及跳转目标；未返回或 disabled
+/// 时首页不占位。
+class HomeCampaignBanner {
+  const HomeCampaignBanner({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.targetType,
+    required this.targetValue,
+    this.imageUrl,
+    this.enabled = true,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final String targetType;
+  final String targetValue;
+  final String? imageUrl;
+  final bool enabled;
+
+  factory HomeCampaignBanner.fromJson(Map<String, dynamic> json) =>
+      HomeCampaignBanner(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        subtitle: json['subtitle']?.toString() ?? '',
+        targetType: json['targetType']?.toString() ?? '',
+        targetValue: json['targetValue']?.toString() ?? '',
+        imageUrl: json['imageUrl']?.toString(),
+        enabled: json['enabled'] != false,
+      );
+}
+
 /// 缓解小工具列表（iOS XYHomeViewModel.tools 逐项对照）。
 const List<HomeToolItem> kHomeTools = [
   HomeToolItem(
@@ -294,6 +327,8 @@ class AssessmentItem {
     this.userAssessStatus,
     this.userAssessId,
     this.testedCount,
+    this.priceText,
+    this.originalPriceText,
   });
 
   /// 卡片背景图 URL
@@ -338,6 +373,10 @@ class AssessmentItem {
   /// 已测人数
   final int? testedCount;
 
+  /// 前置展示的测评售价与划线原价（由后台直接下发展示文案）。
+  final String? priceText;
+  final String? originalPriceText;
+
   factory AssessmentItem.fromJson(Map<String, dynamic> json) {
     return AssessmentItem(
       backgroundImage: asString(json['backgroundImage']),
@@ -354,6 +393,8 @@ class AssessmentItem {
       userAssessStatus: asString(json['userAssessStatus']),
       userAssessId: asInt(json['userAssessId']),
       testedCount: asInt(json['testedCount']),
+      priceText: asString(json['priceText']),
+      originalPriceText: asString(json['originalPriceText']),
     );
   }
 
@@ -418,6 +459,8 @@ class AssessmentListItem {
     required this.questionCountText,
     required this.participantText,
     required this.status,
+    required this.priceText,
+    this.originalPriceText,
   });
 
   /// 问卷 ID
@@ -450,9 +493,11 @@ class AssessmentListItem {
   /// 用户测评状态
   final AssessmentStatus status;
 
+  final String priceText;
+  final String? originalPriceText;
+
   /// 右侧操作按钮文案（userAssessStatus 为 1 看结果，否则去测试）。
-  String get actionTitle =>
-      status == AssessmentStatus.tested ? '看结果' : '去测试';
+  String get actionTitle => status == AssessmentStatus.tested ? '看结果' : '去测试';
 }
 
 /// 测评接口数据映射（首页卡片 / 全部测评列表共用）。
@@ -506,6 +551,10 @@ class AssessmentMapper {
       questionCountText: questionCountText(item.questionCount),
       participantText: participantText(item.testedCount),
       status: _statusOf(item),
+      priceText: item.priceText?.trim().isNotEmpty == true
+          ? item.priceText!.trim()
+          : '免费',
+      originalPriceText: item.originalPriceText?.trim(),
     );
   }
 
@@ -576,9 +625,8 @@ class AssessmentDetail {
   final String? sourceUrl;
 
   factory AssessmentDetail.fromJson(Map<String, dynamic> json) {
-    List<String>? stringList(dynamic value) => value is List
-        ? value.map((e) => e.toString()).toList()
-        : null;
+    List<String>? stringList(dynamic value) =>
+        value is List ? value.map((e) => e.toString()).toList() : null;
     // 兼容 sourceUrl / source_url；空白视为无
     final rawSource = asString(json['sourceUrl'] ?? json['source_url'])?.trim();
     final sourceUrl =

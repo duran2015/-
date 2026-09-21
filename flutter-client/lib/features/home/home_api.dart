@@ -25,6 +25,19 @@ class HomeApi {
   /// #19 测评报告详情
   static const assessmentDetailPath = '/app/assessment/detail';
 
+  /// 首页运营位配置。后台未配置时返回 null，客户端不占位。
+  static const campaignBannerPath = '/app/home/campaign-banner';
+
+  Future<HomeCampaignBanner?> fetchCampaignBanner() {
+    return _client.postData<HomeCampaignBanner>(
+      campaignBannerPath,
+      const {'position': 'home_top'},
+      decoder: (json) => HomeCampaignBanner.fromJson(
+        Map<String, dynamic>.from(json as Map),
+      ),
+    );
+  }
+
   /// #19 拉取测评报告详情（body: {"assessmentId": userAssessId}）。
   /// iOS 参照：XYHomeAssessmentReportViewController.fetchReportDetail。
   Future<AssessmentDetail?> fetchAssessmentDetail(int assessmentId) {
@@ -42,7 +55,8 @@ class HomeApi {
     final data = await _client.postData<List<MoodRecordItem>>(
       moodTrendPath,
       {'days': days},
-      decoder: (json) => (json as List?)
+      decoder: (json) =>
+          (json as List?)
               ?.map((e) =>
                   MoodRecordItem.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList() ??
@@ -60,7 +74,8 @@ class HomeApi {
     final data = await _client.postData<List<MoodRecordItem>>(
       moodCalendarPath,
       {'year': year, 'month': month},
-      decoder: (json) => (json as List?)
+      decoder: (json) =>
+          (json as List?)
               ?.map((e) =>
                   MoodRecordItem.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList() ??
@@ -92,7 +107,8 @@ class HomeApi {
     final data = await _client.postData<List<AssessmentItem>>(
       assessmentListPath,
       {'category': category},
-      decoder: (json) => (json as List?)
+      decoder: (json) =>
+          (json as List?)
               ?.map((e) =>
                   AssessmentItem.fromJson(Map<String, dynamic>.from(e as Map)))
               .toList() ??

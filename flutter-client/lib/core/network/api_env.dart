@@ -2,8 +2,8 @@
 ///
 /// - `API_ENV=live`（默认）：走真实 HTTP（[baseUrl]），debug / release 一致，
 ///   不注册 dev_mock。
-/// - `API_ENV=mock`：仅用于本地断网演示或单测；debug 下由 main.dart
-///   注册 [registerDevMocks]，release 仍不注册。
+/// - `API_ENV=mock`：用于本地或线上断网演示；由 main.dart 显式注册
+///   [registerDevMocks]，不会请求真实接口。
 ///
 /// 使用方式：
 /// ```bash
@@ -20,8 +20,8 @@ class ApiEnv {
   /// 真实联调：所有请求直连线上后端。
   static const bool isLive = current == 'live';
 
-  /// mock 开发：仅在显式 `--dart-define=API_ENV=mock` 且 debug 时注册
-  ///（见 main.dart / dev_mock.dart）。
+  /// mock 演示：仅在显式 `--dart-define=API_ENV=mock` 时注册
+  ///（见 main.dart / dev_mock.dart），默认构建仍为 live。
   static const bool isMock = !isLive;
 
   /// 网关 baseURL（契约 api_inventory.md §一，全模式同值；
@@ -29,5 +29,5 @@ class ApiEnv {
   /// 默认线上；本地真机联调用 `--dart-define=API_BASE_URL=http://<mac-lan-ip>:18080` 覆盖。
   static const String baseUrl = String.fromEnvironment('API_BASE_URL',
       // defaultValue: 'https://api.currantmind.cn');
-         defaultValue: 'http://192.168.9.45');
+      defaultValue: 'http://192.168.9.45');
 }

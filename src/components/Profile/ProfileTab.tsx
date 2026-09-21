@@ -265,7 +265,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     };
 
     if (onUpdateConsultant) {
-      onUpdateConsultant(updated);
+      try {
+        onUpdateConsultant(updated);
+      } catch {
+        alert('资料保存失败，请检查浏览器存储空间后重试。当前填写内容仍保留。');
+        return;
+      }
     }
     setQualificationsViewMode('view');
     alert('咨询师资质档案与个人介绍已成功保存更新！');
