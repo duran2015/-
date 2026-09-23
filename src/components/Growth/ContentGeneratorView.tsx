@@ -2,23 +2,30 @@ import React, { useState } from 'react';
 import { 
   ArrowLeft, Sparkles, FileText, 
   MessageSquare, Video, PenTool,
-  CheckCircle2, AlertTriangle, 
-  RefreshCw, Copy, Save, ChevronDown,
-  Wand2, Zap, Heart, Hash
+  Copy, CalendarPlus, Share2
 } from 'lucide-react';
+import { ContentAsset } from './ContentLibraryView';
 
 interface ContentGeneratorViewProps {
   onBack: () => void;
   initialTopic?: string;
+  editingContent?: ContentAsset;
+  startEditing?: boolean;
+  onSaveContent: (asset: ContentAsset) => void;
+  onAddToPublishPlan: (asset: ContentAsset) => void;
+  onPublishContent?: (asset: ContentAsset) => void;
 }
 
-export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBack, initialTopic }) => {
-  const [step, setStep] = useState<'input' | 'generating' | 'result'>('input');
+export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBack, initialTopic, editingContent, startEditing = false, onSaveContent, onAddToPublishPlan, onPublishContent }) => {
+  const [step, setStep] = useState<'input' | 'generating' | 'result'>(editingContent && !startEditing ? 'result' : 'input');
   
   // Form State
-  const [topic, setTopic] = useState(initialTopic || '');
-  const [contentType, setContentType] = useState('小红书笔记');
-  const [style, setStyle] = useState('专业科普');
+  const [topic, setTopic] = useState(initialTopic || editingContent?.sourceTopic || editingContent?.title || '');
+  const [contentType, setContentType] = useState(editingContent?.platform || '小红书笔记');
+  const [style, setStyle] = useState(editingContent?.style || '专业科普');
+  const [selectedTitle, setSelectedTitle] = useState(editingContent?.title || '别让领导的一句话，毁了你一整天的心情');
+  const [currentAsset, setCurrentAsset] = useState<ContentAsset | undefined>(editingContent);
+  const [feedback, setFeedback] = useState(editingContent ? '已载入内容草稿' : '');
   
   const contentTypes = [
     { id: '小红书笔记', icon: <PenTool className="w-4 h-4" /> },
@@ -33,12 +40,36 @@ export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBa
     if (!topic.trim()) return;
     setStep('generating');
     setTimeout(() => {
+      const generated: ContentAsset = {
+        id: editingContent?.id || `content-${Date.now()}`,
+        title: selectedTitle,
+        summary: '识别自动化负面想法，用三个简单动作建立自己的情绪边界。',
+        platform: contentType,
+        style,
+        status: 'ready',
+        sourceTopic: initialTopic || undefined,
+        updatedAt: '刚刚生成',
+        words: 1135,
+      };
+      setCurrentAsset(generated);
+      onSaveContent(generated);
       setStep('result');
     }, 2000);
   };
 
+  const saveAsset = (status: ContentAsset['status'] = 'ready') => {
+    const asset: ContentAsset = currentAsset || {
+      id: editingContent?.id || `content-${Date.now()}`,
+      title: selectedTitle, summary: '识别自动化负面想法，用三个简单动作建立自己的情绪边界。',
+      platform: contentType, style, status, sourceTopic: initialTopic || undefined, updatedAt: '刚刚保存', words: 1135,
+    };
+    const next = { ...asset, title: selectedTitle, platform: contentType, style, status, updatedAt: '刚刚保存' };
+    setCurrentAsset(next); onSaveContent(next); return next;
+  };
+
   const InputView = () => (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {initialTopic && <div className="rounded-[20px] border border-[#D8C8FF] bg-[#F1E9FF] p-4"><div className="flex items-center gap-2 text-[12px] font-bold text-[#6750A4]"><Sparkles className="h-4 w-4" /> 已选择灵感</div><p className="mt-2 text-[14px] font-bold leading-snug text-[#1D1B16]">{initialTopic}</p><p className="mt-1 text-[11px] text-[#7A756C]">灵感信息已带入，你可以继续补充或直接生成。</p></div>}
       {/* 核心输入区 */}
       <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-5 shadow-sm">
         <h3 className="font-bold text-[16px] text-[#1D1B16] mb-4 tracking-tight">你想写什么？</h3>
@@ -141,21 +172,12 @@ export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBa
   );
 
   const ResultView = () => (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      
-      {/* 标题候选 */}
-      <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Hash className="w-5 h-5 text-[#6750A4]" />
-          <h3 className="font-bold text-[16px] text-[#1D1B16] tracking-tight">候选标题 (点击使用)</h3>
-        </div>
-        <div className="space-y-2">
-          {['别让领导的一句话，毁了你一整天的心情', '职场高敏感：如何建立情绪防火墙？', '致职场新人：你的价值不由别人的评价决定'].map((title, i) => (
-            <button key={i} className="w-full text-left p-3 bg-[#FAF8F5] border border-[#ECE6DC] rounded-xl text-[14px] text-[#1D1B16] font-bold hover:bg-[#EADDFF] hover:border-[#D0BCFF] hover:text-[#4F378B] transition">
-              {title}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 pb-2">
+      <div className="flex items-center gap-2 rounded-[20px] border border-[#E6E0D6] bg-white px-4 py-3 shadow-sm">
+        <span className="rounded-md bg-[#F1E9FF] px-2 py-1 text-[11px] font-bold text-[#6750A4]">{contentType}</span>
+        <span className="rounded-md bg-[#F5F2ED] px-2 py-1 text-[11px] font-medium text-[#6F6A61]">{style}</span>
+        <span className="ml-auto rounded-md bg-[#E8F7EC] px-2 py-1 text-[11px] font-bold text-[#167A39]">已生成</span>
+        <span className="text-[11px] text-[#8D877E]">1135 字</span>
       </div>
 
       {/* 正文内容 */}
@@ -165,10 +187,12 @@ export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBa
             <FileText className="w-5 h-5 text-[#6750A4]" />
             <h3 className="font-bold text-[16px] text-[#1D1B16] tracking-tight">正文内容</h3>
           </div>
-          <button className="text-[12px] text-[#6750A4] font-bold flex items-center gap-1 bg-[#EADDFF] px-3 py-1.5 rounded-full hover:bg-[#D0BCFF] transition">
+          <button onClick={() => setFeedback('全文已复制')} className="text-[12px] text-[#6750A4] font-bold flex items-center gap-1 bg-[#EADDFF] px-3 py-1.5 rounded-full hover:bg-[#D0BCFF] transition">
             <Copy className="w-3.5 h-3.5" /> 复制全文
           </button>
         </div>
+
+        <h1 className="mb-5 text-[20px] font-bold leading-snug text-[#1D1B16]">{selectedTitle}</h1>
         
         <div className="text-[14px] text-[#49463D] leading-relaxed space-y-4 font-medium">
           <p><span className="font-bold text-[#6750A4]">【痛点引入】</span><br/>最近在咨询室里，我遇到好几位职场新人。他们都有一个共同的困扰：“今天领导叹了口气，我是不是做错了什么？”、“开会时老板没看我，是不是对我有意见？”</p>
@@ -184,64 +208,13 @@ export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBa
         </div>
       </div>
 
-      {/* AI 微调优化 */}
-      <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-5 shadow-sm">
-        <h3 className="font-bold text-[15px] text-[#1D1B16] mb-3 tracking-tight">AI 一键优化</h3>
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          <button className="flex flex-col items-center justify-center p-3 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[16px] hover:bg-[#EAE5DB] transition active:scale-95 text-[#49463D]">
-            <Wand2 className="w-5 h-5 mb-1 text-[#6750A4]" />
-            <span className="text-[12px] font-bold">更专业</span>
-          </button>
-          <button className="flex flex-col items-center justify-center p-3 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[16px] hover:bg-[#EAE5DB] transition active:scale-95 text-[#49463D]">
-            <Heart className="w-5 h-5 mb-1 text-[#B3261E]" />
-            <span className="text-[12px] font-bold">更温暖</span>
-          </button>
-          <button className="flex flex-col items-center justify-center p-3 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[16px] hover:bg-[#EAE5DB] transition active:scale-95 text-[#49463D]">
-            <MessageSquare className="w-5 h-5 mb-1 text-[#0842A0]" />
-            <span className="text-[12px] font-bold">更口语</span>
-          </button>
-          <button className="flex flex-col items-center justify-center p-3 bg-[#FAF8F5] border border-[#ECE6DC] rounded-[16px] hover:bg-[#EAE5DB] transition active:scale-95 text-[#49463D]">
-            <Zap className="w-5 h-5 mb-1 text-[#7A2E0E]" />
-            <span className="text-[12px] font-bold">更营销</span>
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <button className="flex-1 py-2 bg-[#F5F5F5] text-[#49463D] rounded-full text-[13px] font-bold hover:bg-[#EAE5DB] transition">缩短篇幅</button>
-          <button className="flex-1 py-2 bg-[#F5F5F5] text-[#49463D] rounded-full text-[13px] font-bold hover:bg-[#EAE5DB] transition">扩写细节</button>
-          <button className="flex-1 py-2 bg-[#F5F5F5] text-[#49463D] rounded-full text-[13px] font-bold hover:bg-[#EAE5DB] transition flex items-center justify-center gap-1">
-            <RefreshCw className="w-3.5 h-3.5" /> 重写
-          </button>
-        </div>
-      </div>
-
-      {/* 发布前检查 */}
-      <div className="bg-[#F4F8F4] border border-[#C4EED0] rounded-[28px] p-5 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5">
-            <CheckCircle2 className="w-5 h-5 text-[#132C0B]" />
-          </div>
-          <div>
-            <h3 className="font-bold text-[15px] text-[#132C0B] mb-1">发布前安全检查通过</h3>
-            <p className="text-[12px] text-[#003912] font-medium leading-relaxed">
-              未发现过度承诺、医疗风险及违规敏感词。该内容符合《心理咨询师职业伦理规范》及小红书平台规范。
-            </p>
-          </div>
-        </div>
-      </div>
+      {feedback && <p role="status" className="rounded-[14px] bg-[#E8F7EC] px-4 py-3 text-[12px] font-medium text-[#167A39]">{feedback}</p>}
 
       {/* 底部操作 */}
-      <div className="flex gap-3 pt-2">
-        <button 
-          onClick={() => setStep('input')}
-          className="w-1/3 py-3.5 rounded-full font-bold text-[15px] bg-white border border-[#E6E0D6] text-[#49463D] hover:bg-[#FAF8F5] active:scale-95 transition shadow-sm"
-        >
-          返回修改
-        </button>
-        <button className="flex-1 py-3.5 rounded-full font-bold text-[15px] bg-[#6750A4] text-white hover:bg-[#594294] active:scale-95 transition shadow-sm flex items-center justify-center gap-2">
-          <Save className="w-4 h-4" /> 保存草稿
-        </button>
+      <div className="sticky bottom-0 z-30 -mx-1 flex gap-3 border-t border-[#E6E0D6] bg-[#F7F4EF]/95 px-1 py-3 backdrop-blur">
+        <button onClick={() => onAddToPublishPlan(saveAsset('scheduled'))} className="flex-[1.35] py-3.5 rounded-full font-bold text-[14px] bg-[#6750A4] text-white active:scale-95 transition shadow-sm flex items-center justify-center gap-2"><CalendarPlus className="w-4 h-4" /> 加入发布计划</button>
+        <button onClick={() => { const published = saveAsset('published'); onPublishContent?.(published); setFeedback('内容已发布'); }} className="flex-1 py-3.5 rounded-full font-bold text-[14px] bg-white border border-[#6750A4] text-[#6750A4] active:scale-95 transition shadow-sm flex items-center justify-center gap-2"><Share2 className="w-4 h-4" /> 立即发布</button>
       </div>
-
     </div>
   );
 
@@ -255,12 +228,13 @@ export const ContentGeneratorView: React.FC<ContentGeneratorViewProps> = ({ onBa
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-xl font-bold text-[#1D1B16] flex items-center gap-2">
-            AI 内容生成 <Sparkles className="w-5 h-5 text-[#6750A4]" />
+            {step === 'result' ? '文章详情' : editingContent ? '继续创作' : initialTopic ? '从灵感创作' : '直接创作'} {step !== 'result' && <Sparkles className="w-5 h-5 text-[#6750A4]" />}
           </h2>
-          <p className="text-[13px] text-[#7A756C] font-medium mt-0.5">你的专属 AI 写作助手</p>
+          <p className="text-[13px] text-[#7A756C] font-medium mt-0.5">{step === 'result' ? '内容已自动保存到内容库' : '生成、编辑、保存与发布在这里连续完成'}</p>
         </div>
+        {step === 'result' && <button onClick={() => setStep('input')} className="shrink-0 rounded-full bg-[#F1E9FF] px-4 py-2 text-[12px] font-bold text-[#6750A4]">编辑</button>}
       </div>
 
       {step === 'input' && <InputView />}

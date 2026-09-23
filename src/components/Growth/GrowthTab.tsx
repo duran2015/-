@@ -3,11 +3,12 @@ import {
   Sparkles, CheckCircle2, ChevronRight, 
   Lightbulb, FileText, Calendar, 
   Users, MessageSquare, Globe, Heart, Share2,
-  X, Link as LinkIcon
+  X, Link as LinkIcon, BookMarked, Library
 } from 'lucide-react';
 import { ConsultantProfile, ViralVoucher } from '../../types';
 import { TopicInspirationView } from './TopicInspirationView';
 import { ContentGeneratorView } from './ContentGeneratorView';
+import { ContentAsset, ContentLibraryView, defaultContentAssets } from './ContentLibraryView';
 import { PublishPlanView } from './PublishPlanView';
 import { usePublishPlans } from './usePublishPlans';
 import { entrySummary } from './publishPlans';
@@ -31,7 +32,7 @@ export const GrowthTab: React.FC<GrowthTabProps> = ({
   onSubPageChange,
   onNavigateToProfile, onUpdateConsultant
 }) => {
-  const [viewMode, setViewMode] = useState<'main' | 'topic_inspiration' | 'content_generator' | 'publish_plan' | 'private_traffic' | 'consulting_entry'>(() => new URLSearchParams(window.location.search).has('profile') ? 'private_traffic' : new URLSearchParams(window.location.search).get('plan') === 'publish' ? 'publish_plan' : 'main');
+  const [viewMode, setViewMode] = useState<'main' | 'topic_inspiration' | 'content_generator' | 'content_library' | 'publish_plan' | 'private_traffic' | 'consulting_entry'>(() => new URLSearchParams(window.location.search).has('profile') ? 'private_traffic' : new URLSearchParams(window.location.search).get('plan') === 'publish' ? 'publish_plan' : 'main');
   const publishStore = usePublishPlans(consultant.id);
   const [fromPublishPlan, setFromPublishPlan] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
@@ -57,6 +58,10 @@ export const GrowthTab: React.FC<GrowthTabProps> = ({
     const url = new URL(window.location.href); url.searchParams.delete('plan'); window.history.replaceState(null, '', url); setViewMode('main');
   };
   const [passedTopic, setPassedTopic] = useState<string | undefined>();
+  const [savedTopics, setSavedTopics] = useState<string[]>(['t2']);
+  const [contentAssets, setContentAssets] = useState<ContentAsset[]>(defaultContentAssets);
+  const [editingContent, setEditingContent] = useState<ContentAsset | undefined>();
+  const [startEditing, setStartEditing] = useState(false);
   const openProfile = (page: 'manage' | 'preview' | 'share') => {
     const url = new URL(window.location.href); url.searchParams.set('tab', 'growth'); url.searchParams.set('profile', page); url.searchParams.delete('content'); url.searchParams.delete('read');
     window.history.pushState(null, '', url); setViewMode('private_traffic'); window.scrollTo(0, 0);
@@ -95,8 +100,12 @@ export const GrowthTab: React.FC<GrowthTabProps> = ({
         onBack={() => setViewMode('main')} 
         onGoToContentGenerator={(topic) => {
           setPassedTopic(topic);
+          setEditingContent(undefined);
+          setStartEditing(false);
           setViewMode('content_generator');
         }}
+        savedTopics={savedTopics}
+        onSavedTopicsChange={setSavedTopics}
       />
     );
   }
@@ -110,8 +119,32 @@ export const GrowthTab: React.FC<GrowthTabProps> = ({
           setPassedTopic(undefined);
         }} 
         initialTopic={passedTopic}
+        editingContent={editingContent}
+        startEditing={startEditing}
+        onSaveContent={(asset) => {
+          setContentAssets(previous => [asset, ...previous.filter(item => item.id !== asset.id)]);
+        }}
+        onAddToPublishPlan={(asset) => {
+          setContentAssets(previous => [{ ...asset, status: 'scheduled', updatedAt: '刚刚加入发布计划' }, ...previous.filter(item => item.id !== asset.id)]);
+          openPublishPlan();
+        }}
+        onPublishContent={(asset) => {
+          setContentAssets(previous => [{ ...asset, status: 'published', updatedAt: '刚刚发布' }, ...previous.filter(item => item.id !== asset.id)]);
+        }}
       />
     );
+  }
+
+  if (viewMode === 'content_library') {
+    return <ContentLibraryView
+      items={contentAssets}
+      onBack={() => setViewMode('main')}
+      onContinue={(item) => { setEditingContent(item); setStartEditing(false); setPassedTopic(item.sourceTopic || item.title); setViewMode('content_generator'); }}
+      onEdit={(item) => { setEditingContent(item); setStartEditing(true); setPassedTopic(item.sourceTopic || item.title); setViewMode('content_generator'); }}
+      onSchedule={(item) => { setContentAssets(previous => previous.map(asset => asset.id === item.id ? { ...asset, status: 'scheduled', updatedAt: '刚刚加入发布计划' } : asset)); openPublishPlan(); }}
+      onPublish={(item) => { setContentAssets(previous => previous.map(asset => asset.id === item.id ? { ...asset, status: 'published', updatedAt: '刚刚发布' } : asset)); }}
+      onDelete={(id) => setContentAssets(previous => previous.filter(asset => asset.id !== id))}
+    />;
   }
 
   if (viewMode === 'publish_plan') {
@@ -120,7 +153,7 @@ export const GrowthTab: React.FC<GrowthTabProps> = ({
         onBack={closePublishPlan}
         store={publishStore}
         specialties={consultant.specialties}
-        onGoToContentGenerator={(topic) => { setPassedTopic(topic); setFromPublishPlan(true); setViewMode('content_generator'); }}
+        onGoToContentGenerator={(topic) => { setPassedTopic(topic); setEditingContent(undefined); setStartEditing(false); setFromPublishPlan(true); setViewMode('content_generator'); }}
       />
     );
   }
@@ -257,47 +290,56 @@ export const GrowthTab: React.FC<GrowthTabProps> = ({
           </div>
         </div>
         
-        <div className="space-y-3">
+        <p className="-mt-2 mb-4 text-[12px] font-medium text-[#7A756C]">从灵感出发，或带着明确主题直接开始</p>
+        <div className="grid grid-cols-2 gap-3">
           <button 
             onClick={() => setViewMode('topic_inspiration')}
-            className="w-full flex items-center gap-4 p-4 bg-[#FAF8F5] rounded-[20px] border border-[#ECE6DC] hover:bg-[#EAE5DB] transition text-left group"
+            className="min-h-[152px] flex flex-col items-start p-4 bg-[#FFF7E7] rounded-[20px] border border-[#F2DCAA] hover:border-[#D7B96E] transition text-left group"
           >
             <div className="w-12 h-12 rounded-[16px] bg-[#FFDF99] text-[#7A2E0E] flex items-center justify-center shrink-0 group-active:scale-95 transition">
               <Lightbulb className="w-6 h-6" />
             </div>
             <div className="flex-1">
-              <div className="font-bold text-[15px] text-[#1D1B16]">选题灵感</div>
-              <div className="text-[12px] text-[#7A756C] mt-0.5 font-medium">挖掘你的擅长生成热门选题</div>
+              <div className="font-bold text-[15px] text-[#1D1B16] mt-3">从灵感开始</div>
+              <div className="text-[12px] text-[#7A756C] mt-1 font-medium leading-relaxed">浏览推荐，选一个灵感开始创作</div>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#A09C94] group-hover:text-[#1D1B16] transition" />
+            <span className="mt-auto flex items-center text-[12px] font-bold text-[#7A2E0E]">去找灵感 <ChevronRight className="w-4 h-4" /></span>
           </button>
           
           <button 
-            onClick={() => setViewMode('content_generator')}
-            className="w-full flex items-center gap-4 p-4 bg-[#FAF8F5] rounded-[20px] border border-[#ECE6DC] hover:bg-[#EAE5DB] transition text-left group"
+            onClick={() => { setPassedTopic(undefined); setEditingContent(undefined); setStartEditing(false); setViewMode('content_generator'); }}
+            className="min-h-[152px] flex flex-col items-start p-4 bg-[#EEF4FF] rounded-[20px] border border-[#D3E3FD] hover:border-[#9EBBEF] transition text-left group"
           >
             <div className="w-12 h-12 rounded-[16px] bg-[#D3E3FD] text-[#0842A0] flex items-center justify-center shrink-0 group-active:scale-95 transition">
               <FileText className="w-6 h-6" />
             </div>
             <div className="flex-1">
-              <div className="font-bold text-[15px] text-[#1D1B16]">内容生成</div>
-              <div className="text-[12px] text-[#7A756C] mt-0.5 font-medium">小红书/公众号/视频脚本</div>
+              <div className="font-bold text-[15px] text-[#1D1B16] mt-3">直接创作</div>
+              <div className="text-[12px] text-[#7A756C] mt-1 font-medium leading-relaxed">已有主题，直接生成笔记、长文或脚本</div>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#A09C94] group-hover:text-[#1D1B16] transition" />
+            <span className="mt-auto flex items-center text-[12px] font-bold text-[#0842A0]">开始创作 <ChevronRight className="w-4 h-4" /></span>
           </button>
-          
-          <button 
-            onClick={openPublishPlan}
-            className="w-full flex items-center gap-4 p-4 bg-[#FAF8F5] rounded-[20px] border border-[#ECE6DC] hover:bg-[#EAE5DB] transition text-left group"
-          >
-            <div className="w-12 h-12 rounded-[16px] bg-[#C4EED0] text-[#003912] flex items-center justify-center shrink-0 group-active:scale-95 transition">
-              <Calendar className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-[15px] text-[#1D1B16]">发布计划</div>
-              <div className="text-[12px] text-[#7A756C] mt-0.5 font-medium">{publishStore.error ? '计划暂无法读取 · 查看详情' : (publishStore.scenario !== 'real' ? '演示 · ' : '') + entrySummary(publishStore.state)}</div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-[#A09C94] group-hover:text-[#1D1B16] transition" />
+        </div>
+      </div>
+
+      <div className="bg-white border border-[#E6E0D6] rounded-[28px] p-6 shadow-sm">
+        <h3 className="font-bold text-[16px] text-[#1D1B16] tracking-tight">我的内容资产</h3>
+        <p className="mt-1 mb-3 text-[12px] font-medium text-[#7A756C]">灵感、内容与发布进度各归其位</p>
+        <div className="divide-y divide-[#EEE9E1]">
+          <button onClick={() => setViewMode('topic_inspiration')} className="w-full flex items-center gap-3 py-4 text-left group">
+            <span className="grid h-11 w-11 place-items-center rounded-[15px] bg-[#FFF2D8] text-[#8A4B08]"><BookMarked className="w-5 h-5" /></span>
+            <span className="flex-1"><b className="block text-[14px] text-[#1D1B16]">灵感池</b><small className="text-[11px] text-[#7A756C]">收藏后随时继续创作</small></span>
+            <strong className="text-[13px] text-[#6750A4]">{savedTopics.length}</strong><ChevronRight className="w-4 h-4 text-[#A09C94]" />
+          </button>
+          <button onClick={() => setViewMode('content_library')} className="w-full flex items-center gap-3 py-4 text-left group">
+            <span className="grid h-11 w-11 place-items-center rounded-[15px] bg-[#EEF4FF] text-[#0842A0]"><Library className="w-5 h-5" /></span>
+            <span className="flex-1"><b className="block text-[14px] text-[#1D1B16]">内容库</b><small className="text-[11px] text-[#7A756C]">草稿、成稿和发布记录</small></span>
+            <strong className="text-[13px] text-[#6750A4]">{contentAssets.length}</strong><ChevronRight className="w-4 h-4 text-[#A09C94]" />
+          </button>
+          <button onClick={openPublishPlan} className="w-full flex items-center gap-3 py-4 text-left group">
+            <span className="grid h-11 w-11 place-items-center rounded-[15px] bg-[#E8F7EC] text-[#167A39]"><Calendar className="w-5 h-5" /></span>
+            <span className="flex-1"><b className="block text-[14px] text-[#1D1B16]">发布计划</b><small className="text-[11px] text-[#7A756C]">{publishStore.error ? '计划暂无法读取' : entrySummary(publishStore.state)}</small></span>
+            <ChevronRight className="w-4 h-4 text-[#A09C94]" />
           </button>
         </div>
       </div>
