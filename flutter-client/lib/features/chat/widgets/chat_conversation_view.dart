@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/app_mode.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/im/im_config.dart';
@@ -344,6 +345,12 @@ class ChatConversationViewState extends ConsumerState<ChatConversationView> {
 
   Future<void> _sendText(String text) async {
     if (_isBlocked) return;
+    // 小程序游客态：发消息是「操作」，先引导授权登录（携程式先看后登录）。
+    if (AppMode.isMiniProgram && ref.read(authControllerProvider) == null) {
+      AppToast.show(context, '登录后才可以发消息哦');
+      context.push(RoutePaths.login);
+      return;
+    }
     try {
       await _im.sendTextMessage(userId: widget.peerUserId, text: text);
       // 回显经 newMessageStream 统一追加（mock/NIM 发送成功均推流）

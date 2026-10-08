@@ -657,6 +657,34 @@ void registerDevMocks() {
   final rescheduleRequests = <String, String>{};
   final paymentOrders = <String, String>{};
 
+  // ---------------- 内容订单（课程/测评报告）内存态 ----------------
+  // 状态机：pendingPayment → paid / cancelled_user / cancelled_timeout。
+  // 读取列表时惰性结算超时单（当前时间超过 payDeadline 自动转超时取消）。
+  final contentOrders = <Map<String, dynamic>>[];
+  var contentOrderSeq = 1000;
+
+  Map<String, dynamic>? findContentOrder(String orderId) =>
+      contentOrders.where((o) => o['orderId'] == orderId).firstOrNull;
+
+  /// 惰性超时结算：待支付且已过截止时间 → cancelled_timeout。
+  void settleContentOrderTimeouts() {
+    final now = DateTime.now();
+    for (final o in contentOrders) {
+      if (o['status'] != 'pendingPayment') continue;
+      final deadline = DateTime.tryParse(o['payDeadline']?.toString() ?? '');
+      if (deadline != null && now.isAfter(deadline)) {
+        o['status'] = 'cancelled_timeout';
+      }
+    }
+  }
+
+  /// 已购课程 id（内容订单支付成功后写入，course/list/detail 的
+  /// purchased 字段据此返回 true）。
+  final purchasedCourseIds = <int>{};
+
+  /// 已解锁完整报告的问卷 id（测评报告订单支付成功后写入）。
+  final unlockedAssessmentIds = <int>{};
+
   /// mock 预约订单行（字段对齐 iOS XYConsultOrder / my-list 行元素）。
   Map<String, dynamic> orderRow({
     required Object orderId,
@@ -1149,7 +1177,20 @@ void registerDevMocks() {
     final tradeNo = body['outTradeNo']?.toString() ?? '';
     if (tradeNo.isEmpty) return {'code': 500, 'msg': '支付订单号缺失'};
     final orderId = paymentOrders[tradeNo];
-    if (orderId != null) paidOrderIds.add(orderId);
+    if (orderId != null) {
+      paidOrderIds.add(orderId);
+      // 内容订单联动：置 paid 并解锁对应商品（课程可学 / 测评报告解锁）
+      final co = findContentOrder(orderId);
+      if (co != null && co['status'] == 'pendingPayment') {
+        co['status'] = 'paid';
+        final refId = (co['refId'] as num?)?.toInt() ?? 0;
+        if (co['bizType'] == 'course') {
+          purchasedCourseIds.add(refId);
+        } else if (co['bizType'] == 'assessment') {
+          unlockedAssessmentIds.add(refId);
+        }
+      }
+    }
     return ok(msg: '支付成功');
   });
 
@@ -1926,5 +1967,293 @@ void registerDevMocks() {
       'aiEmotionalState': '情绪低落、紧张，存在明显的灾难化思维',
       'aiCoreConflict': '对自我价值的怀疑与外在期待之间的冲突',
     });
+  });
+
+  // ---------------- 音视频课程（课程练习 Tab） ----------------
+  // 课程由后台上传维护；mock 内置 6 门课，音视频用本地演示资源
+  //（assets/mock_media/，真实环境为后台上传的 CDN 地址）。
+  // 购买状态保存在内存 purchasedCourseIds（声明于上方支付区），
+  // 支付成功（mock-success）后 detail/list 的 purchased 字段即为 true。
+  Map<String, dynamic> mockLesson(
+    int id,
+    String title,
+    String mediaType,
+    int durationSeconds,
+    bool freePreview,
+  ) =>
+      {
+        'id': id,
+        'title': title,
+        'mediaType': mediaType,
+        'mediaUrl': mediaType == 'audio'
+            ? 'asset:assets/mock_media/sample_audio.mp3'
+            : 'asset:assets/mock_media/sample_video.mp4',
+        'durationSeconds': durationSeconds,
+        'freePreview': freePreview,
+      };
+
+  final mockCourses = <Map<String, dynamic>>[
+    {
+      'id': 1,
+      'title': '停止吼叫：父母情绪管理课',
+      'subtitle': '看见失控背后的需要，减少亲子冲突',
+      'category': '家庭教育',
+      'priceFen': 0,
+      'lessonCount': 3,
+      'totalMinutes': 35,
+      'learnedCount': 2304,
+      'purchased': false,
+      'coverEmoji': '👨‍👧',
+      'description':
+          '吼叫之后往往是自责，自责之后又更容易失控。这门课带你看见情绪升级的全过程，'
+          '在爆发之前找到可以停下来的一秒钟，并逐步建立替代吼叫的沟通方式。',
+      'teacherName': '林小满',
+      'teacherTitle': '国家二级心理咨询师 · 家庭治疗方向',
+      'lessons': [
+        mockLesson(101, '第 1 讲 · 为什么我们总是忍不住吼孩子', 'video', 720, true),
+        mockLesson(102, '第 2 讲 · 情绪升级的三个信号', 'video', 660, true),
+        mockLesson(103, '第 3 讲 · 停下来的一秒钟：暂停技术', 'audio', 780, true),
+      ],
+    },
+    {
+      'id': 2,
+      'title': '孩子不配合，父母怎么沟通',
+      'subtitle': '从命令和对抗，走向清晰而温和的协商',
+      'category': '家庭教育',
+      'priceFen': 4900,
+      'lessonCount': 3,
+      'totalMinutes': 42,
+      'learnedCount': 1186,
+      'purchased': false,
+      'coverEmoji': '🧩',
+      'description':
+          '「快点」「不行」「我说了算」为什么越来越不管用？课程用 8 个真实家庭场景，'
+          '拆解命令式语言如何制造对抗，并给出可以直接套用的协商句式。',
+      'teacherName': '周砚',
+      'teacherTitle': '家庭教育指导师 · 正面管教认证讲师',
+      'lessons': [
+        mockLesson(201, '第 1 讲 · 试看：命令为什么制造对抗', 'video', 600, true),
+        mockLesson(202, '第 2 讲 · 有限选择：把主动权还给孩子', 'video', 900, false),
+        mockLesson(203, '第 3 讲 · 睡前冲突的协商脚本', 'audio', 1020, false),
+      ],
+    },
+    {
+      'id': 3,
+      'title': '关系中的表达与边界',
+      'subtitle': '说清自己的需要，也听懂对方的感受',
+      'category': '亲密关系',
+      'priceFen': 6900,
+      'lessonCount': 4,
+      'totalMinutes': 56,
+      'learnedCount': 986,
+      'purchased': false,
+      'coverEmoji': '💞',
+      'description':
+          '很多争吵不是不爱了，而是需要没有被说出来。课程从「非暴力沟通」出发，'
+          '练习表达事实、感受与请求，同时学会在关系中树立健康的边界。',
+      'teacherName': '陈默',
+      'teacherTitle': '婚姻家庭咨询师',
+      'lessons': [
+        mockLesson(301, '第 1 讲 · 试看：指责背后的真实需要', 'video', 660, true),
+        mockLesson(302, '第 2 讲 · 区分观察与评价', 'video', 840, false),
+        mockLesson(303, '第 3 讲 · 说「不」的三个层次', 'audio', 780, false),
+        mockLesson(304, '第 4 讲 · 边界被侵犯时的表达练习', 'audio', 720, false),
+      ],
+    },
+    {
+      'id': 4,
+      'title': '冲突之后，如何重新靠近',
+      'subtitle': '识别关系循环，练习有效修复',
+      'category': '亲密关系',
+      'priceFen': 3900,
+      'lessonCount': 3,
+      'totalMinutes': 38,
+      'learnedCount': 754,
+      'purchased': false,
+      'coverEmoji': '🌉',
+      'description':
+          '吵架不可怕，可怕的是吵完之后的冷战与疏远。课程帮你识别「追逃循环」，'
+          '在情绪降温后发起一次真正有效的修复对话。',
+      'teacherName': '陈默',
+      'teacherTitle': '婚姻家庭咨询师',
+      'lessons': [
+        mockLesson(401, '第 1 讲 · 试看：什么是追逃循环', 'video', 720, true),
+        mockLesson(402, '第 2 讲 · 降温：先处理心情再处理事情', 'audio', 780, true),
+        mockLesson(403, '第 3 讲 · 修复对话的四步结构', 'video', 780, false),
+      ],
+    },
+    {
+      'id': 5,
+      'title': '压力与情绪调节',
+      'subtitle': '认识压力反应，建立自己的调节方式',
+      'category': '情绪管理',
+      'priceFen': 0,
+      'lessonCount': 3,
+      'totalMinutes': 30,
+      'learnedCount': 3120,
+      'purchased': false,
+      'coverEmoji': '🌿',
+      'description':
+          '压力本身不是问题，持续的紧绷才是。这门免费课带你认识身体的压力反应，'
+          '并练习呼吸、 grounding 等可以随时使用的调节技术。',
+      'teacherName': '林小满',
+      'teacherTitle': '国家二级心理咨询师',
+      'lessons': [
+        mockLesson(501, '第 1 讲 · 压力是敌人还是信使', 'video', 600, true),
+        mockLesson(502, '第 2 讲 · 4-7-8 呼吸法跟练', 'audio', 540, true),
+        mockLesson(503, '第 3 讲 · 5-4-3-2-1 grounding 练习', 'audio', 660, true),
+      ],
+    },
+    {
+      'id': 6,
+      'title': '睡前的放松仪式',
+      'subtitle': '给大脑一个「可以休息了」的信号',
+      'category': '自我成长',
+      'priceFen': 1900,
+      'lessonCount': 3,
+      'totalMinutes': 45,
+      'learnedCount': 2689,
+      'purchased': false,
+      'coverEmoji': '🌙',
+      'description':
+          '睡不着常常不是因为不困，而是大脑没有收到「可以休息」的信号。'
+          '三节音频引导，帮你在睡前 15 分钟建立一套属于自己的放松仪式。',
+      'teacherName': '苏杭',
+      'teacherTitle': '睡眠健康管理师',
+      'lessons': [
+        mockLesson(601, '第 1 讲 · 试看：为什么越努力越睡不着', 'audio', 720, true),
+        mockLesson(602, '第 2 讲 · 身体扫描引导（跟练版）', 'audio', 1020, false),
+        mockLesson(603, '第 3 讲 · 思绪整理与放下练习', 'audio', 960, false),
+      ],
+    },
+  ];
+
+  Map<String, dynamic> courseCardJson(Map<String, dynamic> c) =>
+      {...c, 'purchased': purchasedCourseIds.contains(c['id'])}
+        ..remove('lessons'); // 列表页不带课时明细
+
+  // 课程列表
+  ApiClient.registerMock('/app/course/list', (body) {
+    final category = body['category']?.toString();
+    final filtered = category == null || category.isEmpty
+        ? mockCourses
+        : mockCourses.where((c) => c['category'] == category).toList();
+    return ok(data: {'list': [for (final c in filtered) courseCardJson(c)]});
+  });
+
+  // 课程详情（含课时）
+  ApiClient.registerMock('/app/course/detail', (body) {
+    final id = (body['courseId'] as num?)?.toInt() ?? 0;
+    final course = mockCourses.where((c) => c['id'] == id).firstOrNull;
+    if (course == null) return {'code': 404, 'msg': '课程不存在'};
+    return ok(data: {
+      ...course,
+      'purchased': purchasedCourseIds.contains(id),
+    });
+  });
+
+  // 购买课程（mock 直接成功；接真实支付时走 /app/pay/create 链路）
+  ApiClient.registerMock('/app/course/buy', (body) {
+    final id = (body['courseId'] as num?)?.toInt() ?? 0;
+    if (!mockCourses.any((c) => c['id'] == id)) {
+      return {'code': 404, 'msg': '课程不存在'};
+    }
+    purchasedCourseIds.add(id);
+    return ok(msg: '购买成功');
+  });
+
+  // ---------------- 内容订单（课程 / 测评报告） ----------------
+  // 统一走 /app/content-order/*：创建 → 支付页确认 → mock-success 置 paid。
+  // 状态机见 content_order_models.dart（pendingPayment / paid /
+  // cancelled_user / cancelled_timeout，超时单读取时惰性结算）。
+
+  /// 测评报告价格（分），与 /app/assessment/list 的 priceText 对齐。
+  int assessmentPriceFen(int questionnaireId) => switch (questionnaireId) {
+        1 || 2 => 990,
+        4 => 1990,
+        _ => 0,
+      };
+
+  String assessmentName(int questionnaireId) => switch (questionnaireId) {
+        1 => '抑郁自评量表(SDS)',
+        2 => '焦虑自评量表(SAS)',
+        3 => 'MBTI性格测试',
+        4 => '广泛性焦虑量表(GAD-7)',
+        _ => '心理测评',
+      };
+
+  String fmtNow(DateTime t) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${t.year}-${two(t.month)}-${two(t.day)} '
+        '${two(t.hour)}:${two(t.minute)}:${two(t.second)}';
+  }
+
+  // 创建内容订单（幂等：同 bizType+refId 存在待支付单则直接复用）
+  ApiClient.registerMock('/app/content-order/create', (body) {
+    final bizType = body['bizType']?.toString() ?? 'course';
+    final refId = (body['refId'] as num?)?.toInt() ?? 0;
+
+    settleContentOrderTimeouts();
+    final existing = contentOrders.where((o) =>
+        o['bizType'] == bizType &&
+        o['refId'] == refId &&
+        o['status'] == 'pendingPayment');
+    if (existing.isNotEmpty) return ok(data: existing.first);
+
+    String title;
+    String subtitle;
+    int priceFen;
+    if (bizType == 'course') {
+      final course = mockCourses.where((c) => c['id'] == refId).firstOrNull;
+      if (course == null) return {'code': 404, 'msg': '课程不存在'};
+      title = course['title']?.toString() ?? '课程';
+      subtitle = '${course['subtitle']} · 共${course['lessonCount']}节';
+      priceFen = (course['priceFen'] as num?)?.toInt() ?? 0;
+    } else {
+      if (refId < 1 || refId > 4) return {'code': 404, 'msg': '测评不存在'};
+      title = assessmentName(refId);
+      subtitle = '完整测评报告 · 含三维度雷达解读';
+      priceFen = assessmentPriceFen(refId);
+    }
+
+    final order = <String, dynamic>{
+      'orderId': 'CO${++contentOrderSeq}',
+      'bizType': bizType,
+      'refId': refId,
+      'title': title,
+      'subtitle': subtitle,
+      'priceFen': priceFen,
+      'status': 'pendingPayment',
+      'createdAt': fmtNow(DateTime.now()),
+      'payDeadline': DateTime.now()
+          .add(const Duration(minutes: 30))
+          .toIso8601String(),
+    };
+    contentOrders.add(order);
+    return ok(data: order);
+  });
+
+  // 内容订单列表（bizType 过滤：course / assessment）
+  ApiClient.registerMock('/app/content-order/list', (body) {
+    settleContentOrderTimeouts();
+    final bizType = body['bizType']?.toString();
+    final list = contentOrders
+        .where((o) => bizType == null || o['bizType'] == bizType)
+        .toList()
+      ..sort((a, b) => (b['createdAt']?.toString() ?? '')
+          .compareTo(a['createdAt']?.toString() ?? ''));
+    return ok(data: {'list': list});
+  });
+
+  // 取消内容订单（仅待支付可取消 → cancelled_user）
+  ApiClient.registerMock('/app/content-order/cancel', (body) {
+    final orderId = body['orderId']?.toString() ?? '';
+    final order = findContentOrder(orderId);
+    if (order == null) return {'code': 404, 'msg': '订单不存在'};
+    if (order['status'] != 'pendingPayment') {
+      return {'code': 400, 'msg': '当前订单状态不可取消'};
+    }
+    order['status'] = 'cancelled_user';
+    return ok(msg: '订单已取消');
   });
 }

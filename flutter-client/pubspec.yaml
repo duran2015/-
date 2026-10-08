@@ -26,6 +26,8 @@ dependencies:
   permission_handler: 12.0.3
   audioplayers: 6.8.1
   record: 6.2.1
+  # 视频课程播放（音视频课程：视频走 video_player，音频走 audioplayers）。
+  video_player: 2.10.1
 
   # 本地存储
   hive: 2.2.3
@@ -89,3 +91,5 @@ flutter:
   assets:
     # 2.0x/3.0x 变体由 Flutter 按目录约定自动解析，无需逐一声明
     - assets/images/
+    # mock 课程音视频演示资源（仅 API_ENV=mock 使用）
+    - assets/mock_media/

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/app_mode.dart';
 import '../../../core/im/im_models.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import 'action_middle_card.dart';
+import 'ai_recommend_card.dart';
 import 'begin_chat_middle_card.dart';
 import 'chat_card_logic.dart';
 import 'question_assistant_card.dart';
@@ -55,10 +57,17 @@ class CustomCardView extends StatelessWidget {
         return SummaryAdviseCard(card: card);
       case ChatCardKind.questionAssistant:
         return QuestionAssistantCard(card: card);
+      case ChatCardKind.aiRecommend:
+        return AiRecommendCard(card: card);
       case ChatCardKind.unknown:
         // 内置 businessID（text_link/order 等）与未识别卡兜底：
-        // 居中窄条展示 title/desc（iOS 参照：TUILinkCell/系统消息兜底语义）
-        final text = card.title ?? card.desc ?? card.label ?? '[自定义消息]';
+        // 居中窄条展示 title/desc（iOS 参照：TUILinkCell/系统消息兜底语义）。
+        // 小程序形态：明确告知该内容需在 App 中查看（咨询师发的部分
+        // 卡片小程序渲染不了，避免用户误以为内容丢失）。
+        final raw = card.title ?? card.desc ?? card.label;
+        final text = AppMode.isMiniProgram
+            ? (raw == null ? '该内容请在 App 中查看' : '$raw（请在 App 中查看）')
+            : (raw ?? '[自定义消息]');
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(

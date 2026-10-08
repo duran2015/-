@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_mode.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_env.dart';
 import '../../core/network/dev_mock.dart';
@@ -50,8 +51,10 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     // 直接以 dev_mock 单身份 user 假数据登录，跳过登录页直达主端。
     // 开启方式：flutter run/build 加 --dart-define=DEV_AUTO_LOGIN=1。
     // API_ENV=live 真实联调下不生效（必须用真实短信登录）。
+    // 小程序形态下同样不生效：游客先进店浏览，操作时再授权登录。
     if (ApiEnv.isMock &&
         SplashPage._devAutoLoginEnabled &&
+        !AppMode.isMiniProgram &&
         ref.read(authControllerProvider) == null) {
       try {
         await ref.read(authControllerProvider.notifier).applyLogin(

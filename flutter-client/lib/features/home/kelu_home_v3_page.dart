@@ -10,6 +10,7 @@ import '../../core/widgets/app_toast.dart';
 import '../ai/ai_settings_page.dart';
 import '../chat/widgets/chat_conversation_view.dart';
 import '../message/message_view_model.dart';
+import '../profile/support_profile_state.dart';
 import 'home_models.dart';
 import 'home_view_model.dart';
 import 'widgets/mood_record_sheet.dart';
@@ -220,6 +221,15 @@ class _KeluHomeV3PageState extends ConsumerState<KeluHomeV3Page> {
                   onVoiceCancel: () => setState(() => _isRecording = false),
                   onVoiceEnd: _finishRecording,
                 ),
+              ),
+            // 对话模式下欢迎卡（含完善度条）被顶走，保留悬浮小鹿
+            // 入口让用户随时可以补档案；完善度满 100% 自动隐藏。
+            // 位置：右下角贴近输入条上方的角落，避免挡在消息卡片中间。
+            if (_conversationMode)
+              const Positioned(
+                right: 10,
+                bottom: 100,
+                child: _FloatingProfileEntry(),
               ),
           ],
         ),
@@ -710,6 +720,8 @@ class _AssistantScene extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // 档案完善度动态条：<100% 才出现，填完即消失
+                  const _ProfileCompletenessBar(),
                 ],
               ),
             ),
@@ -1511,6 +1523,182 @@ class _QuickEntry extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 支持档案完善度动态条：整体完善度 <100% 时才出现，
+/// 点击进支持档案页；填完即消失（不占固定位）。
+class _ProfileCompletenessBar extends ConsumerWidget {
+  const _ProfileCompletenessBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(supportProfileProvider);
+    final percent = ((profile.basicCompletion +
+                profile.preferenceCompletion +
+                profile.supportCompletion) /
+            3)
+        .round();
+    if (percent >= 100) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => context.push(RoutePaths.supportProfile),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE7F1ED),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.tune_rounded,
+                  size: 18, color: Color(0xFF286D64)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '小鹿还不太懂你',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF286D64),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '完善支持档案，推荐会更准',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: const Color(0xFF286D64).withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 38,
+                height: 38,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      value: percent / 100,
+                      strokeWidth: 3.5,
+                      backgroundColor: Colors.white,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF286D64)),
+                    ),
+                    Text(
+                      '$percent%',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF286D64),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 20, color: Color(0xFF286D64)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 对话模式下的悬浮档案入口：小鹿头像 + 完善度气泡。
+/// 完善度 <100% 才出现，点击进入支持档案完善页。
+class _FloatingProfileEntry extends ConsumerWidget {
+  const _FloatingProfileEntry();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(supportProfileProvider);
+    final percent = ((profile.basicCompletion +
+                profile.preferenceCompletion +
+                profile.supportCompletion) /
+            3)
+        .round();
+    if (percent >= 100) return const SizedBox.shrink();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(RoutePaths.supportProfile),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFDCE8E2)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x14000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              '补充档案 · $percent%',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF286D64),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFDCE8E2)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/home_mascot.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const Positioned(
+                right: 0,
+                top: 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFE9685B),
+                  ),
+                  child: SizedBox(width: 10, height: 10),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

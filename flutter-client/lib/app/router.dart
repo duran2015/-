@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'navigation.dart';
+import '../core/app_mode.dart';
 import '../core/auth/auth_controller.dart';
 import '../core/auth/auth_state.dart';
 import '../core/consult_room/consult_room_bridge_page.dart';
@@ -10,6 +11,7 @@ import '../core/router/route_paths.dart';
 import '../core/webview/app_webview_page.dart';
 import '../features/auth/bind_phone_page.dart';
 import '../features/auth/login_page.dart';
+import '../features/auth/mp_login_page.dart';
 import '../features/auth/select_identity_page.dart';
 import '../features/auth/consultant_onboarding_page.dart';
 import '../features/auth/consultant_portal_page.dart';
@@ -23,10 +25,15 @@ import '../features/consultant/review_list_page.dart';
 import '../features/counselor/consult_record_page.dart';
 import '../features/counselor/counselor_order_detail_page.dart';
 import '../features/evaluate/evaluate_page.dart';
+import '../features/home/assessment_intro_page.dart';
 import '../features/home/assessment_list_page.dart';
+import '../features/home/assessment_quiz_page.dart';
 import '../features/home/assessment_report_page.dart';
+import '../features/home/assessment_result_teaser_page.dart';
 import '../features/home/assessment_webview_page.dart';
 import '../features/service/service_page.dart';
+import '../features/course/course_detail_page.dart';
+import '../features/course/course_player_page.dart';
 import '../features/growth/newcomer_growth_models.dart';
 import '../features/growth/newcomer_growth_page.dart';
 import '../features/message/system_notification_page.dart';
@@ -39,7 +46,7 @@ import '../features/mine/about_page.dart';
 import '../features/mine/feedback_page.dart';
 import '../features/mine/mine_summaries_page.dart';
 import '../features/mine/personality_page.dart';
-import '../features/order/my_orders_page.dart';
+import '../features/order/order_center_page.dart';
 import '../features/order/order_detail_page.dart';
 import '../features/payment/intake_webview_page.dart';
 import '../features/payment/order_exception_page.dart';
@@ -79,7 +86,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.login,
-        builder: (context, state) => const LoginPage(),
+        // 小程序形态：携程授权模式登录页（无咨询师身份入口）
+        builder: (context, state) => AppMode.isMiniProgram
+            ? const MpLoginPage()
+            : const LoginPage(),
       ),
       GoRoute(
         path: RoutePaths.loginVerify,
@@ -138,6 +148,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: RoutePaths.courseDetail,
+        builder: (context, state) => CourseDetailPage(
+          courseId:
+              int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.coursePlayer,
+        builder: (context, state) => CoursePlayerPage(
+          courseId:
+              int.tryParse(state.uri.queryParameters['courseId'] ?? '') ?? 0,
+          lessonId:
+              int.tryParse(state.uri.queryParameters['lessonId'] ?? '') ?? 0,
+        ),
+      ),
+      GoRoute(
         path: RoutePaths.supportPractice,
         builder: (context, state) => const SupportPracticePage(),
       ),
@@ -191,6 +217,56 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.assessmentList,
         builder: (context, state) => const AssessmentListPage(),
       ),
+      GoRoute(
+        path: RoutePaths.assessmentIntro,
+        // 测评过渡介绍页（去测试前置）：测什么 / 能获得什么 / 题数时长价格
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          return AssessmentIntroPage(
+            questionnaireId:
+                int.tryParse(q['questionnaireId'] ?? '') ?? 0,
+            questionnaireKey: q['questionnaireKey'] ?? '',
+            title: q['title'] ?? '心理测评',
+            subtitle: q['subtitle'] ?? '',
+            priceText: q['priceText'] ?? '',
+            originalPriceText: q['originalPriceText'],
+            questionCountText: q['questionCountText'] ?? '',
+            h5Link: q['h5Link'] ?? '',
+            userAssessId: int.tryParse(q['userAssessId'] ?? ''),
+            tested: q['tested'] == '1',
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.assessmentQuiz,
+        // 测评答题页（mock 原生答题容器）：逐题作答后进结果预览页
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          return AssessmentQuizPage(
+            questionnaireId:
+                int.tryParse(q['questionnaireId'] ?? '') ?? 0,
+            questionnaireKey: q['questionnaireKey'] ?? '',
+            title: q['title'] ?? '心理测评',
+            priceText: q['priceText'] ?? '',
+            questionCount: int.tryParse(q['questionCount'] ?? '') ?? 0,
+            userAssessId: int.tryParse(q['userAssessId'] ?? ''),
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.assessmentResultTeaser,
+        // 测评结果预览页：模糊雷达图 + 付费解锁完整报告
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          return AssessmentResultTeaserPage(
+            questionnaireId:
+                int.tryParse(q['questionnaireId'] ?? '') ?? 0,
+            title: q['title'] ?? '心理测评',
+            userAssessId: int.tryParse(q['userAssessId'] ?? ''),
+            priceText: q['priceText'] ?? '',
+          );
+        },
+      ),
 
       // ---------- 9000 段（契约 §2） ----------
       GoRoute(
@@ -200,9 +276,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.orders,
-        // 9001 我的预约订单（阶段 4 下半实现）
-        // iOS 参照：XYMyAppointmentOrdersViewController
-        builder: (context, state) => const MyOrdersPage(),
+        // 9001 我的预约订单：已并入订单中心，直接落到「预约订单」Tab
+        //（深链 9001 / 旧入口兼容）
+        builder: (context, state) => const OrderCenterPage(initialTab: 2),
+      ),
+      GoRoute(
+        path: RoutePaths.orderCenter,
+        // 订单中心：测评订单 / 课程订单 / 预约订单 三 Tab
+        builder: (context, state) => OrderCenterPage(
+          initialTab:
+              int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+        ),
       ),
       GoRoute(
         path: RoutePaths.orderDetail,
@@ -319,6 +403,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.chat,
         // 1005 IM 聊天：targetUserId/imUserId（空→机器人）、userName、avatar、tags
         // iOS 参照：XYChatContainerViewController（XYChatRouter 打开）
+        // 小程序形态：会话保留（可收发文字），页内提示条告知音视频/
+        // 咨询室等高级能力请去 App；小程序不支持的卡片降级为文字提示。
         builder: (context, state) {
           final q = state.uri.queryParameters;
           final tagsStr = q['tags'];
@@ -346,6 +432,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.consultRoom,
         // 1006：深链兼容入口。透明零动画页，立刻 present 原生会议并自 pop。
         // 业务入口请直接 launchConsultRoom，勿 push 本路由。
+        // 小程序形态：桥接页自 pop 后由 launchConsultRoom toast 引导去 App，
+        // 不展示整页拦截页。
         pageBuilder: (context, state) {
           return CustomTransitionPage<void>(
             key: state.pageKey,
@@ -458,6 +546,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             orderId: q['orderId'] ?? '',
             counselorIMUserID: q['imUserId'] ?? '',
             counselorAvatar: q['avatar'],
+            bizType: q['bizType'] ?? 'consult',
+            contentTitle: q['title'] ?? '',
+            contentRefId: int.tryParse(q['refId'] ?? '') ?? 0,
           );
         },
       ),

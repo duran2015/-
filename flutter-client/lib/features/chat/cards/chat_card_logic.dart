@@ -16,6 +16,9 @@ enum ChatCardKind {
   summaryAdvise,
   questionAssistant,
 
+  /// AI 主动推荐卡（小鹿机器人会话：咨询师/课程/练习/测评）
+  aiRecommend,
+
   /// 未识别 businessID（含内置 text_link/order 等），走兜底渲染
   unknown,
 }
@@ -35,6 +38,8 @@ ChatCardKind resolveChatCardKind(String? businessID) {
       return ChatCardKind.summaryAdvise;
     case 'question_assistant':
       return ChatCardKind.questionAssistant;
+    case 'ai_recommend':
+      return ChatCardKind.aiRecommend;
     default:
       return ChatCardKind.unknown;
   }

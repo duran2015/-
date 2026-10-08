@@ -11,12 +11,18 @@ import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_nav_bar.dart';
 import '../../core/widgets/app_toast.dart';
 import '../order/order_api.dart';
+import '../course/course_view_model.dart';
+import '../order/content_order_api.dart';
+import '../order/content_order_models.dart';
 
 /// 支付成功页（路由 /payment/success?name=&time=&orderId=）。
 /// iOS 参照：XYAIModule/XYAIModule/Classes/ViewController/
 /// XYPaymentSuccessViewController.swift（Figma「支付成功-0715」1173:2859）——
 /// 日历勾选图标 + 「预约成功」+ 提醒文案 + 预订信息卡（倾听师/预约时间）
 /// + 主按钮「填写咨询前问卷」+ 次按钮「稍后填写并返回首页」+ 退单链接。
+///
+/// 内容订单（bizType=course/assessment）走变体：
+/// 「购买成功/解锁成功」+ 主按钮「开始学习/查看完整报告」，无退单链接。
 class PaymentSuccessPage extends ConsumerWidget {
   const PaymentSuccessPage({
     super.key,
@@ -25,6 +31,9 @@ class PaymentSuccessPage extends ConsumerWidget {
     required this.orderId,
     this.counselorIMUserID = '',
     this.counselorAvatar,
+    this.bizType = 'consult',
+    this.contentTitle = '',
+    this.contentRefId = 0,
   });
 
   final String counselorName;
@@ -38,8 +47,163 @@ class PaymentSuccessPage extends ConsumerWidget {
   /// 咨询师头像 URL（iOS counselorAvatar）
   final String? counselorAvatar;
 
+  /// 业务类型：consult（默认）/ course / assessment
+  final String bizType;
+
+  /// 内容订单商品名（课程名 / 测评名）
+  final String contentTitle;
+
+  /// 内容订单商品 ID（课程 ID / 问卷 ID，跳转目标用）
+  final int contentRefId;
+
+  bool get _isCourse => bizType == 'course';
+  bool get _isAssessment => bizType == 'assessment';
+  bool get _isContentOrder => _isCourse || _isAssessment;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (_isContentOrder) return _buildContentSuccess(context, ref);
+    return _buildConsultSuccess(context, ref);
+  }
+
+  /// 内容订单支付成功页（课程购买 / 测评报告解锁）。
+  Widget _buildContentSuccess(BuildContext context, WidgetRef ref) {
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: AppColors.pageBackground,
+        body: SafeArea(
+          child: Column(
+            children: [
+              const AppNavBar(
+                  title: '支付成功', showBack: false, transparent: true),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 30),
+                      Icon(
+                        _isCourse
+                            ? Icons.play_circle_outline
+                            : Icons.assignment_turned_in_outlined,
+                        size: 32,
+                        color: AppColors.brandTeal,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _isCourse ? '购买成功' : '解锁成功',
+                        style: AppTextStyles.titleXLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isCourse ? '课程已加入你的学习列表，可随时回看' : '完整测评报告已解锁，可随时查看',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _contentOrderCard(),
+                      const SizedBox(height: 33),
+                      GestureDetector(
+                        key: const Key('content_success_primary'),
+                        onTap: () => _goContentTarget(context, ref),
+                        child: Container(
+                          height: AppDimens.confirmButtonHeight,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.brandGradient,
+                            borderRadius: BorderRadius.circular(
+                              AppDimens.confirmButtonRadius,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _isCourse ? '开始学习' : '查看完整报告',
+                            style: AppTextStyles.titleLarge.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: () => context.go(RoutePaths.home),
+                        child: Container(
+                          height: 45,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '返回首页',
+                            style: AppTextStyles.titleSmall.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 内容订单信息卡：订单信息标题 + 商品/订单编号两行。
+  Widget _contentOrderCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(15, 20, 15, 20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '订单信息',
+            style: AppTextStyles.bodyLargeStrong.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 18),
+          _infoRow(_isCourse ? '课程' : '测评', contentTitle),
+          const SizedBox(height: 12),
+          _infoRow('订单编号', orderId),
+        ],
+      ),
+    );
+  }
+
+  /// 支付成功后跳转：课程 → 课程详情；测评 → 完整报告页。
+  /// 先使相关缓存失效（课程详情/列表的购买标识、内容订单列表），
+  /// 否则上一页入栈时的缓存会让详情页仍显示未购买。
+  void _goContentTarget(BuildContext context, WidgetRef ref) {
+    ref.invalidate(courseDetailProvider(contentRefId));
+    ref.invalidate(courseListProvider);
+    ref.invalidate(contentOrderListProvider(ContentOrderBiz.course));
+    ref.invalidate(contentOrderListProvider(ContentOrderBiz.assessment));
+    if (_isCourse) {
+      context.go(
+        Uri(path: RoutePaths.courseDetail, queryParameters: {
+          'id': '$contentRefId',
+        }).toString(),
+      );
+    } else {
+      context.go(
+        Uri(path: RoutePaths.assessmentReport, queryParameters: {
+          'assessmentId': '$contentRefId',
+          if (contentTitle.isNotEmpty) 'title': contentTitle,
+        }).toString(),
+      );
+    }
+  }
+
+  Widget _buildConsultSuccess(BuildContext context, WidgetRef ref) {
     return PopScope(
       canPop: false, // iOS 参照：disableNavigationBack
       child: Scaffold(

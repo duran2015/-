@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/counselor/counselor_api.dart';
 import '../../features/order/order_api.dart';
 import '../../features/order/order_models.dart';
+import '../app_mode.dart';
 import '../auth/auth_state.dart';
 import '../network/api_response.dart';
 import '../router/route_guards.dart';
@@ -34,6 +35,13 @@ Future<void> launchConsultRoom(
     if (ctx != null && ctx.mounted) {
       AppToast.show(ctx, message);
     }
+  }
+
+  // 小程序形态：NERTC 音视频/咨询室不可用。所有业务入口（订单、工作台、
+  // 聊天卡片、深链桥接页）都经本函数，统一在这里点击提醒，不跳新页面。
+  if (AppMode.isMiniProgram) {
+    toast('音视频通话、线上咨询室请在 App 中进行');
+    return;
   }
 
   final service = ref.read(consultRoomServiceProvider);

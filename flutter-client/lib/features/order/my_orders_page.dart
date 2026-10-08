@@ -28,11 +28,10 @@ class MyOrdersPage extends ConsumerStatefulWidget {
 }
 
 class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
-  final _listKey = GlobalKey<AppPagedListViewState<AppointmentOrderItem>>();
+  final _listKey = GlobalKey<AppointmentOrderListViewState>();
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).padding.bottom + 16;
     return Scaffold(
       backgroundColor: const Color(0xFFFAF8F5),
       body: SafeArea(
@@ -40,24 +39,45 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         child: Column(
           children: [
             const AppNavBar(title: '预约订单'),
-            Expanded(
-              child: AppPagedListView<AppointmentOrderItem>(
-                key: _listKey,
-                pageSize: 10,
-                padding: EdgeInsets.only(top: 10, bottom: bottomInset),
-                emptyWidget: const AppEmptyView(message: '暂无预约订单'),
-                fetcher: (pageNum, pageSize) => ref
-                    .read(orderApiProvider)
-                    .fetchMyOrders(pageNum: pageNum, pageSize: pageSize),
-                itemBuilder: (context, item, index) => AppointmentOrderCard(
-                  item: item,
-                  onTap: () => _openDetail(item),
-                  onAction: () => _handlePrimary(item),
-                ),
-              ),
-            ),
+            Expanded(child: AppointmentOrderListView(key: _listKey)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 预约订单列表（下拉刷新 + 上拉分页 + 状态机按钮分发）。
+/// 独立页（/orders）与订单中心「预约订单」Tab 共用。
+class AppointmentOrderListView extends ConsumerStatefulWidget {
+  const AppointmentOrderListView({super.key});
+
+  @override
+  ConsumerState<AppointmentOrderListView> createState() =>
+      AppointmentOrderListViewState();
+}
+
+class AppointmentOrderListViewState
+    extends ConsumerState<AppointmentOrderListView> {
+  final _listKey = GlobalKey<AppPagedListViewState<AppointmentOrderItem>>();
+
+  void refresh() => _listKey.currentState?.refresh();
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom + 16;
+    return AppPagedListView<AppointmentOrderItem>(
+      key: _listKey,
+      pageSize: 10,
+      padding: EdgeInsets.only(top: 10, bottom: bottomInset),
+      emptyWidget: const AppEmptyView(message: '暂无预约订单'),
+      fetcher: (pageNum, pageSize) => ref
+          .read(orderApiProvider)
+          .fetchMyOrders(pageNum: pageNum, pageSize: pageSize),
+      itemBuilder: (context, item, index) => AppointmentOrderCard(
+        item: item,
+        onTap: () => _openDetail(item),
+        onAction: () => _handlePrimary(item),
       ),
     );
   }
@@ -70,7 +90,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     final changed = await context.push<bool>(
       '${RoutePaths.orderDetail}?orderId=$orderId',
     );
-    if (changed == true) _listKey.currentState?.refresh();
+    if (changed == true) refresh();
   }
 
   /// 按订单状态分发按钮动作（去支付 / 联系咨询师 / 评价咨询师）。
@@ -106,7 +126,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
         if (item.counselorAvatar != null) 'avatar': item.counselorAvatar!,
       }).toString(),
     );
-    if (mounted) _listKey.currentState?.refresh();
+    if (mounted) refresh();
   }
 
   Future<void> _enterSession(AppointmentOrderItem item) async {
@@ -127,7 +147,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
       ),
       context: context,
     );
-    if (mounted) _listKey.currentState?.refresh();
+    if (mounted) refresh();
   }
 
   Future<void> _pushRecap(AppointmentOrderItem item) async {
@@ -137,7 +157,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
       return;
     }
     await context.push('${RoutePaths.summaryDetail}?orderId=$id');
-    if (mounted) _listKey.currentState?.refresh();
+    if (mounted) refresh();
   }
 
   /// 跳转支付页（携带订单号、金额、咨询师信息）；返回后刷新列表。
@@ -151,7 +171,7 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     await context.push(
       Uri(path: RoutePaths.payment, queryParameters: args.toQuery()).toString(),
     );
-    if (mounted) _listKey.currentState?.refresh();
+    if (mounted) refresh();
   }
 
   /// 打开评价咨询师页（1008）：携带 counselorId/orderId/姓名/头像；返回后刷新。
@@ -173,6 +193,6 @@ class _MyOrdersPageState extends ConsumerState<MyOrdersPage> {
     final submitted = await context.push<bool>(
       Uri(path: RoutePaths.evaluate, queryParameters: params).toString(),
     );
-    if (submitted == true) _listKey.currentState?.refresh();
+    if (submitted == true) refresh();
   }
 }

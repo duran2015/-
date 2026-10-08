@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_mode.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_response.dart';
@@ -13,12 +14,15 @@ final authApiProvider =
     Provider<AuthApi>((ref) => AuthApi(ref.read(apiClientProvider)));
 
 /// 启动/恢复登录态后的入口分流（iOS 参照：HeartHealingMain SceneDelegate）。
+/// - 小程序形态：未登录 → /home（游客可浏览，操作时再引导登录）；
 /// - 未登录 → /login；
 /// - currentIdentity == consultant → /counselor（咨询师工作台）；
 /// - availableIdentities 含双身份且未选定（currentIdentity 为空）→ /login/select-identity；
 /// - 否则 → /home。
 String resolveEntryRoute(LoginData? data) {
-  if (data == null || data.accessToken.isEmpty) return RoutePaths.login;
+  if (data == null || data.accessToken.isEmpty) {
+    return AppMode.isMiniProgram ? RoutePaths.home : RoutePaths.login;
+  }
   if (data.currentIdentity == RouteGuards.identityConsultant) {
     return RoutePaths.counselor;
   }

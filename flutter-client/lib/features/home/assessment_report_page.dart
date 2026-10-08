@@ -12,6 +12,7 @@ import '../../core/widgets/app_background.dart';
 import '../../core/widgets/app_nav_bar.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../utils/load_image.dart';
+import '../profile/support_profile_state.dart';
 import 'home_models.dart';
 import 'home_view_model.dart';
 
@@ -273,6 +274,16 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                             ),
                           ),
                         ),
+                        // 测完动机最强时刻：引导完善支持档案（方案 C）
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            _horizontalInset,
+                            _sectionSpacing,
+                            _horizontalInset,
+                            0,
+                          ),
+                          child: _buildProfilePrompt(context),
+                        ),
                         // 白卡片下方：内容出处 + 两条免责提示
                         // （iOS setupSourceSection，Figma 1572:1793）
                         const SizedBox(height: _sourceTopSpacing),
@@ -291,6 +302,65 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
           ),
         ),
         bottomNavigationBar: _buildBottomBar(),
+      ),
+    );
+  }
+
+  /// 测后引导卡：完善支持档案（完善度 100% 时自动隐藏）。
+  Widget _buildProfilePrompt(BuildContext context) {
+    final profile = ref.watch(supportProfileProvider);
+    final percent = ((profile.basicCompletion +
+                profile.preferenceCompletion +
+                profile.supportCompletion) /
+            3)
+        .round();
+    if (percent >= 100) return const SizedBox.shrink();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => context.push(RoutePaths.supportProfile),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE7F1ED),
+          borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.tune_rounded,
+                  size: 20, color: Color(0xFF286D64)),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '想让建议更贴合你？',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF286D64),
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    '完善基础资料，让解读和建议更贴近你的情况',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF4A7A70)),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                size: 22, color: Color(0xFF286D64)),
+          ],
+        ),
       ),
     );
   }

@@ -37,6 +37,12 @@ class RoutePaths {
   static const String supportTools = '/support/tools';
   static const String supportConsultants = '/support/consultants';
 
+  /// 音视频课程详情页，参数 courseId。
+  static const String courseDetail = '/course/detail';
+
+  /// 课程播放页（音频/视频课时），参数 courseId + lessonId。
+  static const String coursePlayer = '/course/player';
+
   /// 新客福利活动页（领券、首体验、分享与复购承接）。
   static const String newcomerGrowth = '/growth/newcomer';
 
@@ -60,6 +66,21 @@ class RoutePaths {
 
   /// 9001：我的预约订单
   static const String orders = '/orders';
+
+  /// 订单中心：测评订单 / 课程订单 / 预约订单 三 Tab
+  ///（可选参数 tab=0/1/2 指定初始 Tab）
+  static const String orderCenter = '/orders/center';
+
+  /// 测评过渡介绍页（点「去测试」前置），参数 questionnaireId
+  static const String assessmentIntro = '/assessment/intro';
+
+  /// 测评答题页（mock 原生答题容器），参数 questionnaireId /
+  /// questionnaireKey / title / priceText / questionCount / userAssessId
+  static const String assessmentQuiz = '/assessment/quiz';
+
+  /// 测评结果预览页（模糊雷达图 + 付费解锁完整报告），
+  /// 参数 questionnaireId / title / userAssessId
+  static const String assessmentResultTeaser = '/assessment/result-teaser';
 
   /// 9002：小结与建议列表
   static const String mineSummaries = '/mine/summaries';

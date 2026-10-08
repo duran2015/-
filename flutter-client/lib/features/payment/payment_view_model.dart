@@ -4,6 +4,7 @@ import 'package:fluwx/fluwx.dart';
 import 'package:tobias/tobias.dart';
 
 import '../../core/utils/deadline_countdown.dart';
+import '../../core/app_mode.dart';
 import '../consultant/consultant_models.dart';
 import '../order/order_models.dart';
 import 'payment_api.dart';
@@ -160,10 +161,25 @@ class PaymentPageArgs {
     this.specialtyTags = const [],
     this.styleTags = const [],
     this.paymentDeadline,
+    this.bizType = 'consult',
+    this.contentTitle = '',
+    this.contentSubtitle = '',
+    this.contentRefId = 0,
   });
 
   /// 订单 ID（创建支付用）
   final String orderId;
+
+  /// 业务类型：consult（预约订单，默认）/ course（课程）/ assessment（测评报告）。
+  /// 内容订单走 /app/content-order/*，支付页展示与成功页跳转随 bizType 变化。
+  final String bizType;
+
+  /// 内容订单展示标题 / 副标题（课程名 / 测评名 + 规格文案）
+  final String contentTitle;
+  final String contentSubtitle;
+
+  /// 内容订单关联商品 ID（课程 ID / 问卷 ID；支付成功页跳转目标用）
+  final int contentRefId;
 
   /// 支付金额数值（元，创建支付用）
   final double? amount;
@@ -219,6 +235,31 @@ class PaymentPageArgs {
     );
   }
 
+  /// 内容订单（课程/测评报告）→ 支付参数。
+  factory PaymentPageArgs.fromContentOrder({
+    required String orderId,
+    required String bizType,
+    required int refId,
+    required String title,
+    required String subtitle,
+    required int priceFen,
+    String? payDeadline,
+  }) {
+    final yuan = priceFen / 100;
+    return PaymentPageArgs(
+      orderId: orderId,
+      amount: yuan,
+      priceText: priceFen % 100 == 0
+          ? yuan.toStringAsFixed(0)
+          : yuan.toStringAsFixed(2),
+      bizType: bizType,
+      contentTitle: title,
+      contentSubtitle: subtitle,
+      contentRefId: refId,
+      paymentDeadline: payDeadline,
+    );
+  }
+
   /// 路由 query → 支付参数（tags 以逗号分隔传输）。
   factory PaymentPageArgs.fromQuery(Map<String, String> q) {
     List<String> splitTags(String? raw) {
@@ -241,6 +282,10 @@ class PaymentPageArgs {
       specialtyTags: splitTags(q['specialty']),
       styleTags: splitTags(q['style']),
       paymentDeadline: q['deadline'],
+      bizType: q['bizType'] ?? 'consult',
+      contentTitle: q['contentTitle'] ?? '',
+      contentSubtitle: q['contentSubtitle'] ?? '',
+      contentRefId: int.tryParse(q['contentRefId'] ?? '') ?? 0,
     );
   }
 
@@ -263,11 +308,18 @@ class PaymentPageArgs {
       if (styleTags.isNotEmpty) 'style': styleTags.join(','),
       if (paymentDeadline != null && paymentDeadline!.isNotEmpty)
         'deadline': paymentDeadline!,
+      if (bizType != 'consult') 'bizType': bizType,
+      if (contentTitle.isNotEmpty) 'contentTitle': contentTitle,
+      if (contentSubtitle.isNotEmpty) 'contentSubtitle': contentSubtitle,
+      if (contentRefId > 0) 'contentRefId': '$contentRefId',
     };
   }
 
   /// 是否需要回查订单补齐展示字段（预约下单入口仅有 orderId 的场景）。
-  bool get needsOrderLookup => counselorName.isEmpty;
+  bool get needsOrderLookup => counselorName.isEmpty && bizType == 'consult';
+
+  /// 是否为内容订单（课程 / 测评报告，区别于预约订单）。
+  bool get isContentOrder => bizType == 'course' || bizType == 'assessment';
 }
 
 /// 支付页 ViewModel。
@@ -309,11 +361,13 @@ class PaymentViewModel {
   /// 倒计时助手（支付页与结果判定共用）
   final DeadlineCountdown countdown;
 
-  /// 当前选中的支付方式（默认支付宝）
-  PaymentMethod selectedMethod = PaymentMethod.alipay;
+  /// 当前选中的支付方式（默认支付宝；小程序形态仅微信支付）
+  PaymentMethod selectedMethod =
+      AppMode.isMiniProgram ? PaymentMethod.wechat : PaymentMethod.alipay;
 
-  /// 切换支付方式
+  /// 切换支付方式（小程序形态锁定微信支付，忽略切换）
   void selectMethod(PaymentMethod method) {
+    if (AppMode.isMiniProgram) return;
     selectedMethod = method;
   }
 

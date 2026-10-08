@@ -12,7 +12,18 @@ import {
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT || 3001);
+
+// Support CLI args like `--port 7100` / `--host 0.0.0.0` forwarded by npm run dev
+function readArg(flag: string): string | undefined {
+  const idx = process.argv.indexOf(flag);
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
+  const prefixed = process.argv.find((a) => a.startsWith(`${flag}=`));
+  return prefixed ? prefixed.split("=")[1] : undefined;
+}
+const CLI_PORT = readArg("--port") || readArg("-p");
+const CLI_HOST = readArg("--host") || readArg("-H");
+const PORT = Number(CLI_PORT || process.env.PORT || 3001);
+const HOST = CLI_HOST || process.env.HOST || "0.0.0.0";
 
 app.use(express.json({ limit: "32kb" }));
 
@@ -197,8 +208,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
   });
 }
 

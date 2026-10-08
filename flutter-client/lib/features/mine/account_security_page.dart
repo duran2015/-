@@ -6,8 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/app_mode.dart';
 import '../../core/network/api_response.dart';
+import '../../core/network/dev_mock.dart';
 import '../../core/router/route_paths.dart';
+import '../../core/storage/account_store.dart';
 import '../../core/theme/app_assets.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
@@ -55,8 +58,12 @@ class AccountSecurityPage extends ConsumerWidget {
     unawaited(
       ref.read(authApiProvider).logout().catchError((_) => ''),
     );
-    // 立即清登录态 → 路由 redirect 自动回 /login（不等待接口/存储）
+    // 立即清登录态 → 路由 redirect 自动回 /login（不等待接口/存储）；
+    // 小程序形态改为游客浏览：退出后回首页，操作时再进行授权登录。
     unawaited(ref.read(authControllerProvider.notifier).logout());
+    if (AppMode.isMiniProgram && context.mounted) {
+      context.go(RoutePaths.home);
+    }
   }
 
   /// 注销账号点击：跳转到注销账号页面。
@@ -130,43 +137,69 @@ class AccountSecurityPage extends ConsumerWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (!isCounselor) ...[
-                              _SecurityRow(
-                                iconAsset: AppAssets.mineSwitch,
-                                title: '切换为咨询师端',
-                                subtitle: '保留当前账号，进入咨询师工作台',
-                                titleColor: AppColors.textPrimary,
-                                onTap: () =>
-                                    _switchIdentityTapped(context, ref),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppDimens.gap16,
-                                ),
-                                child: Divider(
-                                  height: 0.5,
-                                  thickness: 0.5,
-                                  color: AppColors.divider,
-                                ),
-                              ),
-                            ],
-                            _SecurityRow(
-                              iconAsset: AppAssets.mineLogout,
-                              title: '退出登录',
-                              subtitle: '退出当前账号并返回登录页',
-                              titleColor: AppColors.textPrimary,
-                              onTap: () => _logoutTapped(context, ref),
+                            // 监听 AppMode：下方开关切到小程序形态时，
+                            // 「切换为咨询师端」立即隐藏（小程序只做用户端）。
+                            ValueListenableBuilder<bool>(
+                              valueListenable: AppMode.listenable,
+                              builder: (context, isMp, __) {
+                                if (isCounselor || isMp) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _SecurityRow(
+                                      iconAsset: AppAssets.mineSwitch,
+                                      title: '切换为咨询师端',
+                                      subtitle: '保留当前账号，进入咨询师工作台',
+                                      titleColor: AppColors.textPrimary,
+                                      onTap: () =>
+                                          _switchIdentityTapped(context, ref),
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: AppDimens.gap16,
+                                      ),
+                                      child: Divider(
+                                        height: 0.5,
+                                        thickness: 0.5,
+                                        color: AppColors.divider,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                            // 分隔线 0.5 #EEEEEE 左右各 16
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppDimens.gap16,
-                              ),
-                              child: Divider(
-                                height: 0.5,
-                                thickness: 0.5,
-                                color: AppColors.divider,
-                              ),
+                            // 小程序形态：微信授权后保持登录态，无「退出登录」
+                            // 概念（与携程/微信小程序一致）；切回 App 形态恢复。
+                            ValueListenableBuilder<bool>(
+                              valueListenable: AppMode.listenable,
+                              builder: (context, isMp, __) {
+                                if (isMp) return const SizedBox.shrink();
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _SecurityRow(
+                                      iconAsset: AppAssets.mineLogout,
+                                      title: '退出登录',
+                                      subtitle: '退出当前账号并返回登录页',
+                                      titleColor: AppColors.textPrimary,
+                                      onTap: () => _logoutTapped(context, ref),
+                                    ),
+                                    // 分隔线 0.5 #EEEEEE 左右各 16
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: AppDimens.gap16,
+                                      ),
+                                      child: Divider(
+                                        height: 0.5,
+                                        thickness: 0.5,
+                                        color: AppColors.divider,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             _SecurityRow(
                               iconAsset: AppAssets.mineCancelAccount,
@@ -210,6 +243,19 @@ class AccountSecurityPage extends ConsumerWidget {
                             titleColor: AppColors.textPrimary,
                             onTap: () => _blacklistTapped(context),
                           ),
+                        ),
+                      ),
+                    ],
+                    // mock 演示：小程序模式运行时切换（预览差异点用；
+                    // 正式构建不展示，由 --dart-define=APP_MODE=mp 决定）
+                    if (AppMode.canToggleRuntime) ...[
+                      const SizedBox(height: _cardSpacing),
+                      ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.cardRadius),
+                        child: Container(
+                          color: AppColors.cardBackground,
+                          child: const _AppModePreviewRow(),
                         ),
                       ),
                     ],
@@ -303,6 +349,149 @@ class _SecurityRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// mock 演示用「小程序模式预览」开关卡片：
+/// - 行 1：App ⇄ 小程序形态切换，返回各页面即按对应形态渲染；
+/// - 行 2（小程序形态下出现）：游客 ⇄ 已登录一键切换，方便演示
+///   「游客进店浏览 → 操作时授权登录」完整链路。
+class _AppModePreviewRow extends ConsumerStatefulWidget {
+  const _AppModePreviewRow();
+
+  @override
+  ConsumerState<_AppModePreviewRow> createState() =>
+      _AppModePreviewRowState();
+}
+
+class _AppModePreviewRowState extends ConsumerState<_AppModePreviewRow> {
+  bool _busy = false;
+
+  Future<void> _toggleLogin(bool toLoggedIn) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      if (toLoggedIn) {
+        await ref.read(authControllerProvider.notifier).applyLogin(
+              LoginData.fromJson(devMockLoginData('13800000000', dual: false)),
+            );
+        if (mounted) AppToast.show(context, '已一键授权登录（演示账号）');
+      } else {
+        await ref.read(authControllerProvider.notifier).logout();
+        if (mounted) AppToast.show(context, '已切换为游客态（可浏览，操作时需登录）');
+      }
+    } catch (_) {
+      if (mounted) AppToast.show(context, '切换失败，请重试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loggedIn = ref.watch(authControllerProvider) != null;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.gap16,
+            vertical: 12,
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.phone_iphone_rounded,
+                  size: 20, color: AppColors.brandTeal),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('小程序模式预览',
+                        style: AppTextStyles.bodyLarge
+                            .copyWith(color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '演示用：切换后返回即生效，重启恢复',
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: AppMode.isMiniProgram,
+                activeTrackColor: AppColors.brandTeal,
+                onChanged: (v) {
+                  AppMode.setMiniProgram(v);
+                  setState(() {});
+                  AppToast.show(
+                    context,
+                    v ? '已切换到小程序形态（返回查看差异）' : '已切回 App 形态',
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        // 小程序形态下展示登录态切换（演示游客浏览 → 授权登录链路）
+        ValueListenableBuilder<bool>(
+          valueListenable: AppMode.listenable,
+          builder: (context, isMp, __) {
+            if (!isMp) return const SizedBox.shrink();
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppDimens.gap16,
+                  ),
+                  child: Divider(
+                    height: 0.5,
+                    thickness: 0.5,
+                    color: AppColors.divider,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.gap16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_outline_rounded,
+                          size: 20, color: AppColors.brandTeal),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('演示登录态',
+                                style: AppTextStyles.bodyLarge
+                                    .copyWith(color: AppColors.textPrimary)),
+                            const SizedBox(height: 2),
+                            Text(
+                              loggedIn ? '当前：已登录（点切换为游客）' : '当前：游客（点切换为已登录）',
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.textTertiary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: loggedIn,
+                        activeTrackColor: AppColors.brandTeal,
+                        onChanged: _busy ? null : _toggleLogin,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }

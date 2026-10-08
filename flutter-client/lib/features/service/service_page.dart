@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/route_paths.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../course/course_list_view.dart';
 import '../home/home_models.dart';
 
 class ServicePage extends StatelessWidget {
@@ -411,67 +412,7 @@ class _GrowthServicesPageState extends State<GrowthServicesPage> {
         ),
       );
 
-  Widget _buildCourses(BuildContext context) => ListView(
-        key: const ValueKey('courses'),
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
-        children: [
-          const Text('跟着专业内容，找到适合自己的解决思路。',
-              style: TextStyle(height: 1.5, color: AppColors.textSecondary)),
-          const SizedBox(height: 18),
-          _FeaturedLearningCard(
-            onTap: () => context.push(_resource('停止吼叫：父母情绪管理课', '视频课程')),
-          ),
-          const SizedBox(height: 26),
-          const _SectionHeading(eyebrow: '家庭教育', title: '理解孩子，也照顾好自己'),
-          const SizedBox(height: 12),
-          _ServiceRow(
-            icon: Icons.family_restroom_rounded,
-            color: const Color(0xFFB2744E),
-            title: '停止吼叫：父母情绪管理',
-            subtitle: '看见失控背后的需要，减少亲子冲突',
-            meta: '12 讲',
-            onTap: () => context.push(_resource('停止吼叫：父母情绪管理', '视频课程')),
-          ),
-          _ServiceRow(
-            icon: Icons.child_care_rounded,
-            color: const Color(0xFF57867C),
-            title: '孩子不配合，父母怎么沟通',
-            subtitle: '从命令和对抗，走向清晰而温和的协商',
-            meta: '8 讲',
-            onTap: () => context.push(_resource('孩子不配合，父母怎么沟通', '视频课程')),
-          ),
-          const SizedBox(height: 18),
-          const _SectionHeading(eyebrow: '亲密关系', title: '学习相处，而不是彼此消耗'),
-          const SizedBox(height: 12),
-          _ServiceRow(
-            icon: Icons.favorite_border_rounded,
-            color: const Color(0xFF9A6479),
-            title: '关系中的表达与边界',
-            subtitle: '说清自己的需要，也听懂对方的感受',
-            meta: '10 讲',
-            onTap: () => context.push(_resource('关系中的表达与边界', '视频课程')),
-          ),
-          _ServiceRow(
-            icon: Icons.forum_outlined,
-            color: const Color(0xFF6E7191),
-            title: '冲突之后，如何重新靠近',
-            subtitle: '识别关系循环，练习有效修复',
-            meta: '7 讲',
-            onTap: () => context.push(_resource('冲突之后，如何重新靠近', '视频课程')),
-          ),
-          const SizedBox(height: 18),
-          const _SectionHeading(eyebrow: '自我成长', title: '更稳定地理解自己'),
-          const SizedBox(height: 12),
-          _ServiceRow(
-            icon: Icons.record_voice_over_outlined,
-            color: const Color(0xFFB37A45),
-            title: '压力与情绪调节',
-            subtitle: '认识压力反应，建立自己的调节方式',
-            meta: '6 讲',
-            onTap: () => context.push(_resource('压力与情绪调节', '视频课程')),
-          ),
-        ],
-      );
+  Widget _buildCourses(BuildContext context) => const CourseListView();
 
   Widget _buildPractices(BuildContext context) => ListView(
         key: const ValueKey('practices'),
@@ -603,65 +544,6 @@ class _GrowthSegmentedTabs extends StatelessWidget {
       ),
     );
   }
-}
-
-class _FeaturedLearningCard extends StatelessWidget {
-  const _FeaturedLearningCard({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-        color: const Color(0xFFF0E6DC),
-        borderRadius: BorderRadius.circular(24),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('本周推荐 · 家庭教育',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF8A5B3D))),
-                      const SizedBox(height: 10),
-                      const Text('停止吼叫，从看懂自己的情绪开始',
-                          style: TextStyle(
-                              fontSize: 21,
-                              height: 1.25,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 9),
-                      const Text('12 讲视频课 · 可反复观看',
-                          style: TextStyle(color: AppColors.textSecondary)),
-                      const SizedBox(height: 18),
-                      FilledButton.tonal(
-                        onPressed: onTap,
-                        child: const Text('查看课程'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Container(
-                  width: 84,
-                  height: 112,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD8BFA7),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.family_restroom_rounded,
-                      size: 44, color: Color(0xFF7C4F35)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
 }
 
 class SupportResourcePage extends StatelessWidget {

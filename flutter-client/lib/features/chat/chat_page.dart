@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_mode.dart';
 import '../../core/im/im_config.dart';
 import '../../core/network/api_response.dart';
 import '../../core/router/route_paths.dart';
@@ -254,6 +255,36 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                   '${RoutePaths.orderDetail}?orderId=${Uri.encodeComponent(widget.orderId!)}',
                                 ),
                   ),
+                  // 小程序形态：真人会话保留文字沟通，音视频/咨询室等
+                  // 高级能力提示去 App（卡片内入口会另行拦截/降级）。
+                  if (AppMode.isMiniProgram && !isRobot)
+                    Container(
+                      width: double.infinity,
+                      color: const Color(0xFFFFF6E5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: Color(0xFFB27A1A),
+                          ),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '小程序版支持文字沟通；音视频通话、线上咨询室请前往 App 进行',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFB27A1A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Expanded(
                     child: ChatConversationView(
                       key: _conversationKey,

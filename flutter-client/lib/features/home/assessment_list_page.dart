@@ -13,6 +13,8 @@ import '../../core/widgets/app_refresh_indicator.dart';
 import '../../core/widgets/app_states.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../utils/load_image.dart';
+import '../order/content_order_api.dart';
+import '../order/content_order_models.dart';
 import 'home_models.dart';
 import 'home_view_model.dart';
 
@@ -119,26 +121,60 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
     }
   }
 
-  /// 处理测评操作：未测「去测试」开答题 H5，已测「看结果」开测评报告页。
-  /// iOS 参照：XYHomeAssessmentWebOpener.open。
+  /// 处理测评操作：
+  /// - 未测「去测试」→ 过渡介绍页（/assessment/intro）；
+  /// - 已测「看结果」→ 付费且未解锁 → 结果预览页（模糊雷达 + 解锁 CTA）；
+  ///   免费或已解锁 → 原测评报告页。
   /// 返回后静默刷新列表（iOS viewWillAppear 从子页返回时静默刷新）。
   Future<void> _handleAction(AssessmentListItem item) async {
-    final String location;
-    if (item.status == AssessmentStatus.tested) {
-      location =
+    final tested = item.status == AssessmentStatus.tested;
+    if (!tested) {
+      await context.push(
+        Uri(path: RoutePaths.assessmentIntro, queryParameters: {
+          'questionnaireId': '${item.questionnaireId ?? 0}',
+          'questionnaireKey': item.questionnaireKey ?? '',
+          'title': item.title,
+          'subtitle': item.subtitle,
+          'priceText': item.priceText,
+          if (item.originalPriceText?.isNotEmpty == true)
+            'originalPriceText': item.originalPriceText!,
+          'questionCountText': item.questionCountText,
+          'h5Link': item.h5Link ?? '',
+        }).toString(),
+      );
+    } else {
+      // 已测：付费测评未解锁 → 结果预览页；免费/已解锁 → 完整报告页
+      final isFree = item.priceText.isEmpty || item.priceText == '免费';
+      var unlocked = isFree;
+      if (!unlocked) {
+        try {
+          final orders = await ref
+              .read(contentOrderApiProvider)
+              .fetchList(bizType: ContentOrderBiz.assessment);
+          unlocked = orders.any(
+            (o) => o.refId == item.questionnaireId && o.isPaid,
+          );
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      if (unlocked) {
+        await context.push(
           '${RoutePaths.assessmentReport}?assessmentId=${item.userAssessId ?? ''}'
           '&title=${Uri.encodeComponent(item.title)}'
-          '&h5Link=${Uri.encodeComponent(item.h5Link ?? '')}';
-    } else {
-      final link = item.h5Link?.trim() ?? '';
-      if (link.isEmpty) {
-        AppToast.show(context, '链接无效');
-        return;
+          '&h5Link=${Uri.encodeComponent(item.h5Link ?? '')}',
+        );
+      } else {
+        await context.push(
+          Uri(path: RoutePaths.assessmentResultTeaser, queryParameters: {
+            'questionnaireId': '${item.questionnaireId ?? 0}',
+            'title': item.title,
+            if (item.userAssessId != null)
+              'userAssessId': '${item.userAssessId}',
+            'priceText': item.priceText,
+          }).toString(),
+        );
       }
-      location = '${RoutePaths.webview}?url=${Uri.encodeComponent(link)}'
-          '&title=${Uri.encodeComponent(item.title)}&mode=assessment';
     }
-    await context.push(location);
     if (!mounted) return;
     try {
       await ref

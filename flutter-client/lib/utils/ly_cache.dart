@@ -25,7 +25,17 @@ class LyCache {
   static Future<void> _doInit(String boxName) async {
     try {
       if (kIsWeb) {
-        _box = await Hive.openBox(boxName);
+        // Web 端部分浏览器/嵌入环境下 IndexedDB 可能不可用或回调很慢，
+        // 导致 Hive.openBox 长期挂起、阻塞 runApp（白屏）。
+        // 加超时兜底：先放行启动；Box 稍后打开成功仍会接管缓存。
+        final openFuture = Hive.openBox(boxName);
+        openFuture.then((box) => _box ??= box).catchError((_) => _box);
+        try {
+          _box = await openFuture.timeout(const Duration(seconds: 3));
+        } catch (e) {
+          debugPrint('LyCache web init fallback: $e');
+          _box = null;
+        }
         return;
       }
       String path;

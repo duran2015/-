@@ -15,6 +15,7 @@ import '../../core/widgets/app_nav_bar.dart';
 import '../../core/widgets/app_states.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../utils/load_image.dart';
+import '../../core/app_mode.dart';
 import '../order/order_api.dart';
 import '../order/appointment_policy.dart';
 import '../order/widgets/order_widgets.dart';
@@ -127,7 +128,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     final vm = _vm;
     if (vm == null || _paying) return;
     if (!_policyAccepted) {
-      AppToast.show(context, '请先阅读并同意预约与取消规则');
+      AppToast.show(
+        context,
+        _args.isContentOrder ? '请先阅读并同意购买须知' : '请先阅读并同意预约与取消规则',
+      );
       return;
     }
     if (vm.isExpired) {
@@ -145,6 +149,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         'name': _args.counselorName,
         'time': _args.time,
         'orderId': _args.orderId,
+        if (_args.isContentOrder) ...{
+          'bizType': _args.bizType,
+          'title': _args.contentTitle,
+          'refId': '${_args.contentRefId}',
+        },
         if (_args.counselorIMUserID.isNotEmpty)
           'imUserId': _args.counselorIMUserID,
         if (_args.counselorAvatar != null && _args.counselorAvatar!.isNotEmpty)
@@ -242,6 +251,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   Widget _policyCard() {
+    if (_args.isContentOrder) return _contentPolicyCard();
     const policy = AppointmentPolicy.current;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 15),
@@ -293,6 +303,156 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     );
   }
 
+  /// 内容订单（课程/测评报告）购买须知卡。
+  Widget _contentPolicyCard() {
+    final isCourse = _args.bizType == 'course';
+    final lines = isCourse
+        ? const [
+            '课程为虚拟内容，购买成功后不支持退款',
+            '购买成功后课程永久有效，可随时回看',
+            '请在购买前通过试看/试听确认课程内容',
+          ]
+        : const [
+            '测评报告为虚拟内容，解锁后不支持退款',
+            '解锁后可随时在测评记录中查看完整报告',
+            '测评结果仅供参考，不构成医疗诊断',
+          ];
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+        border: Border.all(color: const Color(0xFFECE6DC)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.policy_outlined,
+                  size: 18, color: Color(0xFF6750A4)),
+              const SizedBox(width: 8),
+              Text('购买须知', style: AppTextStyles.titleSmall),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final line in lines) ...[
+            Text('• $line',
+                style: AppTextStyles.label.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                )),
+            const SizedBox(height: 4),
+          ],
+          const Divider(height: 18),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _policyAccepted = !_policyAccepted),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _policyAccepted,
+                  onChanged: (value) =>
+                      setState(() => _policyAccepted = value ?? false),
+                ),
+                const Expanded(
+                  child: Text('我已阅读并同意上述购买须知'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 内容订单信息卡：图标 + 标题/副标题 + 类型与价格行。
+  Widget _contentOrderCard() {
+    final args = _args;
+    final isCourse = args.bizType == 'course';
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppDimens.cardRadius),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(15),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandTeal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isCourse
+                        ? Icons.play_circle_outline
+                        : Icons.assignment_outlined,
+                    size: 36,
+                    color: AppColors.brandTeal,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        args.contentTitle,
+                        style: AppTextStyles.titleSmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (args.contentSubtitle.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          args.contentSubtitle,
+                          style: AppTextStyles.label.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 15),
+            child: Divider(
+              height: 0.5,
+              thickness: 0.5,
+              color: AppColors.dividerDark,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(15),
+            child: Column(
+              children: [
+                _infoRow('订单类型', isCourse ? '课程' : '测评报告',
+                    highlight: false),
+                const SizedBox(height: 12),
+                _infoRow('订单编号', args.orderId, highlight: false),
+                const SizedBox(height: 12),
+                _infoRow('商品金额', '¥${args.priceText}', highlight: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 支付剩余时间倒计时条（36 高、#FFF3F2 底、#FF6257 13 medium 居中）。
   /// iOS 参照：setupCountdownSection。
   Widget _countdownBanner() {
@@ -319,6 +479,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   /// iOS 参照：setupOrderInfoSection。
   Widget _orderInfoCard() {
     final args = _args;
+    if (args.isContentOrder) return _contentOrderCard();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
@@ -434,8 +595,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   /// 支付方式选择卡：仅展示已接入的支付方式。
-  /// 微信支付已接入（后端 wechatpay-java APIv3 + 客户端 fluwx 调起），
-  /// 展示微信支付选项；selectedMethod 默认支付宝。
+  /// 微信支付已接入（后端 wechatpay-java APIv3 + 客户端 fluwx 调起）；
+  /// 小程序形态（AppMode.isMiniProgram）不支持支付宝，只展示微信支付。
   Widget _paymentMethodCard() {
     final vm = _vm!;
     return Container(
@@ -446,12 +607,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       ),
       child: Column(
         children: [
-          _paymentRow(
-            icon: AppAssets.icPaymentAlipay,
-            title: '支付宝',
-            selected: vm.selectedMethod == PaymentMethod.alipay,
-            onTap: () => setState(() => vm.selectMethod(PaymentMethod.alipay)),
-          ),
+          if (!AppMode.isMiniProgram)
+            _paymentRow(
+              icon: AppAssets.icPaymentAlipay,
+              title: '支付宝',
+              selected: vm.selectedMethod == PaymentMethod.alipay,
+              onTap: () =>
+                  setState(() => vm.selectMethod(PaymentMethod.alipay)),
+            ),
           _paymentRow(
             icon: AppAssets.icPaymentWechat,
             title: '微信支付',

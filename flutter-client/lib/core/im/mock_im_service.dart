@@ -160,8 +160,246 @@ class MockImService implements ImService {
     );
     (_userMessages[userId] ??= []).add(msg);
     if (!_newMessageController.isClosed) _newMessageController.add(msg);
+    // 机器人会话：mock 自动应答（关键词触发主动推荐卡片）
+    if (userId == ImConfig.robotUserId) {
+      _scheduleRobotReply(text);
+    }
     return msg;
   }
+
+  // ---------------- 机器人 mock 自动应答 ----------------
+
+  /// 机器人会话延迟应答：先回一条共情文本，再按关键词下发
+  /// 一张最匹配的 ai_recommend 推荐卡（1 咨询师 / 2 课程 / 3 练习 / 4 测评）。
+  /// 一次只推一张，避免连发打扰；真实环境由后端在 AI 回复中
+  /// 下发结构化卡片，这里仅做演示。
+  void _scheduleRobotReply(String userText) {
+    final (reply, cards) = _robotReplyFor(userText);
+    // 方案 B 触发节点（演示）：本会话第 2 句用户消息、且这句没有
+    // 触发推荐卡时，小鹿主动发「档案完善」引导卡。真实环境由后端
+    // 按对话上下文与档案完整度决定下发时机。
+    final selfCount = (_userMessages[ImConfig.robotUserId] ?? const [])
+        .where((m) => m.isSelf)
+        .length;
+    final promptProfile = selfCount == 2 && cards.isEmpty;
+    Future<void>.delayed(const Duration(milliseconds: 900), () {
+      _pushRobotMessage(
+        ImMessageKind.text,
+        text: promptProfile
+            ? '$reply\n\n对了，我想更懂你一点——'
+            : reply,
+      );
+      if (cards.isNotEmpty) {
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          _pushRobotMessage(ImMessageKind.custom,
+              customJson: jsonEncode(cards.first));
+        });
+      } else if (promptProfile) {
+        Future<void>.delayed(const Duration(milliseconds: 500), () {
+          _pushRobotMessage(
+            ImMessageKind.custom,
+            customJson: jsonEncode(const {
+              'businessID': 'ai_recommend',
+              'type': 5,
+              'title': '完善支持档案',
+              'desc': '花 1 分钟告诉我你的状态与偏好，之后的推荐和解读会更贴合你。',
+              'label': '约 1 分钟 · 内容仅自己可见',
+              'buttonText': '去完善资料',
+              'link': 'kelu://recommend?refId=0',
+            }),
+          );
+        });
+      }
+    });
+  }
+
+  void _pushRobotMessage(
+    ImMessageKind kind, {
+    String? text,
+    String? customJson,
+  }) {
+    _msgSeq += 1;
+    final msg = ImMessage(
+      msgId: 'mock_rbt_reply_${_msgSeq.toString().padLeft(4, '0')}',
+      senderId: ImConfig.robotUserId,
+      kind: kind,
+      text: text,
+      customJson: customJson,
+      timestamp: DateTime.now(),
+      peerId: _userId,
+    );
+    (_userMessages[ImConfig.robotUserId] ??= []).add(msg);
+    if (!_newMessageController.isClosed) _newMessageController.add(msg);
+  }
+
+  /// 关键词 → 回复文本 + 推荐卡列表。
+  /// 课程 ID 对齐 dev_mock mockCourses（1-6）；问卷 ID 对齐
+  /// /app/assessment/list（1 SDS / 2 SAS / 3 MBTI / 4 GAD-7）。
+  (String, List<Map<String, Object>>) _robotReplyFor(String text) {
+    Map<String, Object> rec({
+      required int type,
+      required int refId,
+      required String title,
+      required String desc,
+      String label = '',
+      String buttonText = '',
+      String priceText = '',
+    }) =>
+        {
+          'businessID': 'ai_recommend',
+          'type': type,
+          'title': title,
+          'desc': desc,
+          'label': label,
+          'buttonText': buttonText,
+          'link': 'kelu://recommend?refId=$refId'
+              '${priceText.isEmpty ? '' : '&priceText=${Uri.encodeComponent(priceText)}'}',
+        };
+
+    if (text.contains('睡不着') || text.contains('失眠') || text.contains('睡眠')) {
+      return (
+        '睡不好真的很消耗人。不用急着做什么大改变，先从最轻的开始——这个练习今晚睡前就可以试试：',
+        [
+          rec(
+            type: 3,
+            refId: 0,
+            title: '睡前放松练习',
+            desc: '跟随引导放松身体与呼吸，给大脑一个「可以休息了」的信号。',
+            label: '约 5 分钟 · 免费',
+            buttonText: '开始练习',
+          ),
+          rec(
+            type: 2,
+            refId: 6,
+            title: '睡前的放松仪式',
+            desc: '三节音频引导，帮你建立自己的睡前放松仪式。',
+            label: '3 讲 · 音频课',
+            buttonText: '了解课程',
+          ),
+          rec(
+            type: 4,
+            refId: 4,
+            title: '广泛性焦虑量表(GAD-7)',
+            desc: '如果紧绷感持续存在，可以花 2 分钟筛查一下焦虑水平。',
+            label: '7 题 · ¥19.9',
+            buttonText: '去测评',
+            priceText: '¥19.9',
+          ),
+        ],
+      );
+    }
+    if (text.contains('焦虑') || text.contains('紧张') || text.contains('心慌')) {
+      return (
+        '焦虑来的时候确实不好受，你愿意说出来已经很好了。先试试这个练习，让紧绷的身体松下来：',
+        [
+          rec(
+            type: 3,
+            refId: 0,
+            title: '呼吸放松练习',
+            desc: '跟随呼吸节奏，几分钟内让紧绷的身体先松下来。',
+            label: '约 3 分钟 · 免费',
+            buttonText: '开始练习',
+          ),
+          rec(
+            type: 4,
+            refId: 2,
+            title: '焦虑自评量表(SAS)',
+            desc: '评估近一周的焦虑水平，生成可视化报告与调节建议。',
+            label: '20 题 · ¥9.9',
+            buttonText: '去测评',
+            priceText: '¥9.9',
+          ),
+          rec(
+            type: 1,
+            refId: 109,
+            title: '白鹭洲',
+            desc: '正念减压（MBSR）引导师，擅长焦虑与压力管理。',
+            label: '语音咨询 · 50 分钟',
+            buttonText: '查看主页',
+          ),
+        ],
+      );
+    }
+    if (text.contains('抑郁') || text.contains('低落') || text.contains('难过') ||
+        text.contains('情绪')) {
+      return (
+        '听到你最近情绪不太好，先抱抱你。想更清楚了解自己的状态的话，可以先测测这个：',
+        [
+          rec(
+            type: 4,
+            refId: 1,
+            title: '抑郁自评量表(SDS)',
+            desc: '评估近一周的抑郁情绪水平，看看是否需要更多关注。',
+            label: '20 题 · ¥9.9',
+            buttonText: '去测评',
+            priceText: '¥9.9',
+          ),
+          rec(
+            type: 2,
+            refId: 5,
+            title: '压力与情绪调节',
+            desc: '认识压力反应，建立自己的调节方式。',
+            label: '音视频课 · 可试看',
+            buttonText: '了解课程',
+          ),
+          rec(
+            type: 1,
+            refId: 106,
+            title: '沈知遥',
+            desc: '人本主义取向心理咨询师，擅长情绪困扰与自我探索。',
+            label: '语音咨询 · 50 分钟',
+            buttonText: '查看主页',
+          ),
+        ],
+      );
+    }
+    if (text.contains('孩子') || text.contains('亲子') || text.contains('父母') ||
+        text.contains('家庭')) {
+      return (
+        '带孩子真的不容易，你的着急说明你很在乎。这门课里的方法或许正合适：',
+        [
+          rec(
+            type: 2,
+            refId: 2,
+            title: '孩子不配合，父母怎么沟通',
+            desc: '8 个真实家庭场景，给出可以直接套用的协商句式。',
+            label: '3 讲 · ¥49',
+            buttonText: '了解课程',
+          ),
+          rec(
+            type: 1,
+            refId: 101,
+            title: '林小满',
+            desc: '国家二级心理咨询师，擅长亲子关系与家庭教育。',
+            label: '语音咨询 · 50 分钟',
+            buttonText: '查看主页',
+          ),
+        ],
+      );
+    }
+    if (text.contains('性格') || text.contains('mbti') ||
+        text.toLowerCase().contains('mbti')) {
+      return (
+        '对性格好奇是很好的自我探索起点，这个测试很适合你：',
+        [
+          rec(
+            type: 4,
+            refId: 3,
+            title: 'MBTI性格测试',
+            desc: '了解你的性格类型与特质，找到匹配的成长方向。',
+            label: '93 题 · 免费',
+            buttonText: '去测评',
+            priceText: '免费',
+          ),
+        ],
+      );
+    }
+    return (
+      '我在认真听呢。你可以多跟我说说最近的感受，我会帮你找一些适合的支持方式～',
+      const [],
+    );
+  }
+
 
   @override
   Future<ImMessage> sendImageMessage({

@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/app_mode.dart';
 import '../../core/network/api_response.dart';
 import '../../core/router/route_paths.dart';
 import '../../core/theme/app_assets.dart';
@@ -23,7 +24,7 @@ import '../profile/support_profile_state.dart';
 enum _MenuRow {
   supportProfile,
   scale,
-  appointment,
+  orderCenter,
   summary,
   about,
   feedback,
@@ -100,9 +101,10 @@ class _MinePageState extends ConsumerState<MinePage> {
     ]),
     _MenuSection(title: '预约与服务', rows: [
       _MenuItem(
-        row: _MenuRow.appointment,
+        row: _MenuRow.orderCenter,
         icon: AppAssets.mineAppointment,
-        title: '预约记录',
+        title: '我的订单',
+        subtitle: '测评、课程与预约订单',
       ),
       _MenuItem(
         row: _MenuRow.summary,
@@ -140,8 +142,8 @@ class _MinePageState extends ConsumerState<MinePage> {
         context.push(RoutePaths.supportProfile);
       case _MenuRow.scale:
         context.push(RoutePaths.mineAssessments);
-      case _MenuRow.appointment:
-        context.push(RoutePaths.orders);
+      case _MenuRow.orderCenter:
+        context.push(RoutePaths.orderCenter);
       case _MenuRow.summary:
         context.push(RoutePaths.mineSummaries);
       case _MenuRow.about:
@@ -191,10 +193,15 @@ class _MinePageState extends ConsumerState<MinePage> {
         ? editableProfile.preferredName
         : (account?.nickName ?? account?.phone ?? '未登录');
     final avatarUrl = account?.avatar;
-    // 仅双身份展示「切换身份」（单身份无入口）
-    const showSwitchIdentity = true;
+    // 仅双身份展示「切换身份」（单身份无入口）；
+    // 小程序形态只做用户端，永远不展示。
+    // 监听 AppMode：mock 演示在「账号与安全」切换形态后，返回本页即重建。
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppMode.listenable,
+      builder: (context, _, __) {
+        final showSwitchIdentity = !AppMode.isMiniProgram;
 
-    return Scaffold(
+        return Scaffold(
       // iOS：隐藏导航栏 + 共享订单背景
       body: AppPageBackground(
         child: Stack(
@@ -287,6 +294,8 @@ class _MinePageState extends ConsumerState<MinePage> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 }
