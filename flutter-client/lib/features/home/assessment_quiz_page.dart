@@ -42,6 +42,7 @@ class AssessmentQuizPage extends StatefulWidget {
 class _AssessmentQuizPageState extends State<AssessmentQuizPage> {
   int _index = 0;
   final List<int> _answers = [];
+  bool _submitting = false;
 
   /// GAD-7 真实条目（过去两周的困扰频率）。
   static const _gad7Questions = [
@@ -96,19 +97,20 @@ class _AssessmentQuizPageState extends State<AssessmentQuizPage> {
   List<String> get _options =>
       widget.questionnaireKey == 'gad7' ? _gad7Options : _genericOptions;
 
-  String get _prompt => widget.questionnaireKey == 'gad7'
-      ? '过去两周，以下情况困扰你的频率？'
-      : '最近两周，你的状态更接近？';
+  String get _prompt =>
+      widget.questionnaireKey == 'gad7' ? '过去两周，以下情况困扰你的频率？' : '最近两周，你的状态更接近？';
 
   bool get _isLast => _index == _questions.length - 1;
 
   void _select(int optionIndex) {
+    if (_submitting) return;
     if (_answers.length > _index) {
       _answers[_index] = optionIndex;
     } else {
       _answers.add(optionIndex);
     }
     if (_isLast) {
+      setState(() => _submitting = true);
       _submit();
       return;
     }
@@ -124,13 +126,17 @@ class _AssessmentQuizPageState extends State<AssessmentQuizPage> {
   }
 
   /// 答完：替换栈进结果预览页（避免返回键回到答题页）。
-  void _submit() {
-    context.pushReplacement(
+  Future<void> _submit() async {
+    // 先让最后一个选项呈现选中反馈，再用 go 替换答题栈。
+    // 相比在手势回调里立即 pushReplacement，Web 端不会出现最后一题
+    // 已点击但路由未切换的竞态。
+    await Future<void>.delayed(const Duration(milliseconds: 260));
+    if (!mounted) return;
+    context.go(
       Uri(path: RoutePaths.assessmentResultTeaser, queryParameters: {
         'questionnaireId': '${widget.questionnaireId}',
         'title': widget.title,
-        if (widget.userAssessId != null)
-          'userAssessId': '${widget.userAssessId}',
+        'userAssessId': '${widget.userAssessId ?? widget.questionnaireId}',
         'priceText': widget.priceText,
       }).toString(),
     );
@@ -214,6 +220,22 @@ class _AssessmentQuizPageState extends State<AssessmentQuizPage> {
                   ),
                 ),
               ),
+              if (_submitting)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 10),
+                      Text('正在生成基础解读…'),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -234,8 +256,7 @@ class _AssessmentQuizPageState extends State<AssessmentQuizPage> {
               : AppColors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.cardRadiusLarge),
           border: Border.all(
-            color:
-                selected ? AppColors.brandTeal : const Color(0xFFE2EAE6),
+            color: selected ? AppColors.brandTeal : const Color(0xFFE2EAE6),
             width: selected ? 1.6 : 1,
           ),
         ),
@@ -245,20 +266,14 @@ class _AssessmentQuizPageState extends State<AssessmentQuizPage> {
               child: Text(
                 text,
                 style: AppTextStyles.titleSmall.copyWith(
-                  color: selected
-                      ? AppColors.brandTeal
-                      : AppColors.textPrimary,
+                  color: selected ? AppColors.brandTeal : AppColors.textPrimary,
                 ),
               ),
             ),
             Icon(
-              selected
-                  ? Icons.check_circle_rounded
-                  : Icons.circle_outlined,
+              selected ? Icons.check_circle_rounded : Icons.circle_outlined,
               size: 20,
-              color: selected
-                  ? AppColors.brandTeal
-                  : const Color(0xFFB8C6C0),
+              color: selected ? AppColors.brandTeal : const Color(0xFFB8C6C0),
             ),
           ],
         ),
