@@ -21,10 +21,7 @@ import 'home_view_model.dart';
 /// 全部测评列表状态。
 /// iOS 参照：XYHomeAssessmentListViewModel（items / isFetching / isEmpty）。
 class AssessmentListState {
-  const AssessmentListState({
-    this.items = const [],
-    this.loading = false,
-  });
+  const AssessmentListState({this.items = const [], this.loading = false});
 
   /// 列表数据
   final List<AssessmentListItem> items;
@@ -75,8 +72,8 @@ class AssessmentListViewModel extends Notifier<AssessmentListState> {
 
 final assessmentListViewModelProvider =
     NotifierProvider<AssessmentListViewModel, AssessmentListState>(
-  AssessmentListViewModel.new,
-);
+      AssessmentListViewModel.new,
+    );
 
 /// 全部测评列表页（Figma 864:3069）。
 /// iOS 参照：XYHomeAssessmentListViewController +
@@ -130,17 +127,20 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
     final tested = item.status == AssessmentStatus.tested;
     if (!tested) {
       await context.push(
-        Uri(path: RoutePaths.assessmentIntro, queryParameters: {
-          'questionnaireId': '${item.questionnaireId ?? 0}',
-          'questionnaireKey': item.questionnaireKey ?? '',
-          'title': item.title,
-          'subtitle': item.subtitle,
-          'priceText': item.priceText,
-          if (item.originalPriceText?.isNotEmpty == true)
-            'originalPriceText': item.originalPriceText!,
-          'questionCountText': item.questionCountText,
-          'h5Link': item.h5Link ?? '',
-        }).toString(),
+        Uri(
+          path: RoutePaths.assessmentIntro,
+          queryParameters: {
+            'questionnaireId': '${item.questionnaireId ?? 0}',
+            'questionnaireKey': item.questionnaireKey ?? '',
+            'title': item.title,
+            'subtitle': item.subtitle,
+            'priceText': item.priceText,
+            if (item.originalPriceText?.isNotEmpty == true)
+              'originalPriceText': item.originalPriceText!,
+            'questionCountText': item.questionCountText,
+            'h5Link': item.h5Link ?? '',
+          },
+        ).toString(),
       );
     } else {
       // 已测：付费测评未解锁 → 结果预览页；免费/已解锁 → 完整报告页
@@ -165,13 +165,16 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
         );
       } else {
         await context.push(
-          Uri(path: RoutePaths.assessmentResultTeaser, queryParameters: {
-            'questionnaireId': '${item.questionnaireId ?? 0}',
-            'title': item.title,
-            if (item.userAssessId != null)
-              'userAssessId': '${item.userAssessId}',
-            'priceText': item.priceText,
-          }).toString(),
+          Uri(
+            path: RoutePaths.assessmentResultTeaser,
+            queryParameters: {
+              'questionnaireId': '${item.questionnaireId ?? 0}',
+              'title': item.title,
+              if (item.userAssessId != null)
+                'userAssessId': '${item.userAssessId}',
+              'priceText': item.priceText,
+            },
+          ).toString(),
         );
       }
     }
@@ -236,35 +239,35 @@ class _AssessmentListPageState extends ConsumerState<AssessmentListPage> {
                 child: state.loading && state.isEmpty
                     ? const AppLoadingView()
                     : (!state.loading && state.isEmpty)
-                        // 空态：「暂无测评」15 #999 居中
-                        ? const Center(
-                            child: Text(
-                              '暂无测评',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          )
-                        : AppRefreshIndicator(
-                            onRefresh: _onRefresh,
-                            child: ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              // iOS contentInset：top 6 / bottom 20
-                              padding: const EdgeInsets.only(
-                                top: AppDimens.gap6,
-                                bottom: AppDimens.gap20,
-                              ),
-                              itemCount: visibleItems.length,
-                              itemBuilder: (context, index) {
-                                final item = visibleItems[index];
-                                return _AssessmentListCell(
-                                  item: item,
-                                  onTap: () => _handleAction(item),
-                                );
-                              },
-                            ),
+                    // 空态：「暂无测评」15 #999 居中
+                    ? const Center(
+                        child: Text(
+                          '暂无测评',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textTertiary,
                           ),
+                        ),
+                      )
+                    : AppRefreshIndicator(
+                        onRefresh: _onRefresh,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          // iOS contentInset：top 6 / bottom 20
+                          padding: const EdgeInsets.only(
+                            top: AppDimens.gap6,
+                            bottom: AppDimens.gap20,
+                          ),
+                          itemCount: visibleItems.length,
+                          itemBuilder: (context, index) {
+                            final item = visibleItems[index];
+                            return _AssessmentListCell(
+                              item: item,
+                              onTap: () => _handleAction(item),
+                            );
+                          },
+                        ),
+                      ),
               ),
             ],
           ),
@@ -285,31 +288,31 @@ class _AssessmentCategoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 76,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          children: [
-            for (final item in const [
-              ('全部', Icons.apps_rounded),
-              ('性格', Icons.psychology_outlined),
-              ('情绪', Icons.favorite_border_rounded),
-              ('关系', Icons.people_outline_rounded),
-              ('职场', Icons.work_outline_rounded),
-            ])
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  selected: selected == item.$1,
-                  onSelected: (_) => onSelected(item.$1),
-                  avatar: Icon(item.$2, size: 18),
-                  label: Text(item.$1),
-                  showCheckmark: false,
-                ),
-              ),
-          ],
-        ),
-      );
+    height: 76,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      children: [
+        for (final item in const [
+          ('全部', Icons.apps_rounded),
+          ('性格', Icons.psychology_outlined),
+          ('情绪', Icons.favorite_border_rounded),
+          ('关系', Icons.people_outline_rounded),
+          ('职场', Icons.work_outline_rounded),
+        ])
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              selected: selected == item.$1,
+              onSelected: (_) => onSelected(item.$1),
+              avatar: Icon(item.$2, size: 18),
+              label: Text(item.$1),
+              showCheckmark: false,
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 /// 全部测评列表卡片 Cell。
@@ -374,8 +377,9 @@ class _AssessmentListCell extends StatelessWidget {
               ),
             ],
           ),
-          padding:
-              const EdgeInsets.symmetric(horizontal: AppDimens.cardPadding),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.cardPadding,
+          ),
           child: Row(
             children: [
               // 图标 48（接口 icon 优先，缺省本地占位图）
@@ -404,24 +408,12 @@ class _AssessmentListCell extends StatelessWidget {
                     const SizedBox(height: AppDimens.gap6),
                     Row(
                       children: [
-                        if (item.originalPriceText?.isNotEmpty == true) ...[
-                          Text(
-                            item.originalPriceText!,
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        Text(
-                          item.priceText,
+                        const Text(
+                          '免费测评',
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: item.priceText == '免费'
-                                ? const Color(0xFF357169)
-                                : const Color(0xFFE97932),
+                            color: Color(0xFF357169),
                           ),
                         ),
                       ],
@@ -432,14 +424,16 @@ class _AssessmentListCell extends StatelessWidget {
                       children: [
                         Text(
                           item.questionCountText,
-                          style: AppTextStyles.caption
-                              .copyWith(color: AppColors.textSecondary),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(width: AppDimens.gap12),
                         Text(
                           item.participantText,
-                          style: AppTextStyles.caption
-                              .copyWith(color: AppColors.textSecondary),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -457,8 +451,9 @@ class _AssessmentListCell extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: tested ? null : _actionGradient,
                     color: tested ? _testedBackground : null,
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.cardRadiusLarge),
+                    borderRadius: BorderRadius.circular(
+                      AppDimens.cardRadiusLarge,
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: Text(

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,13 +13,7 @@ import '../order/content_order_api.dart';
 import '../order/content_order_models.dart';
 import '../payment/payment_view_model.dart';
 
-/// 测评结果预览页（路由 /assessment/result-teaser）。
-///
-/// 测完/已测未解锁时进入：告知「深度报告已生成」，用模糊三维度雷达图
-/// （焦虑 / 抑郁 / 人际关系，顶点打「?」）制造悬念，展示报告权益，
-/// 底部 CTA 付费解锁完整报告（走内容订单 + 统一支付确认页）。
-///
-/// 免费测评或已解锁时，CTA 变为「查看完整报告」直达报告页。
+/// 免费基础解读页。测评本身与本页均免费；完整解读统一 ¥9.9 解锁。
 class AssessmentResultTeaserPage extends ConsumerWidget {
   const AssessmentResultTeaserPage({
     super.key,
@@ -36,316 +28,325 @@ class AssessmentResultTeaserPage extends ConsumerWidget {
   final int? userAssessId;
   final String priceText;
 
-  bool get _isFree => priceText.isEmpty || priceText == '免费';
-
-  /// 是否已解锁完整报告（免费测评视为已解锁）。
-  bool _isUnlocked(List<ContentOrder> orders) {
-    if (_isFree) return true;
-    return orders.any((o) => o.refId == questionnaireId && o.isPaid);
-  }
+  bool _isUnlocked(List<ContentOrder> orders) =>
+      orders.any((o) => o.refId == questionnaireId && o.isPaid);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ordersAsync =
-        ref.watch(contentOrderListProvider(ContentOrderBiz.assessment));
-    final unlocked = ordersAsync.maybeWhen(
-      data: _isUnlocked,
-      orElse: () => _isFree,
+    final orders = ref.watch(
+      contentOrderListProvider(ContentOrderBiz.assessment),
     );
-
+    final unlocked = orders.maybeWhen(data: _isUnlocked, orElse: () => false);
     return Scaffold(
       body: AppPageBackground(
         child: SafeArea(
+          bottom: false,
           child: Column(
             children: [
-              const AppNavBar(title: '测评结果', transparent: true),
+              const AppNavBar(title: '基础解读', transparent: true),
               Expanded(
                 child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 6),
-                      Text('您的深度报告已生成', style: AppTextStyles.titleXLarge),
-                      const SizedBox(height: 6),
-                      Text(
-                        title,
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.textSecondary,
+                      _summaryCard(),
+                      const SizedBox(height: 14),
+                      _section(
+                        title: '你目前的状态',
+                        child: const Text(
+                          '你的结果处于需要适度关注的范围。最近可能更容易感到紧张、疲惫，或者在事情结束后仍反复思考。你仍保有一定的自我调节能力，这也是后续改善的重要基础。',
+                          style: TextStyle(
+                            height: 1.65,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      const _BlurredRadarChart(),
-                      const SizedBox(height: 18),
-                      _benefitCard(
-                        icon: Icons.psychology_alt_outlined,
-                        title: '这份报告将告诉你',
-                        lines: const [
-                          '识别影响你状态的潜在因素',
-                          '获得针对性的调节建议',
-                          '掌握可落地的自我调节方法',
-                        ],
+                      const SizedBox(height: 14),
+                      _section(
+                        title: '核心发现',
+                        child: const Column(
+                          children: [
+                            _Finding(
+                              icon: Icons.bolt_outlined,
+                              title: '情绪反应',
+                              text: '压力来临时，情绪反应可能比平时更明显。',
+                            ),
+                            _Finding(
+                              icon: Icons.psychology_outlined,
+                              title: '思维模式',
+                              text: '容易预想不确定结果，较难快速停止担忧。',
+                            ),
+                            _Finding(
+                              icon: Icons.shield_outlined,
+                              title: '积极资源',
+                              text: '你能够觉察自己的变化，并愿意主动寻找方法。',
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _benefitCard(
-                        icon: Icons.lock_open_rounded,
-                        title: '解锁后可查看',
-                        lines: const [
-                          '可视化三维度雷达图与得分解读',
-                          '逐项题目的详细分析',
-                          '个性化成长建议与练习推荐',
-                        ],
+                      const SizedBox(height: 14),
+                      _section(
+                        title: '现在可以先做什么',
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F3EF),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.air_rounded,
+                                color: AppColors.brandTeal,
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  '先做一次 3 分钟呼吸练习，再记录此刻最困扰你的一个想法。',
+                                  style: TextStyle(height: 1.55),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 14),
+                      _upgradeCard(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '本结果仅供自我了解，不构成临床诊断。如状态持续或明显影响生活，建议寻求专业支持。',
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.5,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              _bottomCta(context, ref, unlocked),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: _bottomCta(context, ref, unlocked),
     );
   }
 
-  Widget _benefitCard({
-    required IconData icon,
-    required String title,
-    required List<String> lines,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.cardRadiusLarge),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: AppColors.brandTeal),
-              const SizedBox(width: 8),
-              Text(title, style: AppTextStyles.titleSmall),
-            ],
-          ),
-          const SizedBox(height: 12),
-          for (final line in lines) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _summaryCard() => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppTextStyles.titleLarge),
+            const SizedBox(height: 18),
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 7),
-                  child: Icon(Icons.circle,
-                      size: 5, color: AppColors.brandTeal),
+                Text(
+                  '62',
+                  style: TextStyle(
+                    fontSize: 46,
+                    height: 1,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.indigo,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+                SizedBox(width: 8),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 4),
                   child: Text(
-                    line,
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.5,
+                    '适度关注',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.indigo,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+            const Text(
+              '你的状态有一些值得留意的信号，但不必急着给自己下结论。',
+              style: TextStyle(height: 1.55),
+            ),
           ],
-        ],
-      ),
-    );
-  }
+        ),
+      );
 
-  Widget _bottomCta(BuildContext context, WidgetRef ref, bool unlocked) {
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomInset),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2EAE6))),
-      ),
-      child: GestureDetector(
-        onTap: () => unlocked
-            ? _openReport(context)
-            : _unlock(context, ref),
+  Widget _section({required String title, required Widget child}) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppTextStyles.titleSmall),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      );
+
+  Widget _upgradeCard() => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF5EA),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFFFD9B8)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '完整解读还包括',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 12),
+            _Benefit(text: '各维度得分与详细解释'),
+            _Benefit(text: '可能的影响因素与典型触发场景'),
+            _Benefit(text: '你的优势、保护因素和可用资源'),
+            _Benefit(text: '7 天与 30 天个性化行动计划'),
+            _Benefit(text: '与你结果匹配的课程、练习和支持'),
+          ],
+        ),
+      );
+
+  Widget _bottomCta(BuildContext context, WidgetRef ref, bool unlocked) =>
+      SafeArea(
+        top: false,
         child: Container(
-          height: AppDimens.confirmButtonHeight,
-          decoration: BoxDecoration(
-            gradient: unlocked
-                ? AppColors.brandGradient
-                : const LinearGradient(
-                    colors: [Color(0xFFFF9A56), Color(0xFFE97932)],
-                  ),
-            borderRadius:
-                BorderRadius.circular(AppDimens.confirmButtonRadius),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            unlocked ? '查看完整报告' : '限时 $priceText 解锁详细报告',
-            style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(AppDimens.confirmButtonHeight),
+              backgroundColor:
+                  unlocked ? AppColors.brandTeal : const Color(0xFFF28A3B),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            onPressed: () =>
+                unlocked ? _openReport(context) : _unlock(context, ref),
+            child: Text(
+              unlocked ? '查看已解锁的完整解读' : '¥9.9 解锁完整解读',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 
-  /// 解锁完整报告：创建测评内容订单 → 统一支付确认页。
   Future<void> _unlock(BuildContext context, WidgetRef ref) async {
-    final order = await ref.read(contentOrderApiProvider).create(
-          bizType: ContentOrderBiz.assessment,
-          refId: questionnaireId,
-        );
+    final order = await ref
+        .read(contentOrderApiProvider)
+        .create(bizType: ContentOrderBiz.assessment, refId: questionnaireId);
     if (!context.mounted) return;
     if (order == null) {
       AppToast.show(context, '下单失败，请稍后重试');
       return;
     }
-    final args = PaymentPageArgs.fromContentOrder(
-      orderId: order.orderId,
-      bizType: order.bizType.value,
-      refId: order.refId,
-      title: order.title,
-      subtitle: order.subtitle,
-      priceFen: order.priceFen,
-      payDeadline: order.payDeadline,
-    );
     await context.push(
-      Uri(path: RoutePaths.payment, queryParameters: args.toQuery())
-          .toString(),
+      Uri(
+        path: RoutePaths.payment,
+        queryParameters: PaymentPageArgs.fromContentOrder(
+          orderId: order.orderId,
+          bizType: order.bizType.value,
+          refId: order.refId,
+          title: order.title,
+          subtitle: order.subtitle,
+          priceFen: order.priceFen,
+          payDeadline: order.payDeadline,
+        ).toQuery(),
+      ).toString(),
     );
-    // 从支付页返回：刷新订单状态（支付成功则 CTA 变为「查看完整报告」）。
-    // 支付成功页 go() 换栈时本组件已卸载，先判 mounted；
-    // 成功路径的缓存失效由支付成功页负责。
-    if (!context.mounted) return;
-    ref.invalidate(contentOrderListProvider(ContentOrderBiz.assessment));
+    if (context.mounted) {
+      ref.invalidate(contentOrderListProvider(ContentOrderBiz.assessment));
+    }
   }
 
-  void _openReport(BuildContext context) {
-    context.push(
-      Uri(path: RoutePaths.assessmentReport, queryParameters: {
-        'assessmentId': '${userAssessId ?? questionnaireId}',
-        'title': title,
-      }).toString(),
-    );
-  }
+  void _openReport(BuildContext context) => context.push(
+        Uri(
+          path: RoutePaths.assessmentReport,
+          queryParameters: {
+            'assessmentId': '${userAssessId ?? questionnaireId}',
+            'questionnaireId': '$questionnaireId',
+            'title': title,
+          },
+        ).toString(),
+      );
 }
 
-/// 模糊三维度雷达图：同心浅三角网格 + 模糊填充三角 +
-/// 顶点「?」气泡 + 维度名（焦虑 / 抑郁 / 人际关系）。
-class _BlurredRadarChart extends StatelessWidget {
-  const _BlurredRadarChart();
-
+class _Finding extends StatelessWidget {
+  const _Finding({required this.icon, required this.title, required this.text});
+  final IconData icon;
+  final String title;
+  final String text;
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 240,
-      height: 240,
-      child: CustomPaint(painter: _BlurredRadarPainter()),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE8F3EF),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 18, color: AppColors.brandTeal),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 3),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      height: 1.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
-class _BlurredRadarPainter extends CustomPainter {
-  /// 顶点方向（上 / 左下 / 右下），对应 焦虑 / 抑郁 / 人际关系。
-  static const _labels = ['焦虑', '抑郁', '人际关系'];
-
+class _Benefit extends StatelessWidget {
+  const _Benefit({required this.text});
+  final String text;
   @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 34;
-
-    Offset vertex(int i, double scale) {
-      final angle = -math.pi / 2 + i * 2 * math.pi / 3;
-      return center +
-          Offset(math.cos(angle) * radius * scale,
-              math.sin(angle) * radius * scale);
-    }
-
-    // 同心三角网格（3 层，浅灰）
-    final gridPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = const Color(0xFFDDE5E1);
-    for (final scale in const [1.0, 0.66, 0.33]) {
-      final path = Path()
-        ..moveTo(vertex(0, scale).dx, vertex(0, scale).dy)
-        ..lineTo(vertex(1, scale).dx, vertex(1, scale).dy)
-        ..lineTo(vertex(2, scale).dx, vertex(2, scale).dy)
-        ..close();
-      canvas.drawPath(path, gridPaint);
-    }
-    // 轴线
-    for (var i = 0; i < 3; i++) {
-      canvas.drawLine(center, vertex(i, 1.0), gridPaint);
-    }
-
-    // 模糊填充三角（模拟已生成但未解锁的轮廓）
-    final blurPath = Path()
-      ..moveTo(vertex(0, 0.72).dx, vertex(0, 0.72).dy)
-      ..lineTo(vertex(1, 0.55).dx, vertex(1, 0.55).dy)
-      ..lineTo(vertex(2, 0.82).dx, vertex(2, 0.82).dy)
-      ..close();
-    canvas.drawPath(
-      blurPath,
-      Paint()
-        ..color = AppColors.brandTeal.withValues(alpha: 0.28)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
-    );
-    canvas.drawPath(
-      blurPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = AppColors.brandTeal.withValues(alpha: 0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
-    );
-
-    // 顶点「?」气泡 + 维度名
-    for (var i = 0; i < 3; i++) {
-      final bubbleCenter = vertex(i, 1.0);
-      // 气泡白底圆
-      canvas.drawCircle(
-        bubbleCenter,
-        13,
-        Paint()..color = Colors.white,
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 9),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 18,
+              color: Color(0xFFF28A3B),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(text)),
+          ],
+        ),
       );
-      canvas.drawCircle(
-        bubbleCenter,
-        13,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..color = const Color(0xFFB8C6C0),
-      );
-      _drawText(canvas, bubbleCenter, '?', 13, FontWeight.w800,
-          const Color(0xFF8A9691));
-      // 维度名（气泡外侧）
-      final labelOffset = vertex(i, 1.22);
-      _drawText(canvas, labelOffset, _labels[i], 12, FontWeight.w600,
-          AppColors.textPrimary);
-    }
-  }
-
-  void _drawText(Canvas canvas, Offset center, String text, double size,
-      FontWeight weight, Color color) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style:
-            TextStyle(fontSize: size, fontWeight: weight, color: color),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(
-      canvas,
-      center - Offset(painter.width / 2, painter.height / 2),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

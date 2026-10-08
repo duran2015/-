@@ -50,43 +50,21 @@ class AssessmentIntroPage extends ConsumerWidget {
   static const bool _isMock =
       String.fromEnvironment('API_ENV', defaultValue: '') == 'mock';
 
-  bool get _isFree => priceText.isEmpty || priceText == '免费';
-
   /// 「这个测评能告诉你什么」按问卷类型定制。
   List<String> get _whatItTells => switch (questionnaireKey) {
-        'sds' => const [
-            '你近一周的抑郁情绪处于什么水平',
-            '情绪低落、兴趣减退等表现的程度',
-            '当前状态是否需要进一步关注与调节',
-          ],
-        'sas' => const [
-            '你近一周的焦虑情绪处于什么水平',
-            '紧张、担忧、躯体化反应的程度',
-            '当前状态是否需要进一步关注与调节',
-          ],
-        'gad7' => const [
-            '你是否存在广泛性焦虑的倾向',
-            '焦虑症状的严重程度分级',
-            '是否建议寻求专业心理支持',
-          ],
-        'mbti' => const [
-            '你的性格类型与核心特质',
-            '你在决策、社交中的偏好模式',
-            '与你性格匹配的成长方向',
-          ],
-        _ => const [
-            '你当前心理状态的整体画像',
-            '关键维度的得分与所处区间',
-            '是否需要进一步的关注与调节',
-          ],
-      };
+    'sds' => const ['你近一周的抑郁情绪处于什么水平', '情绪低落、兴趣减退等表现的程度', '当前状态是否需要进一步关注与调节'],
+    'sas' => const ['你近一周的焦虑情绪处于什么水平', '紧张、担忧、躯体化反应的程度', '当前状态是否需要进一步关注与调节'],
+    'gad7' => const ['你是否存在广泛性焦虑的倾向', '焦虑症状的严重程度分级', '是否建议寻求专业心理支持'],
+    'mbti' => const ['你的性格类型与核心特质', '你在决策、社交中的偏好模式', '与你性格匹配的成长方向'],
+    _ => const ['你当前心理状态的整体画像', '关键维度的得分与所处区间', '是否需要进一步的关注与调节'],
+  };
 
   /// 「测完你将获得」认知提升（通用三条）。
   List<String> get _whatYouGain => const [
-        '一份可视化的测评结果反馈，直观看到自己的状态',
-        '对情绪与行为模式的清晰认知，知道「为什么会这样」',
-        '针对性的自我调节建议，知道接下来可以怎么做',
-      ];
+    '一份可视化的测评结果反馈，直观看到自己的状态',
+    '对情绪与行为模式的清晰认知，知道「为什么会这样」',
+    '针对性的自我调节建议，知道接下来可以怎么做',
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -164,10 +142,7 @@ class AssessmentIntroPage extends ConsumerWidget {
               const SizedBox(width: 8),
               _metaChip(Icons.schedule_rounded, '约 3-5 分钟'),
               const SizedBox(width: 8),
-              _metaChip(
-                Icons.payments_outlined,
-                _isFree ? '免费' : priceText,
-              ),
+              _metaChip(Icons.payments_outlined, '免费测评'),
             ],
           ),
         ],
@@ -290,14 +265,11 @@ class AssessmentIntroPage extends ConsumerWidget {
           height: AppDimens.confirmButtonHeight,
           decoration: BoxDecoration(
             gradient: AppColors.brandGradient,
-            borderRadius:
-                BorderRadius.circular(AppDimens.confirmButtonRadius),
+            borderRadius: BorderRadius.circular(AppDimens.confirmButtonRadius),
           ),
           alignment: Alignment.center,
           child: Text(
-            tested
-                ? '查看测评结果'
-                : (_isFree ? '开始测试' : '开始测试 · $priceText'),
+            tested ? '查看基础解读' : '免费开始测评',
             style: AppTextStyles.titleLarge.copyWith(color: Colors.white),
           ),
         ),
@@ -327,15 +299,18 @@ class AssessmentIntroPage extends ConsumerWidget {
     // mock 预览：原生答题页补齐「答题」环节
     if (_isMock || h5Link.trim().isEmpty) {
       await context.push(
-        Uri(path: RoutePaths.assessmentQuiz, queryParameters: {
-          'questionnaireId': '$questionnaireId',
-          'questionnaireKey': questionnaireKey,
-          'title': title,
-          'priceText': priceText,
-          'questionCount':
-              '${int.tryParse(questionCountText.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0}',
-          if (userAssessId != null) 'userAssessId': '$userAssessId',
-        }).toString(),
+        Uri(
+          path: RoutePaths.assessmentQuiz,
+          queryParameters: {
+            'questionnaireId': '$questionnaireId',
+            'questionnaireKey': questionnaireKey,
+            'title': title,
+            'priceText': priceText,
+            'questionCount':
+                '${int.tryParse(questionCountText.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0}',
+            if (userAssessId != null) 'userAssessId': '$userAssessId',
+          },
+        ).toString(),
       );
       return;
     }

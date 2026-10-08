@@ -64,8 +64,9 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
   static const Color _sourceDotColor = Color(0xFF8B8B8B);
 
   /// 报告数据（初值为 mock 占位，detail 返回后覆盖）
-  late AssessmentReport _report =
-      AssessmentReport.mock(assessmentTitle: widget.assessmentTitle);
+  late AssessmentReport _report = AssessmentReport.mock(
+    assessmentTitle: widget.assessmentTitle,
+  );
 
   @override
   void initState() {
@@ -84,8 +85,9 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
       return;
     }
     try {
-      final detail =
-          await ref.read(homeApiProvider).fetchAssessmentDetail(userAssessId);
+      final detail = await ref
+          .read(homeApiProvider)
+          .fetchAssessmentDetail(userAssessId);
       if (detail != null && mounted) {
         if (kDebugMode) {
           debugPrint(
@@ -159,7 +161,8 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
       return;
     }
     final matches = router.routerDelegate.currentConfiguration.matches;
-    final prevIsAssessmentWebView = matches.length >= 2 &&
+    final prevIsAssessmentWebView =
+        matches.length >= 2 &&
         matches[matches.length - 2].matchedLocation == RoutePaths.webview;
     if (prevIsAssessmentWebView) {
       router.pop();
@@ -184,7 +187,7 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
             bottom: false,
             child: Column(
               children: [
-                AppNavBar(title: '测评报告', transparent: true, onBack: _onBack),
+                AppNavBar(title: '完整解读', transparent: true, onBack: _onBack),
                 Expanded(
                   child: SingleChildScrollView(
                     // iOS contentInset.bottom 110 + middleCard bottom -120
@@ -202,6 +205,13 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                             _report.scaleTitle,
                             style: AppTextStyles.titleLarge,
                           ),
+                        ),
+                        const SizedBox(height: _sectionSpacing),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: _horizontalInset,
+                          ),
+                          child: _buildExtendedReport(),
                         ),
                         const SizedBox(height: AppDimens.gap8),
                         // 测评时间 11 #999
@@ -224,8 +234,9 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: AppColors.cardBackground,
-                              borderRadius:
-                                  BorderRadius.circular(_sectionCorner),
+                              borderRadius: BorderRadius.circular(
+                                _sectionCorner,
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,14 +317,140 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
     );
   }
 
+  Widget _buildExtendedReport() {
+    return Column(
+      children: [
+        _reportSection(
+          icon: Icons.insights_outlined,
+          title: '多维度详细分析',
+          child: const Column(
+            children: [
+              _DimensionRow(
+                label: '情绪反应',
+                value: 0.72,
+                text: '对压力和不确定性的感受较敏锐，情绪启动速度偏快。',
+              ),
+              _DimensionRow(
+                label: '思维负荷',
+                value: 0.64,
+                text: '容易反复推演结果，注意力会被尚未解决的问题占用。',
+              ),
+              _DimensionRow(
+                label: '身心恢复',
+                value: 0.48,
+                text: '休息可以带来缓解，但恢复效率仍有提升空间。',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: _sectionSpacing),
+        _reportSection(
+          icon: Icons.hub_outlined,
+          title: '可能的影响因素',
+          child: const Text(
+            '近期任务密度、对结果的高要求，以及缺少完整的恢复时间，可能共同放大了你的压力体验。结果并不说明某一个因素就是确定原因，而是提示可以从生活节奏、思维习惯和支持关系三个方向继续观察。',
+            style: TextStyle(height: 1.65, color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(height: _sectionSpacing),
+        _reportSection(
+          icon: Icons.touch_app_outlined,
+          title: '常见触发场景',
+          child: const Column(
+            children: [
+              _BulletText(text: '需要在短时间内完成多项任务时'),
+              _BulletText(text: '等待重要结果、无法确认进展时'),
+              _BulletText(text: '担心自己的表现让别人失望时'),
+            ],
+          ),
+        ),
+        const SizedBox(height: _sectionSpacing),
+        _reportSection(
+          icon: Icons.eco_outlined,
+          title: '你的优势与保护因素',
+          child: const Text(
+            '你已经能够觉察到状态变化，并愿意通过测评寻找线索。这种自我观察能力、主动求助意愿以及对改善的期待，都是重要的保护因素。建议把“看见变化”当作行动起点，而不是对自己的评价。',
+            style: TextStyle(height: 1.65, color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(height: _sectionSpacing),
+        _reportSection(
+          icon: Icons.calendar_month_outlined,
+          title: '你的行动计划',
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _PlanStep(day: '今天', text: '完成一次 3 分钟呼吸练习，写下当前最重要的一件事。'),
+              _PlanStep(day: '未来 7 天', text: '每天记录一次触发情境、身体感受和自动想法。'),
+              _PlanStep(day: '未来 30 天', text: '建立固定恢复时间，并回看哪些调节方式真正有效。'),
+            ],
+          ),
+        ),
+        const SizedBox(height: _sectionSpacing),
+        _reportSection(
+          icon: Icons.explore_outlined,
+          title: '为你推荐的下一步',
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ActionChip(
+                label: const Text('3 分钟呼吸'),
+                onPressed: _openAiInterpretation,
+              ),
+              ActionChip(
+                label: const Text('压力调节课程'),
+                onPressed: () => context.push(RoutePaths.supportResource),
+              ),
+              ActionChip(
+                label: const Text('寻找专业支持'),
+                onPressed: _openProfessionalInterpretation,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _reportSection({
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(_sectionCorner),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.brandTeal),
+              const SizedBox(width: 8),
+              Text(title, style: AppTextStyles.titleSmall),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
   /// 测后引导卡：完善支持档案（完善度 100% 时自动隐藏）。
   Widget _buildProfilePrompt(BuildContext context) {
     final profile = ref.watch(supportProfileProvider);
-    final percent = ((profile.basicCompletion +
-                profile.preferenceCompletion +
-                profile.supportCompletion) /
-            3)
-        .round();
+    final percent =
+        ((profile.basicCompletion +
+                    profile.preferenceCompletion +
+                    profile.supportCompletion) /
+                3)
+            .round();
     if (percent >= 100) return const SizedBox.shrink();
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -333,8 +470,11 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.tune_rounded,
-                  size: 20, color: Color(0xFF286D64)),
+              child: const Icon(
+                Icons.tune_rounded,
+                size: 20,
+                color: Color(0xFF286D64),
+              ),
             ),
             const SizedBox(width: 12),
             const Expanded(
@@ -357,8 +497,11 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 22, color: Color(0xFF286D64)),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 22,
+              color: Color(0xFF286D64),
+            ),
           ],
         ),
       ),
@@ -535,7 +678,7 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
     );
   }
 
-  /// 测评完成后的支持入口：AI 解读与付费专业解读；重新测降为次级操作。
+  /// 完整解读后的后续支持入口；完整报告本身已经完成付费解锁。
   Widget _buildBottomBar() {
     return Container(
       decoration: BoxDecoration(
@@ -562,38 +705,42 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
             children: [
               const Align(
                 alignment: Alignment.centerLeft,
-                child: Text('想进一步理解结果？',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(
+                  '接下来，你可以',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
               const SizedBox(height: AppDimens.gap8),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, _retestHeight),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(_retestCorner),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, _retestHeight),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_retestCorner),
+                        ),
                       ),
+                      onPressed: _openAiInterpretation,
+                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      label: const Text('和小鹿聊聊'),
                     ),
-                    onPressed: _openAiInterpretation,
-                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                    label: const Text('AI 解读'),
                   ),
-                ),
-                const SizedBox(width: AppDimens.gap8),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, _retestHeight),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(_retestCorner),
+                  const SizedBox(width: AppDimens.gap8),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, _retestHeight),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_retestCorner),
+                        ),
                       ),
+                      onPressed: _openProfessionalInterpretation,
+                      child: const Text('寻找专业支持'),
                     ),
-                    onPressed: _openProfessionalInterpretation,
-                    child: const Text('专业解读 · ¥9.9'),
                   ),
-                ),
-              ]),
+                ],
+              ),
               TextButton(
                 onPressed: _onRetestTapped,
                 child: Text('重新测 · ${_report.retestHint}'),
@@ -604,6 +751,118 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
       ),
     );
   }
+}
+
+class _DimensionRow extends StatelessWidget {
+  const _DimensionRow({
+    required this.label,
+    required this.value,
+    required this.text,
+  });
+  final String label;
+  final double value;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const Spacer(),
+            Text(
+              '${(value * 100).round()}%',
+              style: const TextStyle(
+                color: AppColors.brandTeal,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 7),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: value,
+            minHeight: 7,
+            backgroundColor: const Color(0xFFE7EFEC),
+            valueColor: const AlwaysStoppedAnimation(AppColors.brandTeal),
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.5,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _BulletText extends StatelessWidget {
+  const _BulletText({required this.text});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 7),
+          child: Icon(Icons.circle, size: 5, color: AppColors.brandTeal),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(height: 1.5, color: AppColors.textSecondary),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PlanStep extends StatelessWidget {
+  const _PlanStep({required this.day, required this.text});
+  final String day;
+  final String text;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 62,
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F3EF),
+            borderRadius: BorderRadius.circular(99),
+          ),
+          child: Text(
+            day,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.brandTeal,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text, style: const TextStyle(height: 1.5))),
+      ],
+    ),
+  );
 }
 
 /// 测评报告得分摘要卡（Figma 1530:1951 / 518:2081）。
@@ -693,9 +952,7 @@ class _ScoreCard extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      for (final tag in report.tags) _Tag(text: tag),
-                    ],
+                    children: [for (final tag in report.tags) _Tag(text: tag)],
                   )
                 else
                   const SizedBox(height: _Tag.rowHeight),
@@ -762,8 +1019,10 @@ class _Tag extends StatelessWidget {
   /// 单行标签高度（无标签时得分卡也按此预留）
   static const double rowHeight = 20; // Figma 标签区约 40 → 20
   static const double _corner = 10; // Figma 20 → 10
-  static const EdgeInsets _inset =
-      EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+  static const EdgeInsets _inset = EdgeInsets.symmetric(
+    horizontal: 8,
+    vertical: 4,
+  );
 
   @override
   Widget build(BuildContext context) {

@@ -2168,11 +2168,7 @@ void registerDevMocks() {
   // cancelled_user / cancelled_timeout，超时单读取时惰性结算）。
 
   /// 测评报告价格（分），与 /app/assessment/list 的 priceText 对齐。
-  int assessmentPriceFen(int questionnaireId) => switch (questionnaireId) {
-        1 || 2 => 990,
-        4 => 1990,
-        _ => 0,
-      };
+  int assessmentPriceFen(int questionnaireId) => 990;
 
   String assessmentName(int questionnaireId) => switch (questionnaireId) {
         1 => '抑郁自评量表(SDS)',
@@ -2212,7 +2208,7 @@ void registerDevMocks() {
     } else {
       if (refId < 1 || refId > 4) return {'code': 404, 'msg': '测评不存在'};
       title = assessmentName(refId);
-      subtitle = '完整测评报告 · 含三维度雷达解读';
+      subtitle = '完整测评解读 · 一次购买永久查看';
       priceFen = assessmentPriceFen(refId);
     }
 

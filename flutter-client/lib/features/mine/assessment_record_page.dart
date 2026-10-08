@@ -14,6 +14,8 @@ import '../../core/widgets/app_refresh_indicator.dart';
 import '../../core/widgets/app_states.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../utils/load_image.dart';
+import '../order/content_order_api.dart';
+import '../order/content_order_models.dart';
 import 'mine_api.dart';
 import 'mine_models.dart';
 
@@ -51,29 +53,41 @@ class _AssessmentRecordPageState extends ConsumerState<AssessmentRecordPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      AppToast.show(
-        context,
-        e is ApiException ? e.msg : '加载失败，请稍后重试',
-      );
+      AppToast.show(context, e is ApiException ? e.msg : '加载失败，请稍后重试');
     }
   }
 
   /// 打开测评报告详情（9004）。
   /// iOS 参照：openRecordDetail——userAssessId 缺失 toast「测评信息缺失」，
   /// 透传 userAssessId/title/h5Link。
-  void _openRecordDetail(AssessmentRecordItem item) {
+  Future<void> _openRecordDetail(AssessmentRecordItem item) async {
     final userAssessId = item.userAssessId;
     if (userAssessId == null) {
       AppToast.show(context, '测评信息缺失');
       return;
     }
+    final questionnaireId = item.questionnaireId ?? userAssessId;
+    var unlocked = false;
+    try {
+      final orders = await ref
+          .read(contentOrderApiProvider)
+          .fetchList(bizType: ContentOrderBiz.assessment);
+      unlocked = orders.any((o) => o.refId == questionnaireId && o.isPaid);
+    } catch (_) {}
+    if (!mounted) return;
     context.push(
-      Uri(path: RoutePaths.assessmentReport, queryParameters: {
-        'userAssessId': '$userAssessId',
-        'title': item.title,
-        if (item.h5Link != null && item.h5Link!.isNotEmpty)
-          'h5Link': item.h5Link!,
-      }).toString(),
+      Uri(
+        path: unlocked
+            ? RoutePaths.assessmentReport
+            : RoutePaths.assessmentResultTeaser,
+        queryParameters: {
+          'questionnaireId': '$questionnaireId',
+          'userAssessId': '$userAssessId',
+          'title': item.title,
+          if (item.h5Link != null && item.h5Link!.isNotEmpty)
+            'h5Link': item.h5Link!,
+        },
+      ).toString(),
     );
   }
 
@@ -93,35 +107,34 @@ class _AssessmentRecordPageState extends ConsumerState<AssessmentRecordPage> {
                 child: _loading
                     ? const AppLoadingView()
                     : _items.isEmpty
-                        // 空态：「暂无量表测试记录」15 #999 居中（iOS emptyLabel）
-                        ? const Center(
-                            child: Text(
-                              '暂无量表测试记录',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          )
-                        : AppRefreshIndicator(
-                            onRefresh: _loadRecords,
-                            child: ListView.builder(
-                              physics:
-                                  const AlwaysScrollableScrollPhysics(),
-                              // iOS：tableHeaderView 顶部留白 10，contentInset 底部 16
-                              padding: EdgeInsets.only(
-                                top: AppDimens.gap10,
-                                bottom: AppDimens.gap16 + bottomInset,
-                              ),
-                              itemCount: _items.length,
-                              itemBuilder: (context, index) =>
-                                  _AssessmentRecordCell(
+                    // 空态：「暂无量表测试记录」15 #999 居中（iOS emptyLabel）
+                    ? const Center(
+                        child: Text(
+                          '暂无量表测试记录',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      )
+                    : AppRefreshIndicator(
+                        onRefresh: _loadRecords,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          // iOS：tableHeaderView 顶部留白 10，contentInset 底部 16
+                          padding: EdgeInsets.only(
+                            top: AppDimens.gap10,
+                            bottom: AppDimens.gap16 + bottomInset,
+                          ),
+                          itemCount: _items.length,
+                          itemBuilder: (context, index) =>
+                              _AssessmentRecordCell(
                                 item: _items[index],
                                 onDetailTap: () =>
                                     _openRecordDetail(_items[index]),
                               ),
-                            ),
-                          ),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -155,11 +168,7 @@ class _AssessmentRecordCell extends StatelessWidget {
 
   /// 卡片投影（iOS：黑 5%，offset(0,2)，blur 10）
   static const List<BoxShadow> _cardShadow = [
-    BoxShadow(
-      color: Color(0x0D000000),
-      offset: Offset(0, 2),
-      blurRadius: 10,
-    ),
+    BoxShadow(color: Color(0x0D000000), offset: Offset(0, 2), blurRadius: 10),
   ];
 
   @override
