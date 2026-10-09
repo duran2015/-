@@ -53,8 +53,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
   static const double _sectionCorner = 16; // 中间白卡片圆角
   static const double _boxCorner = 10; // 内层灰盒圆角
   static const double _badgeSize = 22; // 建议序号徽标
-  static const double _retestCorner = 22.5;
-  static const double _retestHeight = 46; // Figma 92 → 46
   // 出处/免责声明区（iOS setupSourceSection，Figma 1572:1793）
   static const double _sourceFontSize = 10; // Figma 20 → 10
   static const double _sourceIconSize = 10;
@@ -85,9 +83,8 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
       return;
     }
     try {
-      final detail = await ref
-          .read(homeApiProvider)
-          .fetchAssessmentDetail(userAssessId);
+      final detail =
+          await ref.read(homeApiProvider).fetchAssessmentDetail(userAssessId);
       if (detail != null && mounted) {
         if (kDebugMode) {
           debugPrint(
@@ -104,21 +101,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
         debugPrint('[AssessmentReport] detail 失败（保留占位）：$e\n$st');
       }
     }
-  }
-
-  /// 响应重新测点击：用答题 WebView 替换栈顶报告页，返回时直达列表/首页
-  /// （不回到报告页）。iOS 参照：retestTapped（替换导航栈顶）。
-  void _onRetestTapped() {
-    final link = widget.h5Link?.trim() ?? '';
-    if (link.isEmpty) {
-      AppToast.show(context, '暂不支持重新测');
-      return;
-    }
-    context.pushReplacement(
-      '${RoutePaths.webview}?url=${Uri.encodeComponent(link)}'
-      '&title=${Uri.encodeComponent(_report.scaleTitle)}'
-      '&mode=assessment',
-    );
   }
 
   /// 点击「内容出处」：打开 detail.sourceUrl（iOS sourceLinkTapped）。
@@ -161,8 +143,7 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
       return;
     }
     final matches = router.routerDelegate.currentConfiguration.matches;
-    final prevIsAssessmentWebView =
-        matches.length >= 2 &&
+    final prevIsAssessmentWebView = matches.length >= 2 &&
         matches[matches.length - 2].matchedLocation == RoutePaths.webview;
     if (prevIsAssessmentWebView) {
       router.pop();
@@ -312,7 +293,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
             ),
           ),
         ),
-        bottomNavigationBar: _buildBottomBar(),
       ),
     );
   }
@@ -445,12 +425,11 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
   /// 测后引导卡：完善支持档案（完善度 100% 时自动隐藏）。
   Widget _buildProfilePrompt(BuildContext context) {
     final profile = ref.watch(supportProfileProvider);
-    final percent =
-        ((profile.basicCompletion +
-                    profile.preferenceCompletion +
-                    profile.supportCompletion) /
-                3)
-            .round();
+    final percent = ((profile.basicCompletion +
+                profile.preferenceCompletion +
+                profile.supportCompletion) /
+            3)
+        .round();
     if (percent >= 100) return const SizedBox.shrink();
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -677,80 +656,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
       child: Divider(height: 1, thickness: 1, color: AppColors.divider),
     );
   }
-
-  /// 完整解读后的后续支持入口；完整报告本身已经完成付费解锁。
-  Widget _buildBottomBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFEAEAEA).withValues(alpha: 0.4),
-            offset: const Offset(0, -4),
-            blurRadius: 4,
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(
-            top: AppDimens.gap12,
-            left: _horizontalInset,
-            right: _horizontalInset,
-            bottom: AppDimens.gap8,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '接下来，你可以',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              const SizedBox(height: AppDimens.gap8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, _retestHeight),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(_retestCorner),
-                        ),
-                      ),
-                      onPressed: _openAiInterpretation,
-                      icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                      label: const Text('和小鹿聊聊'),
-                    ),
-                  ),
-                  const SizedBox(width: AppDimens.gap8),
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, _retestHeight),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(_retestCorner),
-                        ),
-                      ),
-                      onPressed: _openProfessionalInterpretation,
-                      child: const Text('寻找专业支持'),
-                    ),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: _onRetestTapped,
-                child: Text('重新测 · ${_report.retestHint}'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _DimensionRow extends StatelessWidget {
@@ -765,45 +670,46 @@ class _DimensionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const Spacer(),
+            Row(
+              children: [
+                Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Text(
+                  '${(value * 100).round()}%',
+                  style: const TextStyle(
+                    color: AppColors.brandTeal,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 7,
+                backgroundColor: const Color(0xFFE7EFEC),
+                valueColor: const AlwaysStoppedAnimation(AppColors.brandTeal),
+              ),
+            ),
+            const SizedBox(height: 7),
             Text(
-              '${(value * 100).round()}%',
+              text,
               style: const TextStyle(
-                color: AppColors.brandTeal,
-                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                height: 1.5,
+                color: AppColors.textSecondary,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 7),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: value,
-            minHeight: 7,
-            backgroundColor: const Color(0xFFE7EFEC),
-            valueColor: const AlwaysStoppedAnimation(AppColors.brandTeal),
-          ),
-        ),
-        const SizedBox(height: 7),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class _BulletText extends StatelessWidget {
@@ -811,24 +717,25 @@ class _BulletText extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 9),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 7),
-          child: Icon(Icons.circle, size: 5, color: AppColors.brandTeal),
+        padding: const EdgeInsets.only(bottom: 9),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 7),
+              child: Icon(Icons.circle, size: 5, color: AppColors.brandTeal),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                    height: 1.5, color: AppColors.textSecondary),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(height: 1.5, color: AppColors.textSecondary),
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class _PlanStep extends StatelessWidget {
@@ -837,32 +744,32 @@ class _PlanStep extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 62,
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F3EF),
-            borderRadius: BorderRadius.circular(99),
-          ),
-          child: Text(
-            day,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.brandTeal,
-              fontWeight: FontWeight.w700,
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 62,
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F3EF),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                day,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.brandTeal,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(text, style: const TextStyle(height: 1.5))),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(child: Text(text, style: const TextStyle(height: 1.5))),
-      ],
-    ),
-  );
+      );
 }
 
 /// 测评报告得分摘要卡（Figma 1530:1951 / 518:2081）。
