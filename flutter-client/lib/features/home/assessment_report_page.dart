@@ -51,8 +51,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
   static const double _horizontalInset = 15; // Figma 30 → 15
   static const double _sectionSpacing = 12; // Figma 24 → 12
   static const double _sectionCorner = 16; // 中间白卡片圆角
-  static const double _boxCorner = 10; // 内层灰盒圆角
-  static const double _badgeSize = 22; // 建议序号徽标
   // 出处/免责声明区（iOS setupSourceSection，Figma 1572:1793）
   static const double _sourceFontSize = 10; // Figma 20 → 10
   static const double _sourceIconSize = 10;
@@ -193,78 +191,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
                             horizontal: _horizontalInset,
                           ),
                           child: _buildExtendedReport(),
-                        ),
-                        const SizedBox(height: AppDimens.gap8),
-                        // 测评时间 11 #999
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _horizontalInset,
-                          ),
-                          child: Text(
-                            _report.testDateText,
-                            style: AppTextStyles.label,
-                          ),
-                        ),
-                        const SizedBox(height: AppDimens.gap12),
-                        // 中间白色圆角内容卡片
-                        // 得分卡相对白底：上/左/右 15（对齐 iOS scoreCardView inset）
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _horizontalInset,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.cardBackground,
-                              borderRadius: BorderRadius.circular(
-                                _sectionCorner,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: _horizontalInset,
-                                    left: _horizontalInset,
-                                    right: _horizontalInset,
-                                  ),
-                                  child: _ScoreCard(report: _report),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    _horizontalInset,
-                                    _sectionSpacing,
-                                    _horizontalInset,
-                                    _horizontalInset,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        '结果解读',
-                                        style: AppTextStyles.titleSmall,
-                                      ),
-                                      const SizedBox(height: AppDimens.gap10),
-                                      _buildBox(
-                                        child: Text(
-                                          _report.interpretation,
-                                          style: AppTextStyles.body,
-                                        ),
-                                      ),
-                                      const SizedBox(height: _sectionSpacing),
-                                      const Text(
-                                        '专业建议',
-                                        style: AppTextStyles.titleSmall,
-                                      ),
-                                      const SizedBox(height: AppDimens.gap10),
-                                      _buildBox(child: _buildSuggestionRows()),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                         // 测完动机最强时刻：引导完善支持档案（方案 C）
                         Padding(
@@ -585,77 +511,6 @@ class _AssessmentReportPageState extends ConsumerState<AssessmentReportPage> {
     );
   }
 
-  /// 内层灰盒（iOS boxBackground #F7F8FC 圆角 10，内边距 12）。
-  Widget _buildBox({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.innerBackground,
-        borderRadius: BorderRadius.circular(_boxCorner),
-      ),
-      padding: const EdgeInsets.all(AppDimens.gap12),
-      child: child,
-    );
-  }
-
-  /// 专业建议列表（iOS buildSuggestionRows：空数组展示占位，避免空白灰条）。
-  Widget _buildSuggestionRows() {
-    final suggestions = _report.suggestions;
-    if (suggestions.isEmpty) {
-      // 空态占位行（无序号，灰色文案）
-      return Text(
-        '暂无专业建议',
-        style: AppTextStyles.body.copyWith(color: AppColors.textTertiary),
-      );
-    }
-    final rows = <Widget>[];
-    for (var i = 0; i < suggestions.length; i++) {
-      if (i > 0) rows.add(_buildDivider());
-      rows.add(_buildSuggestionRow(index: i + 1, text: suggestions[i]));
-    }
-    return Column(children: rows);
-  }
-
-  /// 单条专业建议行（iOS makeSuggestionRow：22 圆形序号徽标 #00A6A1 +
-  /// 13 #666 文案，徽标与文案间距 10，文案 top 偏移 2）。
-  Widget _buildSuggestionRow({required int index, required String text}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: _badgeSize,
-          height: _badgeSize,
-          decoration: const BoxDecoration(
-            color: AppColors.brandTeal,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$index',
-            style: AppTextStyles.label.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: AppDimens.gap10),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(text, style: AppTextStyles.body),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 建议项分隔线（iOS makeDivider：#EEEEEE 1px，左缩进 32，上下间距 10）。
-  Widget _buildDivider() {
-    return const Padding(
-      padding: EdgeInsets.only(left: 32, top: 10, bottom: 10),
-      child: Divider(height: 1, thickness: 1, color: AppColors.divider),
-    );
-  }
 }
 
 class _DimensionRow extends StatelessWidget {
@@ -780,6 +635,7 @@ class _PlanStep extends StatelessWidget {
 /// - level 文案下方叠渐变色条（高 6，#C9E0EF→#DCE5FF）；
 /// - 标签白底圆角 10、高 20、左右 inset 8，字 12；可换行，卡片高度随内容增高。
 /// - 相对白色背景：上/左/右外边距 15（由外层 Padding 保证）。
+// ignore: unused_element
 class _ScoreCard extends StatelessWidget {
   const _ScoreCard({required this.report});
 
