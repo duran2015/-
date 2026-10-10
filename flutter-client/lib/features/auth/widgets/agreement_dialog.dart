@@ -37,26 +37,31 @@ class AgreementDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
-      child: Container(
-        width: 315.w,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF7F8FC),
-          borderRadius: BorderRadius.circular(16.r),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 360,
+          maxHeight: MediaQuery.sizeOf(context).height - 48,
         ),
-        padding: EdgeInsets.all(12.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            renderHeader(context),
-            12.verticalSpace,
-            renderContentCard(context),
-            16.verticalSpace,
-            renderPrimaryButton(context),
-            10.verticalSpace,
-            renderSecondaryButton(context),
-          ],
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7F8FC),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              renderHeader(context),
+              const SizedBox(height: 12),
+              Flexible(child: renderContentCard(context)),
+              const SizedBox(height: 16),
+              renderPrimaryButton(context),
+              const SizedBox(height: 10),
+              renderSecondaryButton(context),
+            ],
+          ),
         ),
       ),
     );
@@ -70,12 +75,12 @@ class AgreementDialog extends StatelessWidget {
       children: [
         SizedBox(
           width: double.infinity,
-          height: 28.h,
+          height: 28,
           child: Center(
             child: Text(
               '服务协议与隐私政策',
               style: TextStyle(
-                fontSize: 18.sp,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF222222),
                 fontFamily: 'PingFang SC',
@@ -84,21 +89,21 @@ class AgreementDialog extends StatelessWidget {
           ),
         ),
         Positioned(
-          right: 4.w,
+          right: 4,
           top: 0,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => Navigator.of(context).pop(false),
             child: Container(
-              width: 24.w,
-              height: 24.w,
+              width: 24,
+              height: 24,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Color(0x10000000),
               ),
               child: Icon(
                 Icons.close,
-                size: 16.r,
+                size: 16,
                 color: const Color(0xFF999999),
               ),
             ),
@@ -115,11 +120,11 @@ class AgreementDialog extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12),
       ),
-      padding: EdgeInsets.all(14.w),
-      child: SizedBox(
-        height: 235.h,
+      padding: const EdgeInsets.all(14),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 235),
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: renderRichTextContent(context),
@@ -133,13 +138,13 @@ class AgreementDialog extends StatelessWidget {
   /// 作者：郭翰林
   Widget renderRichTextContent(BuildContext context) {
     final textStyle = TextStyle(
-      fontSize: 13.sp,
+      fontSize: 13,
       height: 1.5,
       color: const Color(0xFF666666),
       fontFamily: 'PingFang SC',
     );
     final linkStyle = TextStyle(
-      fontSize: 13.sp,
+      fontSize: 13,
       height: 1.5,
       color: const Color(0xFF00AFBE),
       fontWeight: FontWeight.w600,
@@ -173,7 +178,8 @@ class AgreementDialog extends StatelessWidget {
                   ),
           ),
           const TextSpan(
-            text: '。\n在你使用AI倾诉、心理测评、情绪记录和咨询预约等服务时，我们会收集必要的设备信息、网络信息，以及你主动提供的情绪和服务资料，并按照相关法律法规进行保护。\n未经你的明确同意，我们不会将AI沟通内容直接展示给咨询师;仅在你授权时同步结构化摘要用于咨询前准备。',
+            text:
+                '。\n在你使用AI倾诉、心理测评、情绪记录和咨询预约等服务时，我们会收集必要的设备信息、网络信息，以及你主动提供的情绪和服务资料，并按照相关法律法规进行保护。\n未经你的明确同意，我们不会将AI沟通内容直接展示给咨询师;仅在你授权时同步结构化摘要用于咨询前准备。',
           ),
         ],
       ),
@@ -187,19 +193,19 @@ class AgreementDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(true),
       child: Container(
-        height: 45.h,
+        height: 45,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF00D8E0), Color(0xFF00AFBE)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(26.5.r),
+          borderRadius: BorderRadius.circular(26.5),
           boxShadow: [
             BoxShadow(
               color: const Color(0x2000AFBE),
-              offset: Offset(0, 4.h),
-              blurRadius: 8.r,
+              offset: const Offset(0, 4),
+              blurRadius: 8,
             )
           ],
         ),
@@ -207,7 +213,7 @@ class AgreementDialog extends StatelessWidget {
           child: Text(
             '同意并继续',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.white,
               fontFamily: 'PingFang SC',
@@ -225,16 +231,16 @@ class AgreementDialog extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(false),
       child: Container(
-        height: 45.h,
+        height: 45,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(26.5.r),
+          borderRadius: BorderRadius.circular(26.5),
         ),
         child: Center(
           child: Text(
             '暂不同意',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 16,
               fontWeight: FontWeight.normal,
               color: const Color(0xFF999999),
               fontFamily: 'PingFang SC',
